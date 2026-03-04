@@ -94,10 +94,15 @@ No Claude Code, invoque qualquer command com `/`:
 
 ```
 /gerador-prd          → produz PRD em thoughts/shared/research/
+  ↓ revise o PRD, resolva [NEEDS CLARIFICATION], corrija imprecisões
 /gerador-spec          → lê o PRD, produz SPEC em thoughts/shared/plans/
+  ↓ revise a SPEC, resolva [NEEDS CLARIFICATION], aprove antes do Plan
 /executor-plan         → lê a SPEC, executa micro-tarefas com checkpoints do usuário
+  ↓ revise a implementação, aprove cada micro-tarefa
 /sdd-review            → faz review do PR/branch resultante
 ```
+
+> **Importante**: Sempre revise o output de cada fase antes de avançar para a próxima. Resolva todos os itens `[NEEDS CLARIFICATION]` e corrija imprecisões — a fase seguinte usa a anterior como fonte de verdade.
 
 ## Estrutura de Diretórios
 
