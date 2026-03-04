@@ -99,6 +99,7 @@ No Claude Code, invoque qualquer command com `/`:
   ↓ revise a SPEC, resolva [NEEDS CLARIFICATION], aprove antes do Plan
 /executor-plan         → lê a SPEC, executa micro-tarefas com checkpoints do usuário
   ↓ revise a implementação, aprove cada micro-tarefa
+  ↓ gera relatório de implementação em thoughts/shared/history/
 /sdd-review            → faz review do PR/branch resultante
 ```
 

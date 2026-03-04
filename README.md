@@ -99,6 +99,7 @@ In Claude Code, invoke any command with `/`:
   ↓ review the SPEC, resolve [NEEDS CLARIFICATION], approve before Plan
 /executor-plan         → reads SPEC, executes micro-tasks with user checkpoints
   ↓ review the implementation, approve each micro-task
+  ↓ generates implementation report in thoughts/shared/history/
 /sdd-review            → reviews the resulting PR/branch
 ```
 
