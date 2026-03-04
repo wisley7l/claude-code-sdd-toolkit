@@ -1,70 +1,70 @@
 # claude-code-sdd-toolkit
 
-> **[Leia em Português](./README-pt.md)**
+> **[Read in English](./README-en.md)**
 
-A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) slash commands that implement a **Specification-Driven Development (SDD)** workflow.
+Uma coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) que implementam um workflow de **Specification-Driven Development (SDD)**.
 
-These commands turn Claude Code into a structured development partner that follows a disciplined process: **Research → Spec → Plan → Execute → Review**.
+Esses commands transformam o Claude Code em um parceiro de desenvolvimento estruturado que segue um processo disciplinado: **Pesquisa → Spec → Plano → Execução → Review**.
 
-## What's Inside
+## O que tem aqui
 
-### SDD Workflow (3-phase pipeline)
+### Workflow SDD (pipeline de 3 fases)
 
-| Phase | Command | Description |
-|-------|---------|-------------|
-| 0 — Research | `/gerador-prd` | Scouts the codebase and external docs, producing a PRD (Preliminary Design Research) without prescribing solutions |
-| 1 — Spec + Plan | `/gerador-spec` | Reads the PRD and produces a two-part document: **Part A** (what & why) and **Part B** (how — atomic micro-tasks) |
-| 2 — Execute | `/executor-plan` | Executes micro-tasks one at a time, pausing for user approval after each step |
-| Review | `/sdd-review` | Analyzes a PR, branch, or diff and generates a private review report with confidence scoring |
+| Fase | Command | Descrição |
+|------|---------|-----------|
+| 0 — Pesquisa | `/gerador-prd` | Explora o codebase e documentações externas, produzindo um PRD (Preliminary Design Research) sem prescrever soluções |
+| 1 — Spec + Plano | `/gerador-spec` | Lê o PRD e produz um documento em duas partes: **Part A** (o quê e por quê) e **Part B** (como — micro-tarefas atômicas) |
+| 2 — Execução | `/executor-plan` | Executa micro-tarefas uma por vez, pausando para aprovação do usuário após cada passo |
+| Review | `/sdd-review` | Analisa um PR, branch ou diff e gera um relatório privado de review com pontuação de confiança |
 
-### Git Utilities
+### Utilitários Git
 
-| Command | Description |
-|---------|-------------|
-| `/git-worktree` | Creates an isolated worktree from the default branch for parallel work |
-| `/git-remove-worktree` | Safely removes a worktree, checking for uncommitted changes first |
-| `/git-prune-branches` | Removes local branches whose remotes have been deleted |
-| `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
+| Command | Descrição |
+|---------|-----------|
+| `/git-worktree` | Cria uma worktree isolada a partir da branch default para trabalho paralelo |
+| `/git-remove-worktree` | Remove uma worktree de forma segura, verificando mudanças não commitadas |
+| `/git-prune-branches` | Remove branches locais cujas remotas já foram deletadas |
+| `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees focadas |
 
-### Deprecated (v1)
+### Depreciados (v1)
 
-Older versions of the SDD commands are kept in `deprecated/commands/` for reference. They work independently but lack some features of the current versions (worktree integration, checkpoint tracking, diagram generation).
+Versões anteriores dos commands SDD estão em `deprecated/commands/` para referência. Funcionam independentemente, mas não têm alguns recursos das versões atuais (integração com worktree, rastreamento de checkpoints, geração de diagramas).
 
-## Core Principles
+## Princípios Fundamentais
 
-These commands enforce a few non-negotiable rules:
+Esses commands aplicam algumas regras inegociáveis:
 
-- **Zero Inference** — Never assume API behavior or patterns. Always verify against official documentation (via [Context7](https://context7.com/) MCP) or existing project code. If no verifiable source is found, mark as `[NEEDS VERIFICATION]`
-- **Constitution-first** — Commands always read `CLAUDE.md` and `ARCHITECTURE.md` before any action, making them stack-agnostic
-- **Atomic execution** — The executor never advances to the next task without explicit user approval
-- **Source transparency** — Every external reference used by subagents must appear in the final document with a verifiable link
+- **Zero Inferência** — Nunca assume comportamento de APIs ou padrões. Sempre verifica na documentação oficial (via [Context7](https://context7.com/) MCP) ou no código existente do projeto. Se nenhuma fonte verificável for encontrada, marca como `[NEEDS VERIFICATION]`
+- **Constitution-first** — Commands sempre leem `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer ação, tornando-os agnósticos de stack
+- **Execução atômica** — O executor nunca avança para a próxima tarefa sem aprovação explícita do usuário
+- **Transparência de fontes** — Toda referência externa usada por subagentes deve aparecer no documento final com link verificável
 
-## How to Use
+## Como Usar
 
-### 1. Install
+### 1. Instalação
 
-Copy the command files to your Claude Code commands directory:
+Copie os arquivos de command para o diretório de commands do Claude Code:
 
 ```bash
-# Global commands (available in all projects)
+# Commands globais (disponíveis em todos os projetos)
 cp commands/*.md ~/.claude/commands/
 
-# Or project-scoped commands
-cp commands/*.md /your-project/.claude/commands/
+# Ou commands por projeto
+cp commands/*.md /seu-projeto/.claude/commands/
 ```
 
-### 2. Prerequisites
+### 2. Pré-requisitos
 
-**Project files** — These commands expect your project to have:
+**Arquivos do projeto** — Esses commands esperam que seu projeto tenha:
 
-- **`CLAUDE.md`** — Project rules, stack, conventions (the "constitution")
-- **`ARCHITECTURE.md`** — Structural decisions and patterns
+- **`CLAUDE.md`** — Regras do projeto, stack, convenções (a "constituição")
+- **`ARCHITECTURE.md`** — Decisões estruturais e padrões
 
-The commands read these files first and adapt to whatever stack you use. No hardcoded framework or runtime assumptions.
+Os commands leem esses arquivos primeiro e se adaptam a qualquer stack que você use. Nenhuma suposição de framework ou runtime hardcoded.
 
-**MCP Server** — The commands use [Context7](https://github.com/upstash/context7) to query official documentation of libraries and frameworks. This is how they avoid inference — they look up real docs instead of guessing.
+**MCP Server** — Os commands usam o [Context7](https://github.com/upstash/context7) para consultar documentação oficial de bibliotecas e frameworks. É assim que eles evitam inferência — consultam docs reais ao invés de adivinhar.
 
-To set it up, add to your Claude Code MCP config (`~/.claude.json` or project `.mcp.json`):
+Para configurar, adicione ao seu MCP config do Claude Code (`~/.claude.json` ou `.mcp.json` do projeto):
 
 ```json
 {
@@ -77,11 +77,11 @@ To set it up, add to your Claude Code MCP config (`~/.claude.json` or project `.
 }
 ```
 
-> The commands will still work without Context7, but documentation lookups will fall back to web search, which is less reliable.
+> Os commands ainda funcionam sem o Context7, mas as consultas de documentação cairão para busca web, que é menos confiável.
 
-### 3. Run
+### 3. Executar
 
-In Claude Code, invoke any command with `/`:
+No Claude Code, invoque qualquer command com `/`:
 
 ```
 /gerador-prd
@@ -90,50 +90,50 @@ In Claude Code, invoke any command with `/`:
 /sdd-review
 ```
 
-### Recommended SDD Flow
+### Fluxo SDD Recomendado
 
 ```
-/gerador-prd          → produces PRD in thoughts/shared/research/
-  ↓ review the PRD, resolve [NEEDS CLARIFICATION], fix any inaccuracies
-/gerador-spec          → reads PRD, produces SPEC in thoughts/shared/plans/
-  ↓ review the SPEC, resolve [NEEDS CLARIFICATION], approve before Plan
-/executor-plan         → reads SPEC, executes micro-tasks with user checkpoints
-  ↓ review the implementation, approve each micro-task
-  ↓ generates implementation report in thoughts/shared/history/
-/sdd-review            → reviews the resulting PR/branch
+/gerador-prd          → produz PRD em thoughts/shared/research/
+  ↓ revise o PRD, resolva [NEEDS CLARIFICATION], corrija imprecisões
+/gerador-spec          → lê o PRD, produz SPEC em thoughts/shared/plans/
+  ↓ revise a SPEC, resolva [NEEDS CLARIFICATION], aprove antes do Plan
+/executor-plan         → lê a SPEC, executa micro-tarefas com checkpoints do usuário
+  ↓ revise a implementação, aprove cada micro-tarefa
+  ↓ gera relatório de implementação em thoughts/shared/history/
+/sdd-review            → faz review do PR/branch resultante
 ```
 
-> **Important**: Always review the output of each phase before moving to the next. Resolve any `[NEEDS CLARIFICATION]` items and correct inaccuracies — the next phase uses the previous one as its source of truth.
+> **Importante**: Sempre revise o output de cada fase antes de avançar para a próxima. Resolva todos os itens `[NEEDS CLARIFICATION]` e corrija imprecisões — a fase seguinte usa a anterior como fonte de verdade.
 
-## Directory Structure
+## Estrutura de Diretórios
 
 ```
 commands/
-  gerador-prd.md            # Phase 0 — Research
-  gerador-spec.md           # Phase 1 — Spec + Plan
-  executor-plan.md          # Phase 2 — Execute
+  gerador-prd.md            # Fase 0 — Pesquisa
+  gerador-spec.md           # Fase 1 — Spec + Plano
+  executor-plan.md          # Fase 2 — Execução
   sdd-review.md             # Review
-  git-worktree.md           # Create worktree
-  git-remove-worktree.md    # Remove worktree
-  git-prune-branches.md     # Prune local branches
-  worktree-detect.md        # Analyze worktree opportunities
+  git-worktree.md           # Criar worktree
+  git-remove-worktree.md    # Remover worktree
+  git-prune-branches.md     # Limpar branches locais
+  worktree-detect.md        # Analisar oportunidades de worktree
 deprecated/
   commands/
-    gerador-prd.v1.md       # Legacy research (v1)
-    gerador-spec.v1.md      # Legacy spec (v1)
-    executor-plan.v1.md     # Legacy executor (v1)
+    gerador-prd.v1.md       # Pesquisa legacy (v1)
+    gerador-spec.v1.md      # Spec legacy (v1)
+    executor-plan.v1.md     # Executor legacy (v1)
 ```
 
-## Inspiration
+## Inspirações
 
-This toolkit was heavily inspired by the following resources:
+Este toolkit foi fortemente inspirado pelos seguintes recursos:
 
-- **[spec-kit](https://github.com/github/spec-kit)** — GitHub's official toolkit for Spec-Driven Development. The foundation of the SDD methodology used here
-- **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Deep dive into context engineering patterns for AI agents
-- **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Practical examples of PRD generation and structured development commands
-- **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Detailed walkthrough of a real-world SDD workflow with Claude Code
-- Various YouTube videos on Spec-Driven Development and AI-assisted coding workflows
+- **[spec-kit](https://github.com/github/spec-kit)** — Toolkit oficial do GitHub para Spec-Driven Development. A base da metodologia SDD usada aqui
+- **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Mergulho profundo em padrões de context engineering para agentes de IA
+- **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Exemplos práticos de geração de PRD e commands de desenvolvimento estruturado
+- **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Walkthrough detalhado de um workflow SDD real com Claude Code
+- Diversos vídeos no YouTube sobre Spec-Driven Development e workflows de desenvolvimento assistido por IA
 
-## License
+## Licença
 
 [MIT](./LICENSE)
