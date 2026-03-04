@@ -1,5 +1,7 @@
 # claude-code-sdd-toolkit
 
+> **[Read in English](./README.md)**
+
 Uma coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) que implementam um workflow de **Specification-Driven Development (SDD)**.
 
 Esses commands transformam o Claude Code em um parceiro de desenvolvimento estruturado que segue um processo disciplinado: **Pesquisa → Spec → Plano → Execução → Review**.
