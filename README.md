@@ -24,9 +24,9 @@ These commands turn Claude Code into a structured development partner that follo
 | `/git-prune-branches` | Removes local branches whose remotes have been deleted |
 | `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
 
-### Legacy (v1)
+### Deprecated (v1)
 
-Older versions of the SDD commands are kept as `*-v1.md` for reference. They work independently but lack some features of the current versions (worktree integration, checkpoint tracking, diagram generation).
+Older versions of the SDD commands are kept in `deprecated/commands/` for reference. They work independently but lack some features of the current versions (worktree integration, checkpoint tracking, diagram generation).
 
 ## Core Principles
 
@@ -41,14 +41,14 @@ These commands enforce a few non-negotiable rules:
 
 ### 1. Install
 
-Copy the `.md` files to your Claude Code commands directory:
+Copy the command files to your Claude Code commands directory:
 
 ```bash
 # Global commands (available in all projects)
-cp *.md ~/.claude/commands/
+cp commands/*.md ~/.claude/commands/
 
 # Or project-scoped commands
-cp *.md /your-project/.claude/commands/
+cp commands/*.md /your-project/.claude/commands/
 ```
 
 ### 2. Prerequisites
@@ -84,17 +84,19 @@ In Claude Code, invoke any command with `/`:
 
 ```
 commands/
-  gerador-prd.md          # Phase 0 — Research
-  gerador-spec.md         # Phase 1 — Spec + Plan
-  executor-plan.md        # Phase 2 — Execute
-  sdd-review.md           # Review
-  git-worktree.md         # Create worktree
-  git-remove-worktree.md  # Remove worktree
-  git-prune-branches.md   # Prune local branches
-  worktree-detect.md      # Analyze worktree opportunities
-  gerador-prd.v1.md       # Legacy research (v1)
-  gerador-spec.v1.md      # Legacy spec (v1)
-  executor-plan.v1.md     # Legacy executor (v1)
+  gerador-prd.md            # Phase 0 — Research
+  gerador-spec.md           # Phase 1 — Spec + Plan
+  executor-plan.md          # Phase 2 — Execute
+  sdd-review.md             # Review
+  git-worktree.md           # Create worktree
+  git-remove-worktree.md    # Remove worktree
+  git-prune-branches.md     # Prune local branches
+  worktree-detect.md        # Analyze worktree opportunities
+deprecated/
+  commands/
+    gerador-prd.v1.md       # Legacy research (v1)
+    gerador-spec.v1.md      # Legacy spec (v1)
+    executor-plan.v1.md     # Legacy executor (v1)
 ```
 
 ## License
