@@ -55,12 +55,29 @@ cp commands/*.md /seu-projeto/.claude/commands/
 
 ### 2. Pré-requisitos
 
-Esses commands esperam que seu projeto tenha:
+**Arquivos do projeto** — Esses commands esperam que seu projeto tenha:
 
 - **`CLAUDE.md`** — Regras do projeto, stack, convenções (a "constituição")
 - **`ARCHITECTURE.md`** — Decisões estruturais e padrões
 
 Os commands leem esses arquivos primeiro e se adaptam a qualquer stack que você use. Nenhuma suposição de framework ou runtime hardcoded.
+
+**MCP Server** — Os commands usam o [Context7](https://github.com/upstash/context7) para consultar documentação oficial de bibliotecas e frameworks. É assim que eles evitam inferência — consultam docs reais ao invés de adivinhar.
+
+Para configurar, adicione ao seu MCP config do Claude Code (`~/.claude.json` ou `.mcp.json` do projeto):
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+> Os commands ainda funcionam sem o Context7, mas as consultas de documentação cairão para busca web, que é menos confiável.
 
 ### 3. Executar
 
