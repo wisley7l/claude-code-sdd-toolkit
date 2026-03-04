@@ -118,6 +118,16 @@ deprecated/
     executor-plan.v1.md     # Legacy executor (v1)
 ```
 
+## Inspiration
+
+This toolkit was heavily inspired by the following resources:
+
+- **[spec-kit](https://github.com/github/spec-kit)** — GitHub's official toolkit for Spec-Driven Development. The foundation of the SDD methodology used here
+- **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Deep dive into context engineering patterns for AI agents
+- **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Practical examples of PRD generation and structured development commands
+- **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Detailed walkthrough of a real-world SDD workflow with Claude Code
+- Various YouTube videos on Spec-Driven Development and AI-assisted coding workflows
+
 ## License
 
 [MIT](./LICENSE)
