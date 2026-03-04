@@ -89,8 +89,18 @@ Para cada micro-tarefa do Plan, em ordem:
 
 **2. Verificar**
 - Execute o comando de typecheck do projeto (consulte `package.json` ou `CLAUDE.md`) após cada tarefa
-- Se houver erros de lint/tipo, corrija antes de reportar ao usuário
+- Se houver erros de lint/tipo, **investigue antes de corrigir** (ver workflow "Encruzilhadas" abaixo) e corrija antes de reportar ao usuário
 - Execute o comando de lint do projeto quando aplicável
+
+> **Workflow: Encruzilhadas — investigar, propor, perguntar**
+>
+> Quando encontrar um problema com múltiplas causas possíveis ou a solução não for óbvia:
+>
+> 1. **Investigar tudo**: rastrear toda a cadeia (caller → função → tipos → schema). Usar subagentes se necessário para ter visão completa
+> 2. **Propor soluções**: apresentar as opções encontradas com prós/contras
+> 3. **Perguntar ao usuário**: deixar o usuário escolher qual caminho seguir antes de aplicar
+>
+> **Nunca**: aplicar a primeira solução que compila sem validar se é o local certo para o fix. Ex: não forçar workaround no caller quando o problema real está na assinatura da função chamada.
 
 **3. Pausar e Reportar**
 - Apresente o que foi feito de forma concisa, referenciando o FR/Scenario implementado
@@ -112,6 +122,8 @@ Pode validar?
 ## Etapa 2 — Ciclo de Correção
 
 Se o usuário reportar erros ou solicitar ajustes:
+
+0. **Encruzilhadas — investigar, propor, perguntar**: Antes de qualquer correção, investigue toda a cadeia (caller → função → tipos → schema). Se houver múltiplas causas possíveis, apresente as opções com prós/contras e deixe o usuário escolher. Nunca aplique a primeira solução que compila sem validar se é o local certo.
 
 1. **Verifique se está no escopo da Spec**: compare com os FRs e a Seção 7 (Out of Scope)
 
