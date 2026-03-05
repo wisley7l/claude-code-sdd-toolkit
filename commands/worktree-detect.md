@@ -140,6 +140,16 @@ O que deseja fazer?
 
 Se o usuário escolher **"a)"**, gere um sub-SPEC por worktree proposta.
 
+### Resolução do diretório root
+
+Antes de salvar qualquer arquivo em `thoughts/`, resolva o diretório root do projeto principal (não do worktree atual):
+
+```bash
+git worktree list | head -1 | awk '{print $1}'
+```
+
+Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositório principal mesmo quando executando dentro de um worktree.
+
 **Diferença do gerador-spec normal**: aqui o SPEC documenta o que *já foi implementado*, não o que será. O Part B (Plan) descreve as tarefas como já concluídas e serve como registro histórico + guia de review.
 
 ### Formato do sub-SPEC retroativo

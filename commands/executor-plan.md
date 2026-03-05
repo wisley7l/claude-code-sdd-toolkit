@@ -19,6 +19,16 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Commits atomicos**: Cada commit faz uma coisa, com mensagem clara
 - **Pausa entre tarefas**: Confirme com usuario antes de avancar para proxima tarefa, nao entre micro-passos
 
+## Resolucao do diretorio root
+
+Antes de ler ou salvar qualquer arquivo em `thoughts/`, resolva o diretorio root do projeto principal (nao do worktree atual):
+
+```bash
+git worktree list | head -1 | awk '{print $1}'
+```
+
+Use esse caminho como base para todos os caminhos de `thoughts/` (plans, tests, history). Isso garante que os outputs sejam salvos e lidos do repositorio principal mesmo quando executando dentro de um worktree.
+
 ## Configuracao Inicial
 
 Ao ser invocado:

@@ -107,7 +107,17 @@ Classifique por severidade:
 
 ## Etapa 4 — Geração do Relatório
 
-Crie `thoughts/shared/reviews/REV-DD-MM-YYYY-[slug].md`:
+### Resolução do diretório root
+
+Antes de salvar o relatório em `thoughts/`, resolva o diretório root do projeto principal (não do worktree atual):
+
+```bash
+git worktree list | head -1 | awk '{print $1}'
+```
+
+Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositório principal mesmo quando executando dentro de um worktree.
+
+Crie `<root>/thoughts/shared/reviews/REV-DD-MM-YYYY-[slug].md`:
 
 ````markdown
 ---

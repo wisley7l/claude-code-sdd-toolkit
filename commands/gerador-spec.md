@@ -121,7 +121,19 @@ No documento, indique claramente para cada tarefa:
 
 ## Output
 
-Crie o arquivo em `thoughts/shared/plans/` com nome `SPEC-DD-MM-YYYY-[slug].md`.
+### Resolucao do diretorio root
+
+Antes de salvar qualquer arquivo em `thoughts/`, resolva o diretorio root do projeto principal (nao do worktree atual):
+
+```bash
+git worktree list | head -1 | awk '{print $1}'
+```
+
+Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositorio principal mesmo quando executando dentro de um worktree.
+
+### Arquivo
+
+Crie o arquivo em `<root>/thoughts/shared/plans/` com nome `SPEC-DD-MM-YYYY-[slug].md`.
 
 ```markdown
 # Plano: [Titulo]
