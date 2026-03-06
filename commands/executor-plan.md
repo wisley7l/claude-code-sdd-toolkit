@@ -14,7 +14,8 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **TDD sempre**: Teste unitario antes do codigo. Sem excecao
 - **Testes unitarios sao nosso contrato**: Ficam em `thoughts/tests/`, nao sao commitados, mas sao nossa garantia. Se quebram, paramos e discutimos
 - **Constitution-first**: Leia `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer codigo
-- **Zero Inferencia**: Nao chute comportamento de APIs/libs. Verifique no codigo existente, docs via Context7, ou pergunte
+- **Zero Inferencia**: Nao chute comportamento de APIs/libs. Verifique no codigo existente, docs via Context7/WebFetch/WebSearch, ou pergunte
+- **Fonte obrigatoria**: Toda decisao de implementacao que depende de API externa, lib ou servico de terceiro DEVE ser verificada na doc oficial antes de codar. Sem verificacao = pare e pergunte ao usuario
 - **Skills do projeto**: Ative e siga as skills listadas no plano
 - **Commits atomicos**: Cada commit faz uma coisa, com mensagem clara
 - **Pausa entre tarefas**: Confirme com usuario antes de avancar para proxima tarefa, nao entre micro-passos
@@ -199,16 +200,14 @@ Plano: [caminho do SPEC]
 
 ## Guardrails
 
-- **TDD sem excecao**: Teste antes do codigo. Sempre
-- **Testes quebrando = parada**: Se testes que passavam falham, pare e discuta com o usuario
-- **Testes unitarios sao auto-explicativos**: Devem sobreviver entre sessoes sem contexto adicional
-- **Testes unitarios nao sao commitados**: Ficam em `thoughts/tests/`, sao nosso andaime
-- **Testes de integracao/e2e sao commitados**: Vao onde o projeto manda
-- **Marque checkpoints**: Edite o SPEC e marque `[x]` apos concluir cada tarefa
-- **Pausa entre tarefas, nao entre micro-passos**: O pair programming flui, a pausa e entre entregas
-- **Constitution compliance**: CLAUDE.md e ARCHITECTURE.md sao inegociaveis
-- **Skills ativas**: Siga as skills listadas no plano
-- **Runtime do projeto**: Use o runtime e comandos definidos no CLAUDE.md e dependencias do projeto
-- **GitHub via `gh` CLI**: Use `gh issue view`, `gh pr view` — nunca tokens manuais
-- **Subagentes como ferramenta**: Use para pesquisa, debate de abordagens, codigo paralelo
+- **TDD sem excecao**: Teste antes do codigo. Sempre. Nunca pule a red phase
+- **Testes quebrando = parada**: Se testes que passavam falham, pare e discuta com o usuario. Nunca tente consertar sozinho
+- **Nunca commite testes unitarios**: `thoughts/tests/` nunca entra no git — sao andaime, nao entrega
+- **Nunca invente runtime**: Use apenas o runtime e comandos do CLAUDE.md — nao assuma npm se o projeto usa bun, nao assuma jest se o projeto usa vitest
+- **Nunca pule a pausa**: Confirme com usuario entre tarefas. Nao entre micro-passos
+- **Nunca ignore skills**: Skills do plano sao ativadas e seguidas, nao opcionais
+- **Nunca chute comportamento de API**: Verifique na doc oficial (Context7/WebFetch/WebSearch) ou no codigo existente antes de implementar. Sem verificacao = pare e pergunte
+- **Constitution e inegociavel**: CLAUDE.md e ARCHITECTURE.md delimitam toda decisao
+- **Nunca pule o checkpoint**: Edite o SPEC e marque `[x]` apos concluir cada tarefa. Sem excecao
 - **Commits atomicos**: Cada commit = uma tarefa concluida e testada
+- **GitHub via `gh` CLI**: Nunca tokens manuais

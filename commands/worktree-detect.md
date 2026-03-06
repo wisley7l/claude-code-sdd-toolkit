@@ -236,11 +236,11 @@ feat/[slug]-[domínio-B]:
 
 ---
 
-## Guardrails Críticos
+## Guardrails
 
-- **Nunca crie branches ou commits**: apenas analise e proponha — ações são do usuário
-- **Inferência honesta**: se não conseguir determinar o propósito de um arquivo pelo caminho/nome, leia o diff antes de classificar
-- **Dependências explícitas**: sempre indique quando worktree B depende de worktree A para o merge
-- **Score transparente**: mostre quais critérios foram verdadeiros para o score calculado
-- **`gh` CLI para GitHub**: use `gh pr diff`, `gh pr view`, `gh pr list` — nunca tokens manuais
-- **Sub-SPECs retroativos são documentação, não plano**: o status `retroactive` indica que descreve código existente
+- **Nunca crie branches ou commits**: Apenas analise e proponha. Acoes sao do usuario. Sem excecao
+- **Nunca classifique sem ler**: Se nao conseguir determinar o proposito de um arquivo pelo caminho/nome, leia o diff antes de classificar. Nunca chute
+- **Nunca omita dependencias**: Sempre indique quando worktree B depende de worktree A para o merge. Ordem de merge e obrigatoria
+- **Nunca esconda o score**: Mostre quais criterios foram verdadeiros para o score calculado. Transparencia total
+- **Nunca confunda retroativo com plano**: Sub-SPECs retroativos descrevem codigo existente (status `retroactive`), nao prescrevem implementacao
+- **GitHub via `gh` CLI**: Nunca tokens manuais

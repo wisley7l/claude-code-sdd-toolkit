@@ -237,15 +237,15 @@ graph LR
 
 ## Guardrails
 
-- **Nunca comente no PR**: O relatório é local, salvo em `thoughts/shared/reviews/`
-- **Filtre pelo confidence**: Bugs/segurança ≥ 80; nomenclatura ≥ 75
-- **Não reporte issues pré-existentes**: Foque apenas no que a mudança introduz
-- **Não reporte o que o linter já captura**: O linter do projeto cuida de style/formatting
-- **Nomenclatura nunca bloqueia**: Issues do Agente 4 são sempre MINOR — informe isso claramente no relatório
-- **Queries: risco futuro conta**: Uma query sem LIMIT "funciona hoje" mas pode ser catastrófica em produção — reporte
-- **`gh` CLI para GitHub**: Use `gh pr view`, `gh pr diff` — nunca tokens manuais
-- **Seja direto**: Se não há issues críticas, diga claramente — não force problemas
-- **Sugestões embasadas**: Toda sugestão de correção DEVE ser embasada em fonte verificável. Ao sugerir uma alternativa, cite: documentação oficial da lib (link via Context7), padrão existente no projeto (`arquivo.ts:linha`), ou referência externa com URL. Nunca sugira uma correção baseada apenas em "boas práticas" genéricas sem apontar a fonte
+- **Nunca comente no PR**: O relatório é local, salvo em `thoughts/shared/reviews/`. Sem excecao
+- **Nunca reporte abaixo do threshold**: Bugs/seguranca < 80 e nomenclatura < 75 = descarte. Nao infle o relatorio
+- **Nunca reporte issues pre-existentes**: Foque apenas no que a mudanca introduz. Codigo antigo nao e escopo
+- **Nunca reporte o que o linter ja captura**: Style/formatting e do linter, nao seu
+- **Nunca force problemas**: Se nao ha issues criticas, diga claramente. Zero relatorio inflado para parecer util
+- **Nunca sugira sem fonte**: Toda sugestao de correcao DEVE citar `[Fonte: url]` (doc oficial via Context7/WebFetch), `[Fonte: path:line]` (padrao do projeto), ou referencia externa com URL. Sugestao baseada em "boas praticas" genericas sem fonte = nao inclua
+- **Nomenclatura nunca bloqueia**: Issues do Agente 4 sao sempre MINOR. Sem excecao
+- **Queries: risco futuro conta**: Query sem LIMIT "funciona hoje" mas pode ser catastrofica em producao — reporte
+- **GitHub via `gh` CLI**: Nunca tokens manuais
 
 ## Formato de Conclusão
 
