@@ -53,7 +53,30 @@ Se houver mudanças, **avisar o usuário** e perguntar se deseja:
 - Continuar removendo (perde mudanças)
 - Cancelar para commitar antes
 
-### Passo 5 — Verificar Branch Remota
+### Passo 5 — Migrar testes TDD (thoughts/tests/)
+
+Se a worktree tiver `thoughts/tests/` com arquivos:
+
+1. Resolver o root do repo principal:
+```bash
+MAIN_ROOT=$(git worktree list | head -1 | awk '{print $1}')
+```
+
+2. Copiar testes para o root:
+```bash
+mkdir -p "$MAIN_ROOT/thoughts/tests/"
+cp -r "$WORKTREE_DIR/thoughts/tests/"* "$MAIN_ROOT/thoughts/tests/"
+```
+
+3. Avisar o usuario:
+```
+Testes TDD migrados de <worktree>/thoughts/tests/ para <root>/thoughts/tests/.
+Imports e paths relativos podem precisar de ajuste manual para apontar ao root.
+```
+
+Se `thoughts/tests/` nao existir ou estiver vazio, pular este passo silenciosamente.
+
+### Passo 6 — Verificar Branch Remota
 
 Detectar a branch associada e verificar se já foi enviada ao remote:
 
@@ -64,7 +87,7 @@ git branch -vv | grep "$BRANCH"
 
 Se a branch não tiver tracking remoto, avisar o usuário antes de prosseguir.
 
-### Passo 6 — Remover Worktree
+### Passo 7 — Remover Worktree
 
 ```bash
 git worktree remove "$WORKTREE_DIR"
@@ -76,7 +99,7 @@ Se falhar por mudanças pendentes e o usuário confirmou que quer prosseguir:
 git worktree remove --force "$WORKTREE_DIR"
 ```
 
-### Passo 7 — Reportar ao Usuário
+### Passo 8 — Reportar ao Usuário
 
 Informar:
 - Worktree removida com sucesso

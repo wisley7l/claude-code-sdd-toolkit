@@ -28,7 +28,16 @@ Antes de ler ou salvar qualquer arquivo em `thoughts/`, resolva o diretorio root
 git worktree list | head -1 | awk '{print $1}'
 ```
 
-Use esse caminho como base para todos os caminhos de `thoughts/` (plans, tests, history). Isso garante que os outputs sejam salvos e lidos do repositorio principal mesmo quando executando dentro de um worktree.
+Use esse caminho como base para `thoughts/shared/` (plans, history, research). Isso garante que os outputs compartilhados sejam salvos e lidos do repositorio principal mesmo quando executando dentro de um worktree.
+
+**Excecao: `thoughts/tests/`** — veja secao "TDD: Localizacao dos testes unitarios" abaixo.
+
+## TDD: Localizacao dos testes unitarios (thoughts/tests/)
+
+- **Em worktree**: testes TDD ficam em `<worktree>/thoughts/tests/` — imports usam paths relativos ao worktree
+- **No repo principal (sem worktree)**: testes ficam em `<root>/thoughts/tests/` normalmente
+- **Ao apagar worktree**: mover testes para `<root>/thoughts/tests/` e corrigir imports/paths para apontar ao root
+- Esses testes nunca sao commitados (sao andaime do TDD)
 
 ## Configuracao Inicial
 

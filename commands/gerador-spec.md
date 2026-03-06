@@ -168,6 +168,8 @@ Este passo e **bloqueante** — nao escreva o arquivo sem completar esta revisao
 Analise o projeto para definir onde os testes vao:
 
 - **Testes unitarios**: SEMPRE em `thoughts/tests/` — sao nosso andaime de trabalho, nosso contrato entre dev e AI. Escritos antes do codigo (TDD). Nao sao commitados mas existem enquanto a pasta existir
+  - **Em worktree**: ficam em `<worktree>/thoughts/tests/` — imports usam paths relativos ao worktree
+  - **Ao apagar worktree**: mover para `<root>/thoughts/tests/` e corrigir imports/paths para apontar ao root
 - **Testes de integracao/e2e**: Se o projeto usa, vao onde o projeto manda (seguir convencao existente). Sao commitados
 
 No documento, indique claramente para cada tarefa:
@@ -186,7 +188,9 @@ Antes de salvar qualquer arquivo em `thoughts/`, resolva o diretorio root do pro
 git worktree list | head -1 | awk '{print $1}'
 ```
 
-Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositorio principal mesmo quando executando dentro de um worktree.
+Use esse caminho como base para `thoughts/shared/` (plans, history, research). Isso garante que os outputs compartilhados sejam salvos no repositorio principal mesmo quando executando dentro de um worktree.
+
+**Excecao: `thoughts/tests/`** — testes TDD ficam locais ao worktree (veja secao 7 — Estrategia de Testes).
 
 ### Arquivo
 
