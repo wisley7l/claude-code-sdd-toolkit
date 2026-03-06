@@ -187,10 +187,39 @@ Skills: [lista de skills relevantes]
 [Se houver — itens [NEEDS CLARIFICATION] ou [NEEDS VERIFICATION]]
 ```
 
-Apos escrever:
+Apos escrever o arquivo, execute a **Verificacao de Links**.
+
+### Verificacao de Links
+
+Lance um subagente para verificar todos os links (URLs) presentes no arquivo gerado:
+
+1. Extraia todas as URLs do documento (links em `[Fonte: url]`, referencias, links de documentacao, etc)
+2. Para cada URL, faca um `WebFetch` e verifique se o conteudo retornado e uma pagina real ou uma pagina de erro/404
+3. Links que redirecionam para paginas com conteudo de 404, "not found", "page doesn't exist" ou equivalente sao considerados **quebrados** mesmo que o HTTP status nao seja 404
+4. Gere um resumo no final do documento:
+
+```markdown
+## Verificacao de Links
+
+| URL | Status |
+|-----|--------|
+| [url] | OK / QUEBRADO — [motivo] |
+```
+
+5. Para cada link quebrado, o agente principal DEVE:
+   - Identificar as decisoes tecnicas que dependiam daquele link
+   - Pesquisar novamente a informacao usando outras fontes (Context7, WebSearch, WebFetch com URL alternativa)
+   - Se encontrar fonte valida: atualizar a decisao e o link no documento
+   - Se NAO encontrar fonte valida: remover a decisao das tarefas e mover para "Duvidas Pendentes" como `[NEEDS VERIFICATION]`
+6. Reescreva o documento com as correcoes antes de informar ao usuario
+
+Este passo e **bloqueante** — o documento so e considerado finalizado apos todas as claims com links quebrados serem revisadas.
+
+Apos a verificacao e correcao, informe:
 ```
 Plano salvo em thoughts/shared/plans/SPEC-DD-MM-YYYY-[slug].md
 [N] tarefas definidas.
+Links verificados: [X OK, Y quebrados]
 
 Pronto para /executor-plan quando quiser.
 ```

@@ -235,6 +235,32 @@ graph LR
 
 ---
 
+## Etapa 5 — Verificacao de Links
+
+Apos gerar o relatorio, lance um subagente para verificar todos os links (URLs) presentes no arquivo:
+
+1. Extraia todas as URLs do documento (links em `[Fonte: url]`, referencias externas, docs citadas, etc)
+2. Para cada URL, faca um `WebFetch` e verifique se o conteudo retornado e uma pagina real ou uma pagina de erro/404
+3. Links que redirecionam para paginas com conteudo de 404, "not found", "page doesn't exist" ou equivalente sao considerados **quebrados** mesmo que o HTTP status nao seja 404
+4. Gere um resumo no final do documento:
+
+```markdown
+## Verificacao de Links
+
+| URL | Status |
+|-----|--------|
+| [url] | OK / QUEBRADO — [motivo] |
+```
+
+5. Para cada link quebrado, o agente principal DEVE:
+   - Identificar as issues/sugestoes que dependiam daquele link como fonte
+   - Pesquisar novamente a informacao usando outras fontes (Context7, WebSearch, WebFetch com URL alternativa)
+   - Se encontrar fonte valida: atualizar a fonte da issue no documento
+   - Se NAO encontrar fonte valida: remover a issue do relatorio — sugestao sem fonte verificavel nao e reportada
+6. Reescreva o documento com as correcoes antes de finalizar
+
+---
+
 ## Guardrails
 
 - **Nunca comente no PR**: O relatório é local, salvo em `thoughts/shared/reviews/`. Sem excecao

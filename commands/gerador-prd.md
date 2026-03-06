@@ -129,7 +129,35 @@ Complexidade: [leve/media/pesada]
 [Duvidas, ambiguidades, itens marcados com [NEEDS VERIFICATION] ou [NEEDS CLARIFICATION]]
 ```
 
-Apos escrever o arquivo, apresente um resumo ao usuario e pergunte:
+Apos escrever o arquivo, execute a **Verificacao de Links**.
+
+### Verificacao de Links
+
+Lance um subagente para verificar todos os links (URLs) presentes no arquivo gerado:
+
+1. Extraia todas as URLs do documento (links em `[Fonte: url]`, referencias, links de documentacao, etc)
+2. Para cada URL, faca um `WebFetch` e verifique se o conteudo retornado e uma pagina real ou uma pagina de erro/404
+3. Links que redirecionam para paginas com conteudo de 404, "not found", "page doesn't exist" ou equivalente sao considerados **quebrados** mesmo que o HTTP status nao seja 404
+4. Gere um resumo no final do documento:
+
+```markdown
+## Verificacao de Links
+
+| URL | Status |
+|-----|--------|
+| [url] | OK / QUEBRADO — [motivo] |
+```
+
+5. Para cada link quebrado, o agente principal DEVE:
+   - Identificar as afirmacoes que dependiam daquele link
+   - Pesquisar novamente a informacao usando outras fontes (Context7, WebSearch, WebFetch com URL alternativa)
+   - Se encontrar fonte valida: atualizar a afirmacao e o link no documento
+   - Se NAO encontrar fonte valida: remover a afirmacao da secao "O que descobri" e mover para "O que nao ficou claro" como `[NEEDS VERIFICATION]`
+6. Reescreva o documento com as correcoes antes de apresentar ao usuario
+
+Este passo e **bloqueante** — o documento so e considerado finalizado apos todas as claims com links quebrados serem revisadas.
+
+Apos a verificacao e correcao, apresente um resumo ao usuario e pergunte:
 
 ```
 Pesquisa salva em thoughts/shared/research/PRD-DD-MM-YYYY-[slug].md

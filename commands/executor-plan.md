@@ -198,6 +198,32 @@ Plano: [caminho do SPEC]
 
 ---
 
+## Verificacao de Links do Relatorio
+
+Apos escrever o relatorio, lance um subagente para verificar todos os links (URLs) presentes no arquivo gerado:
+
+1. Extraia todas as URLs do documento (referencias, links de documentacao, etc)
+2. Para cada URL, faca um `WebFetch` e verifique se o conteudo retornado e uma pagina real ou uma pagina de erro/404
+3. Links que redirecionam para paginas com conteudo de 404, "not found", "page doesn't exist" ou equivalente sao considerados **quebrados** mesmo que o HTTP status nao seja 404
+4. Gere um resumo no final do documento:
+
+```markdown
+## Verificacao de Links
+
+| URL | Status |
+|-----|--------|
+| [url] | OK / QUEBRADO — [motivo] |
+```
+
+5. Para cada link quebrado, o agente principal DEVE:
+   - Identificar as afirmacoes que dependiam daquele link
+   - Pesquisar novamente a informacao usando outras fontes (Context7, WebSearch, WebFetch com URL alternativa)
+   - Se encontrar fonte valida: atualizar a afirmacao e o link no documento
+   - Se NAO encontrar fonte valida: remover a afirmacao e registrar nas "Observacoes" que a informacao nao pode ser verificada
+6. Reescreva o documento com as correcoes antes de finalizar
+
+---
+
 ## Guardrails
 
 - **TDD sem excecao**: Teste antes do codigo. Sempre. Nunca pule a red phase
