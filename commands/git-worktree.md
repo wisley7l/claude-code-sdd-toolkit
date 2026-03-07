@@ -52,11 +52,34 @@ Se a branch já existir, usar sem `-b`:
 git worktree add "$WORKTREE_DIR" "$ARGUMENTS"
 ```
 
-### Passo 6 — Verificar .gitignore
+### Passo 6 — Copiar testes TDD (thoughts/tests/)
+
+Testes unitarios TDD nao sao commitados, entao nao existem na nova worktree. Se o root tiver testes, copiar para a worktree:
+
+```bash
+MAIN_ROOT=$(git worktree list | head -1 | awk '{print $1}')
+```
+
+Se `$MAIN_ROOT/thoughts/tests/` existir e tiver arquivos:
+
+```bash
+mkdir -p "$WORKTREE_DIR/thoughts/tests/"
+cp -r "$MAIN_ROOT/thoughts/tests/"* "$WORKTREE_DIR/thoughts/tests/"
+```
+
+Avisar o usuario:
+```
+Testes TDD copiados de <root>/thoughts/tests/ para <worktree>/thoughts/tests/.
+Imports e paths relativos podem precisar de ajuste para apontar ao worktree.
+```
+
+Se nao existir ou estiver vazio, pular silenciosamente.
+
+### Passo 7 — Verificar .gitignore
 
 Garantir que `.worktrees/` está no `.gitignore` da raiz. Se não estiver, adicionar.
 
-### Passo 7 — Reportar ao Usuário
+### Passo 8 — Reportar ao Usuário
 
 Após criação, informar:
 - Caminho da worktree (absoluto)
