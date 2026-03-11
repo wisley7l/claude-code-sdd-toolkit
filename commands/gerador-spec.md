@@ -46,7 +46,8 @@ PRD lido. Vou:
 ### 1 — Absorver Contexto
 
 1. Leia completamente: `CLAUDE.md`, `ARCHITECTURE.md`, ADRs relevantes
-2. Leia o PRD inteiro, consumindo cada secao:
+2. Leia skills relevantes de `.claude/skills/` — absorva o conhecimento delas para informar suas decisoes de planejamento (estrategia de testes, padroes de codigo, convencoes de commit, etc). Skills nao sao apenas metadata para o executor — elas contem padroes do projeto que voce precisa conhecer para planejar tarefas coerentes
+3. Leia o PRD inteiro, consumindo cada secao:
 
 | Secao do PRD | O que extrair |
 |---|---|
@@ -136,9 +137,11 @@ Deseja dividir ou manter tudo junto?
 ## Tarefas
 
 1. [Tarefa] — testa: [o que o teste unitario valida]
+   Skills: [skills relevantes]
    Baseado em: [PRD secao/ponto de integracao]
    Riscos: [desafio tecnico do PRD, se aplicavel]
 2. [Tarefa] — testa: [o que o teste unitario valida]
+   Skills: [skills relevantes]
 ...
 
 ## Skills Relevantes
@@ -229,6 +232,7 @@ Skills: [lista de skills relevantes]
 - [ ] **1. [Titulo da Tarefa]**
   Acao: [o que fazer]
   Arquivos: [caminhos envolvidos]
+  Skills: [skills que o executor deve ativar nesta tarefa]
   Baseado em: [PRD secao/ponto de integracao]
   Riscos: [desafio tecnico do PRD, se aplicavel]
   Testes unitarios: [o que testar — descreva os casos]
@@ -237,6 +241,7 @@ Skills: [lista de skills relevantes]
 - [ ] **2. [Titulo da Tarefa]**
   Acao: [o que fazer]
   Arquivos: [caminhos envolvidos]
+  Skills: [skills relevantes para esta tarefa]
   Baseado em: [PRD secao/ponto de integracao]
   Testes unitarios: [o que testar]
 

@@ -83,6 +83,10 @@ Posso comecar?
 
 ### Para cada tarefa pendente:
 
+**0. Ativar Skills da Tarefa**
+
+Se a tarefa tem campo `Skills:`, leia cada skill listada em `.claude/skills/` antes de comecar. Isso garante que voce tenha o contexto necessario (padroes, convencoes, ferramentas) para esta tarefa especifica. Skills ja lidas na configuracao inicial nao precisam ser relidas — apenas ative as novas.
+
 **1. Escrever testes unitarios (TDD)**
 
 Antes de qualquer codigo de producao:
@@ -242,7 +246,7 @@ Apos escrever o relatorio, lance um subagente para verificar todos os links (URL
 - **Nunca exporte para testar**: Se uma funcao nao e exportada, nao crie export so para o teste. Teste-a indiretamente via os exports publicos
 - **Nunca invente runtime**: Use apenas o runtime e comandos do CLAUDE.md — nao assuma npm se o projeto usa bun, nao assuma jest se o projeto usa vitest
 - **Nunca pule a pausa**: Confirme com usuario entre tarefas. Nao entre micro-passos
-- **Nunca ignore skills**: Skills do plano sao ativadas e seguidas, nao opcionais
+- **Nunca ignore skills**: Skills do plano sao ativadas e seguidas, nao opcionais. Se a tarefa tem campo `Skills:`, ative-as antes de comecar a tarefa
 - **Nunca chute comportamento de API**: Verifique na doc oficial (Context7/WebFetch/WebSearch) ou no codigo existente antes de implementar. Sem verificacao = pare e pergunte
 - **Constitution e inegociavel**: CLAUDE.md e ARCHITECTURE.md delimitam toda decisao
 - **Nunca pule o checkpoint**: Edite o SPEC e marque `[x]` apos concluir cada tarefa. Sem excecao
