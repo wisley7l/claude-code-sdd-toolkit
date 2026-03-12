@@ -1,7 +1,6 @@
 ---
 description: Analisa branches/PRs abertos e detecta oportunidades de isolamento em worktrees
 model: sonnet
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git merge-base*), Bash(git fetch*), Bash(gh *)
 ---
 
 # Analisador de Worktree — Detecção Retroativa
