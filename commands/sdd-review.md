@@ -33,11 +33,12 @@ O que devo revisar?
    - **Branch**: `git diff dev...HEAD` (ou `main...HEAD` conforme o projeto)
    - **Commit**: `git show [hash]`
 3. Liste arquivos modificados e volume de mudanças (`+X / -Y linhas`)
-4. Se existir SPEC relacionada em `thoughts/shared/plans/`, leia-a para contexto adicional
+4. Leia os **arquivos completos** modificados pelo diff — o diff sozinho não dá contexto suficiente para avaliar impacto real
+5. Se existir SPEC relacionada em `thoughts/shared/plans/`, leia-a para contexto adicional
 
-## Etapa 2 — Análise Paralela com 5 Subagentes
+## Etapa 2 — Análise Paralela com 6 Subagentes
 
-Lance todos em paralelo:
+Lance todos em paralelo. **Pule agentes cujo escopo não aparece no diff** — ex: sem queries SQL/ORM no diff = pule Agente 5, sem arquivos de teste = pule Agente 6.
 
 **Agente 1 — Conformidade com Projeto**
 - Verifica conformidade com `CLAUDE.md` (stack, convenções, padrões)
@@ -52,6 +53,7 @@ Lance todos em paralelo:
 - Tratamento de erros ausente
 - Edge cases não tratados
 - Type mismatches
+- **Dead code introduzido**: funções, exports ou imports adicionados que não são referenciados por nenhum outro arquivo do projeto
 
 **Agente 3 — Segurança**
 - Secrets hardcoded
@@ -68,6 +70,8 @@ Foco exclusivo em legibilidade e clareza — nunca bloqueia merge, mas toda issu
 - Inconsistências de convenção no mesmo escopo (camelCase vs snake_case misturados sem motivo)
 - Abreviações excessivas que obscurecem significado (ex: `usrCtx` em vez de `userContext`)
 - Nomes que mentem sobre o que fazem (função `getUser` que também salva, `isValid` que lança exceção)
+- **Métodos/funções fora do imperativo**: funções devem comandar uma ação — `createUser`, `sendEmail`, `validateInput` — não `userCreation`, `emailSending`, `inputValidation`
+- **Booleanos sem prefixo semântico**: variáveis booleanas devem usar `is`, `has` ou `have` — ex: `isActive`, `hasPermission`, `haveAccess` — não `active`, `permission`, `allowed`
 - Sugerir nomes alternativos melhores quando encontrar problema
 
 **Agente 5 — Performance de Queries (SQL / ORM)**
@@ -84,6 +88,23 @@ Analisa queries SQL puras e queries via ORM introduzidas ou modificadas pelo dif
 
 > Queries aparentemente inofensivas em desenvolvimento podem ser problemáticas em escala.
 > Report mesmo quando a query "funciona" — o critério é o comportamento com volume real.
+
+**Agente 6 — Qualidade de Testes**
+Analisa arquivos de teste introduzidos ou modificados pelo diff:
+- **Testes que não testam nada**: assertions genéricas demais (`toBeTruthy()` em tudo), sem verificar o comportamento real
+- **Testes acoplados à implementação**: mockam internals, quebram com qualquer refactor — devem testar comportamento, não estrutura
+- **Cenários ausentes**: happy path coberto mas edge cases ignorados (input vazio, null, erro de rede, limites)
+- **Testes frágeis**: dependem de ordem de execução, estado compartilhado entre testes, ou valores hardcoded sensíveis a ambiente (timestamps, IDs auto-increment)
+- **Descrições que mentem**: `it("should return user")` mas o teste verifica outra coisa
+- **Setup excessivo**: arrange de 50 linhas para testar uma operação simples — sinal de acoplamento ou falta de factory/fixture
+- **Ausência de testes para código novo**: funcionalidade introduzida no diff sem nenhum teste correspondente
+- **Testes que testam o framework**: verificam comportamento do ORM/lib ao invés da lógica de negócio
+- **Cobertura falsa**: testes que executam o código mas não fazem assertions significativas sobre o resultado
+- **Testes inflados**: quantidade excessiva de `it()` quando múltiplas assertions relacionadas caberiam no mesmo bloco — ex: testar `name`, `email` e `id` de um mesmo retorno em 3 `it()` separados ao invés de um só
+- **Fragmentação desnecessária**: testes que compartilham o mesmo setup e verificam facetas do mesmo comportamento devem ser agrupados — mais testes ≠ mais qualidade
+
+> Testes ruins são piores que nenhum teste — dão falsa confiança e travam refactors.
+> O critério é: esse teste quebraria se o comportamento mudasse de forma errada?
 
 ## Etapa 3 — Confidence Scoring
 
@@ -164,7 +185,7 @@ graph LR
 
 ## Issues Encontradas
 
-### 🔴 CRITICAL — [Título Issue]
+### - [ ] 🔴 CRITICAL — [Título Issue]
 
 **Arquivo**: `caminho/arquivo.ts:linha`
 **Confidence**: 95/100
@@ -180,7 +201,7 @@ graph LR
 
 ---
 
-### 🟡 MAJOR — [Título Issue]
+### - [ ] 🟡 MAJOR — [Título Issue]
 
 **Arquivo**: `caminho/arquivo.ts:linha`
 **Confidence**: 85/100
@@ -190,7 +211,7 @@ graph LR
 
 ---
 
-### 🔵 MINOR — Nomenclatura: [Título Issue]
+### - [ ] 🔵 MINOR — Nomenclatura: [Título Issue]
 
 **Arquivo**: `caminho/arquivo.ts:linha`
 **Confidence**: 80/100
@@ -199,7 +220,7 @@ graph LR
 
 ---
 
-### 🔵 MINOR — Query: [Título Issue]
+### - [ ] 🔵 MINOR — Query: [Título Issue]
 
 **Arquivo**: `caminho/arquivo.ts:linha`
 **Confidence**: 82/100
@@ -215,6 +236,22 @@ graph LR
 
 ---
 
+### - [ ] 🟡 MAJOR / 🔵 MINOR — Teste: [Título Issue]
+
+**Arquivo**: `caminho/arquivo.test.ts:linha`
+**Confidence**: 85/100
+**Descrição**: [Problema identificado — ex: 5 `it()` separados testando propriedades do mesmo retorno]
+**Impacto**: [Suite inflada, setup duplicado, falsa sensação de cobertura]
+**Sugestão**: [Agrupar assertions / reescrever teste]
+
+```typescript
+// Teste atual (problemático)
+
+// Teste sugerido
+```
+
+---
+
 ## Conformidade com Projeto
 
 | Critério | Status | Observação |
@@ -224,7 +261,7 @@ graph LR
 | Schema validation | ✅ / ⚠️ / ❌ | |
 | Runtime correto (conforme CLAUDE.md) | ✅ / ⚠️ / ❌ | |
 | Error handling | ✅ / ⚠️ / ❌ | |
-| Test coverage | ✅ / ⚠️ / N/A | |
+| Test quality | ✅ / ⚠️ / N/A | |
 
 ## Referências
 
@@ -235,29 +272,15 @@ graph LR
 
 ---
 
-## Etapa 5 — Verificacao de Links
+## Etapa 5 — Verificação de Fontes
 
-Apos gerar o relatorio, lance um subagente para verificar todos os links (URLs) presentes no arquivo:
+Fontes válidas para sugestões são:
 
-1. Extraia todas as URLs do documento (links em `[Fonte: url]`, referencias externas, docs citadas, etc)
-2. Para cada URL, faca um `WebFetch` e verifique se o conteudo retornado e uma pagina real ou uma pagina de erro/404
-3. Links que redirecionam para paginas com conteudo de 404, "not found", "page doesn't exist" ou equivalente sao considerados **quebrados** mesmo que o HTTP status nao seja 404
-4. Gere um resumo no final do documento:
+- `[Fonte: path:line]` — padrão existente no próprio projeto (preferível)
+- `[Fonte: CLAUDE.md]` ou `[Fonte: ARCHITECTURE.md]` — constraint documentado do projeto
+- `[Fonte: doc oficial]` — conhecimento do modelo sobre documentação oficial da linguagem/framework (não precisa de URL)
 
-```markdown
-## Verificacao de Links
-
-| URL | Status |
-|-----|--------|
-| [url] | OK / QUEBRADO — [motivo] |
-```
-
-5. Para cada link quebrado, o agente principal DEVE:
-   - Identificar as issues/sugestoes que dependiam daquele link como fonte
-   - Pesquisar novamente a informacao usando outras fontes (Context7, WebSearch, WebFetch com URL alternativa)
-   - Se encontrar fonte valida: atualizar a fonte da issue no documento
-   - Se NAO encontrar fonte valida: remover a issue do relatorio — sugestao sem fonte verificavel nao e reportada
-6. Reescreva o documento com as correcoes antes de finalizar
+**Não exija URLs externas**. Sugestões baseadas em padrões do projeto, documentação oficial conhecida ou evidência direta no código são válidas. Descarte apenas sugestões que não têm nenhuma base verificável — nem no código, nem em docs conhecidas.
 
 ---
 
@@ -268,7 +291,7 @@ Apos gerar o relatorio, lance um subagente para verificar todos os links (URLs) 
 - **Nunca reporte issues pre-existentes**: Foque apenas no que a mudanca introduz. Codigo antigo nao e escopo
 - **Nunca reporte o que o linter ja captura**: Style/formatting e do linter, nao seu
 - **Nunca force problemas**: Se nao ha issues criticas, diga claramente. Zero relatorio inflado para parecer util
-- **Nunca sugira sem fonte**: Toda sugestao de correcao DEVE citar `[Fonte: url]` (doc oficial via Context7/WebFetch), `[Fonte: path:line]` (padrao do projeto), ou referencia externa com URL. Sugestao baseada em "boas praticas" genericas sem fonte = nao inclua
+- **Nunca sugira sem base**: Toda sugestão DEVE citar `[Fonte: path:line]` (padrão do projeto), `[Fonte: CLAUDE.md/ARCHITECTURE.md]` (constraint documentado), ou `[Fonte: doc oficial]` (documentação conhecida da linguagem/framework). Sugestão baseada apenas em "boas práticas" genéricas sem evidência = não inclua
 - **Nomenclatura nunca bloqueia**: Issues do Agente 4 sao sempre MINOR. Sem excecao
 - **Queries: risco futuro conta**: Query sem LIMIT "funciona hoje" mas pode ser catastrofica em producao — reporte
 - **GitHub via `gh` CLI**: Nunca tokens manuais
