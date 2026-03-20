@@ -1,6 +1,5 @@
 ---
 description: Pair programming — executa tarefas com TDD
-model: sonnet
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(ls *), Bash(mkdir *), Bash(cp *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 

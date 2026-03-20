@@ -1,6 +1,5 @@
 ---
 description: Gerador de PDR (Preliminary Design Research) — Fase 0 do workflow SDD
-model: sonnet
 allowed-tools: Read, Write, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(gh *), Bash(ls *), Bash(mkdir *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 

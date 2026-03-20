@@ -1,6 +1,5 @@
 ---
 description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/shared/reviews/
-model: sonnet
 allowed-tools: Read, Write, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(gh *)
 ---
 
