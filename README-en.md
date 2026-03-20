@@ -22,7 +22,8 @@ These commands turn Claude Code into a structured development partner that follo
 | Command | Description |
 |---------|-------------|
 | `/git-worktree` | Creates an isolated worktree from the default branch for parallel work |
-| `/git-remove-worktree` | Safely removes a worktree, checking for uncommitted changes first |
+| `/git-remove-worktree` | Safely removes a worktree, syncing TDD tests before deletion |
+| `/sync-tests` | Syncs TDD tests between worktree and root, showing diffs before acting |
 | `/git-prune-branches` | Removes local branches whose remotes have been deleted |
 | `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
 
@@ -115,6 +116,7 @@ commands/
   sdd-review.md             # Review
   git-worktree.md           # Create worktree
   git-remove-worktree.md    # Remove worktree
+  sync-tests.md             # Sync TDD tests
   git-prune-branches.md     # Prune local branches
   worktree-detect.md        # Analyze worktree opportunities
 deprecated/

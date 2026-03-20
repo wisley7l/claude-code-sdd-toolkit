@@ -53,28 +53,17 @@ Se houver mudanças, **avisar o usuário** e perguntar se deseja:
 - Continuar removendo (perde mudanças)
 - Cancelar para commitar antes
 
-### Passo 5 — Migrar testes TDD (thoughts/tests/)
+### Passo 5 — Sincronizar testes TDD (thoughts/tests/)
 
-Se a worktree tiver `thoughts/tests/` com arquivos:
+Invocar o comando `/sync-tests` passando o caminho da worktree:
 
-1. Resolver o root do repo principal:
-```bash
-MAIN_ROOT=$(git worktree list | head -1 | awk '{print $1}')
+```
+/sync-tests $WORKTREE_DIR
 ```
 
-2. Copiar testes para o root:
-```bash
-mkdir -p "$MAIN_ROOT/thoughts/tests/"
-cp -r "$WORKTREE_DIR/thoughts/tests/"* "$MAIN_ROOT/thoughts/tests/"
-```
+Esse comando compara os testes entre worktree e root, mostra diffs dos modificados, e pede confirmacao antes de agir. O worktree e a fonte da verdade.
 
-3. Avisar o usuario:
-```
-Testes TDD migrados de <worktree>/thoughts/tests/ para <root>/thoughts/tests/.
-Imports e paths relativos podem precisar de ajuste manual para apontar ao root.
-```
-
-Se `thoughts/tests/` nao existir ou estiver vazio, pular este passo silenciosamente.
+Se `thoughts/tests/` nao existir ou estiver vazio no worktree, o sync-tests encerra sozinho — prosseguir para o proximo passo.
 
 ### Passo 6 — Verificar Branch Remota
 

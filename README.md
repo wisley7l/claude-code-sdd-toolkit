@@ -22,7 +22,8 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 |---------|-----------|
 | `/sdd-review` | Analisa PR, branch ou diff e gera relatorio privado de review |
 | `/git-worktree` | Cria uma worktree isolada para trabalho paralelo |
-| `/git-remove-worktree` | Remove uma worktree de forma segura |
+| `/git-remove-worktree` | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
+| `/sync-tests` | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
 | `/git-prune-branches` | Remove branches locais cujas remotas ja foram deletadas |
 | `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees |
 
@@ -105,6 +106,7 @@ commands/
   sdd-review.md             # Review
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree
+  sync-tests.md             # Sincronizar testes TDD
   git-prune-branches.md     # Limpar branches
   worktree-detect.md        # Analisar worktrees
 deprecated/
