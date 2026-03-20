@@ -1,6 +1,6 @@
 ---
 description: Sincroniza testes TDD (thoughts/tests/) entre worktree e root, mostrando diffs antes de agir.
-argument-hint: <caminho-da-worktree>
+argument-hint: [caminho-da-worktree]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---
 
@@ -12,7 +12,7 @@ Compara e sincroniza `thoughts/tests/` entre um worktree e o repo root, garantin
 
 ## Argumentos
 
-- `$ARGUMENTS` — Caminho da worktree (obrigatorio). Se vazio, listar worktrees disponiveis e perguntar qual usar via AskUserQuestion.
+- `$ARGUMENTS` — Caminho da worktree (opcional). Se vazio, detectar automaticamente.
 
 ## Fluxo de Execucao
 
@@ -20,8 +20,14 @@ Compara e sincroniza `thoughts/tests/` entre um worktree e o repo root, garantin
 
 ```bash
 MAIN_ROOT=$(git worktree list | head -1 | awk '{print $1}')
-WORKTREE_DIR="$ARGUMENTS"
+CURRENT_DIR=$(git rev-parse --show-toplevel)
 ```
+
+**Detectar worktree automaticamente** quando `$ARGUMENTS` estiver vazio:
+
+1. Se `$CURRENT_DIR` != `$MAIN_ROOT` → estamos num worktree, usar `WORKTREE_DIR=$CURRENT_DIR`
+2. Se `$CURRENT_DIR` == `$MAIN_ROOT` → estamos no root, listar worktrees disponiveis e perguntar qual usar via AskUserQuestion
+3. Se `$ARGUMENTS` foi fornecido → usar `WORKTREE_DIR=$ARGUMENTS`
 
 Validar que ambos os diretorios existem. Se `$WORKTREE_DIR/thoughts/tests/` nao existir ou estiver vazio:
 
