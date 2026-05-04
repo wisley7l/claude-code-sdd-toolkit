@@ -121,17 +121,6 @@ Deseja dividir ou manter tudo junto?
 **Antes de escrever o arquivo**, apresente ao usuario:
 
 ```
-## Resumo Executivo (preview)
-
-**O que vamos implementar**: [2-3 linhas]
-**Estrategia geral**: [2-3 linhas]
-**Tarefas (visao de cima)**:
-1. [Titulo] — [1 linha do que entrega]
-2. [Titulo] — [1 linha do que entrega]
-...
-**Riscos principais**: [bullets]
-**Pre-requisitos**: [decisoes resolvidas, dependencias]
-
 ## Meu Entendimento
 
 [O que entendi do problema — direto, sem formalismo]
@@ -145,17 +134,13 @@ Deseja dividir ou manter tudo junto?
 [Como pretendo resolver — a direcao tecnica, nao micro-passos]
 [Conectar com pontos de integracao (PRD 5.1) e desafios (PRD 5.2)]
 
-## Tarefas (detalhe)
+## Tarefas
 
-1. [Tarefa]
-   Resumo: [1-2 linhas — o que entrega e por que existe]
-   Testa: [o que o teste unitario valida]
+1. [Tarefa] — testa: [o que o teste unitario valida]
    Skills: [skills relevantes]
    Baseado em: [PRD secao/ponto de integracao]
    Riscos: [desafio tecnico do PRD, se aplicavel]
-2. [Tarefa]
-   Resumo: [1-2 linhas]
-   Testa: [o que o teste unitario valida]
+2. [Tarefa] — testa: [o que o teste unitario valida]
    Skills: [skills relevantes]
 ...
 
@@ -168,8 +153,6 @@ Deseja dividir ou manter tudo junto?
 ---
 Faz sentido? Ajusta algo antes de eu finalizar?
 ```
-
-> O Resumo Executivo apresentado aqui e o mesmo que ira no topo do arquivo final. Aprove o resumo + as tarefas — se algo nao bate entre eles, ajuste antes de eu escrever.
 
 Aguarde aprovacao ou ajustes.
 
@@ -224,29 +207,6 @@ Data: DD-MM-YYYY
 PRD: [caminho do PRD]
 Skills: [lista de skills relevantes]
 
-## Resumo Executivo
-
-> Escrito **por ultimo**, depois das outras secoes estarem completas. Permite leitura rapida sem perder contexto.
-
-**O que vamos implementar**
-[2-3 linhas — o objetivo concreto da entrega]
-
-**Estrategia geral**
-[2-3 linhas — a abordagem tecnica em alto nivel, sem detalhar passo a passo]
-
-**Tarefas (visao de cima)**
-1. [Titulo da Tarefa 1] — [1 linha do que entrega]
-2. [Titulo da Tarefa 2] — [1 linha do que entrega]
-3. [...]
-
-**Riscos principais**
-- [risco mais relevante — extraido do PRD secao 5.2 ou identificado no planejamento]
-- [...]
-
-**Pre-requisitos**
-- Decisoes resolvidas: [questoes do PRD ja respondidas — referencia rapida]
-- Dependencias externas: [libs, servicos, acessos necessarios antes de comecar]
-
 ## Entendimento
 
 [O que entendi do problema e como vou resolver — direto]
@@ -270,8 +230,7 @@ Skills: [lista de skills relevantes]
 ## Tarefas
 
 - [ ] **1. [Titulo da Tarefa]**
-  Resumo: [1-2 linhas — o que esta tarefa entrega e por que ela existe]
-  Acao: [como fazer — detalhe tecnico]
+  Acao: [o que fazer]
   Arquivos: [caminhos envolvidos]
   Skills: [skills que o executor deve ativar nesta tarefa]
   Baseado em: [PRD secao/ponto de integracao]
@@ -280,8 +239,7 @@ Skills: [lista de skills relevantes]
   Testes integracao: [se aplicavel]
 
 - [ ] **2. [Titulo da Tarefa]**
-  Resumo: [1-2 linhas — o que esta tarefa entrega e por que ela existe]
-  Acao: [como fazer — detalhe tecnico]
+  Acao: [o que fazer]
   Arquivos: [caminhos envolvidos]
   Skills: [skills relevantes para esta tarefa]
   Baseado em: [PRD secao/ponto de integracao]
@@ -349,5 +307,3 @@ Pronto para /executor-plan quando quiser.
 - **Nunca force worktree**: Proponha split apenas quando score >= 2 criterios. Nao pressione
 - **Diagrama obrigatorio**: Mapeie a arquitetura real das mudancas, nao copie exemplos genericos
 - **GitHub via `gh` CLI**: Nunca tokens manuais
-- **Resumo Executivo por ultimo**: Escreva o Resumo Executivo do arquivo final apos as outras secoes (Entendimento, Decisoes, Diagrama, Tarefas) estarem completas. Cada bullet do resumo deve corresponder a conteudo real das secoes seguintes — sem isso, vira repeticao da request
-- **Resumo em toda tarefa**: Sem excecao — cada tarefa comeca com `Resumo:` (1-2 linhas: o que entrega e por que existe). Antes do `Acao:` tecnico

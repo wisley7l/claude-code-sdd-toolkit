@@ -74,20 +74,6 @@ Após retorno de todos os agentes:
 2. Identifique gaps e conflitos entre o que existe e o que se pretende
 3. Classifique tudo que não está claro como `[NEEDS CLARIFICATION]`
 
-## Fase 0e — Resumo Executivo (por último)
-
-**Ordem obrigatória de preenchimento do documento:**
-
-1. Preencha primeiro as seções **2 a 7** (Constitution, Análise Local, Referências, Viabilidade, Sinais para a Spec, Fontes)
-2. **Só depois** volte e escreva a **Seção 1 — Resumo Executivo**, destilando os achados reais das seções 2-7
-
-**Por que esta ordem**: se o resumo for escrito antes, ele vira repetição da request inicial — não dos achados. Escrevê-lo por último garante que reflita pesquisa real, não expectativa.
-
-**Validação antes de finalizar:**
-- Resumo tem entre 15 e 50 linhas?
-- Cada bullet do resumo aponta para conteúdo real nas seções 2-7?
-- Um leitor que lê **só** o resumo entende o suficiente pra decidir aprofundar?
-
 ---
 
 # Output: Documento PRD
@@ -117,31 +103,9 @@ related_specs: []
 > **Nota SDD**: Este documento é a Fase 0 (Research) do workflow Specification-Driven Development.
 > Não constitui spec final nem proposta de implementação. Alimenta as fases seguintes: Spec → Plan → Tasks.
 
-## 1. Resumo Executivo
+## 1. Visão Geral
 
-> **Mínimo 15 linhas, máximo 50 linhas.** Esta seção é escrita **por último**, depois das seções 2-7 estarem completas. O leitor humano deve conseguir decidir aqui se aprofunda ou aceita.
-
-**Objetivo da pesquisa**
-[1-2 linhas — o que está sendo investigado e por quê]
-
-**Principais achados** (3-7 bullets, 1 linha cada)
-- [achado mais relevante extraído da seção 3 ou 4]
-- [achado seguinte]
-- [...]
-
-**Constraints críticos** (extraídos da seção 2 — 2-4 bullets)
-- [constraint que mais delimita as opções técnicas]
-- [...]
-
-**Riscos / Desafios** (extraídos da seção 5.2 — 2-4 bullets)
-- [desafio técnico mais impactante]
-- [...]
-
-**Pendências** (resumo da seção 5.3)
-- [N] questões `[NEEDS CLARIFICATION]` — [1 linha do que mais bloqueia]
-
-**Para a próxima fase (Spec)**
-[1-2 linhas — direcionamento alto-nível baseado na seção 6, sem prescrever solução]
+[Resumo do objetivo da pesquisa e do problema sendo investigado — 3 a 5 linhas]
 
 ## 2. Constitution do Projeto (Constraints Imutáveis)
 
@@ -241,4 +205,3 @@ graph LR
 - **[NEEDS CLARIFICATION]**: Ambiguidade vai para Seção 5.3 — nunca assuma
 - **Constitution first**: Constraints de CLAUDE.md/ARCHITECTURE.md são inegociáveis — sempre na Seção 2
 - **Diagrama de impacto obrigatório**: A seção 3.4 deve ter um diagrama Mermaid real — não use o exemplo do template, mapeie os componentes reais identificados na pesquisa
-- **Resumo Executivo por último**: A Seção 1 só é escrita após as seções 2-7 estarem completas. Tamanho entre 15 e 50 linhas. Cada bullet aponta para conteúdo real nas seções seguintes — sem isso, vira repetição da request
