@@ -122,13 +122,33 @@ Se a tarefa especificar testes de integracao/e2e:
 - Siga a convencao existente do projeto
 - Execute e valide
 
-**6. Commit**
+**6. Simplificar (com confirmacao do usuario)**
 
-- Commit atomico da tarefa (codigo de producao + testes de integracao se houver)
+Antes de commitar, pergunte ao usuario se deve passar o `code-simplifier` no codigo da tarefa:
+
+```
+Tarefa [N] verificada — testes passando.
+Posso passar o code-simplifier antes do commit?
+[Arquivos alterados: lista]
+```
+
+Se o usuario aprovar:
+- Lance o subagent `code-simplifier` (via `Agent` com `subagent_type: code-simplifier`) escopado aos arquivos alterados na tarefa
+- Apos o simplifier rodar, **reexecute os testes** (unitarios + integracao) — TODOS devem continuar passando
+- Se algum teste quebrar pos-simplificacao: PARE, mostre o que quebrou ao usuario, e discutam antes de prosseguir
+- Se tudo passar: prossiga ao commit incluindo as mudancas do simplifier no mesmo commit atomico
+
+Se o usuario recusar: prossiga direto ao commit.
+
+A pergunta e feita a cada tarefa — usuario pode aceitar ou recusar caso a caso.
+
+**7. Commit**
+
+- Commit atomico da tarefa (codigo de producao + simplificacao + testes de integracao se houver)
 - Testes unitarios de `thoughts/tests/` NAO entram no commit
 - Mensagem clara descrevendo o que foi feito
 
-**7. Marcar e Pausar**
+**8. Marcar e Pausar**
 
 - Edite o arquivo SPEC e marque a tarefa como concluida: `- [ ]` → `- [x]`
 - Informe o usuario:
@@ -173,7 +193,18 @@ Apos todas as tarefas concluidas:
 1. Execute TODOS os testes unitarios de `thoughts/tests/`
 2. Execute testes de integracao/e2e se existirem
 3. Execute typecheck e lint do projeto
-4. Informe o resultado ao usuario
+4. **Passada final do code-simplifier (com confirmacao)**:
+   ```
+   Todas as tarefas concluidas e testes passando.
+   Posso rodar uma passada final do code-simplifier sobre todo o conjunto de mudancas da feature?
+   [Escopo: arquivos alterados desde o branch base]
+   ```
+   Se o usuario aprovar:
+   - Lance o subagent `code-simplifier` escopado aos arquivos alterados desde a branch base (`git diff <base>...HEAD --name-only`)
+   - Reexecute todos os testes apos o simplifier
+   - Se algo quebrar: PARE e discuta com o usuario
+   - Se tudo passar: faca um commit separado de simplificacao final (`refactor: simplify [feature]`)
+5. Informe o resultado ao usuario
 
 ---
 
@@ -251,4 +282,6 @@ Apos escrever o relatorio, lance um subagente para verificar todos os links (URL
 - **Constitution e inegociavel**: CLAUDE.md e ARCHITECTURE.md delimitam toda decisao
 - **Nunca pule o checkpoint**: Edite o SPEC e marque `[x]` apos concluir cada tarefa. Sem excecao
 - **Commits atomicos**: Cada commit = uma tarefa concluida e testada
+- **Simplifier nunca silencia testes quebrados**: Se a passada do `code-simplifier` quebrar testes que passavam, PARE. Nao reverta sozinho — discuta com o usuario. Simplificacao que quebra contrato e mudanca de comportamento, nao limpeza
+- **Simplifier sempre com confirmacao**: A pergunta sobre rodar o simplifier (passo 6 e Verificacao Final) e a cada vez. Nao assuma "sim" porque o usuario aceitou antes
 - **GitHub via `gh` CLI**: Nunca tokens manuais

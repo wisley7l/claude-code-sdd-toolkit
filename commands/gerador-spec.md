@@ -267,6 +267,14 @@ Skills: [lista de skills relevantes]
 - Testes de integracao: [caminho do projeto, se aplicavel]
 - Convencao do projeto: [o que o projeto ja usa — jest, vitest, go test, etc]
 
+## Simplificacao
+
+Ao executar este plano, o `/executor-plan` ira:
+- Ao fim de cada tarefa (apos testes verdes, antes do commit): perguntar se deve passar o subagent `code-simplifier` no codigo alterado
+- Apos todas as tarefas concluidas: oferecer uma passada final do `code-simplifier` sobre o conjunto da feature
+
+A confirmacao e a cada vez — usuario decide tarefa a tarefa.
+
 ## Tarefas
 
 - [ ] **1. [Titulo da Tarefa]**
