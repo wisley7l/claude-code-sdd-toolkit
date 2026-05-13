@@ -8,13 +8,15 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 
 ## O que tem aqui
 
-### Workflow Principal (3 fases)
+### Workflow Principal v7 (auto-sizing)
 
 | Fase | Command | Descricao |
 |------|---------|-----------|
-| Pesquisar | `/gerador-prd` | Investiga o problema: analisa codebase, consulta docs, mapeia o terreno. Profundidade proporcional a tarefa |
-| Entender | `/gerador-spec` | Le a pesquisa, entende o problema, divide em tarefas praticas com TDD. Pausa para aprovacao |
-| Codar | `/executor-plan` | Pair programming: escreve testes antes do codigo, implementa, refatora. Pausa entre tarefas |
+| Pesquisar | `/gerador-prd` | Investiga o problema: analisa codebase, consulta docs, mapeia design docs existentes. Le e propoe escrita em `thoughts/STATE.md` |
+| Entender | `/gerador-spec` | Le a pesquisa, classifica complexidade (Medium/Large/Complex), reconcilia com docs do projeto, divide em tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). DESIGN.md separado opcional |
+| Codar | `/executor-plan` | Pair programming com TDD. Sub-agents paralelos para tarefas `[P]`. Test count protection (bloqueia silent deletion). Pausa entre tarefas. Atualiza STATE.md |
+| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula PRD/SPEC. Safety valve sobe para fluxo formal se escopo crescer |
+| Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com PRD/SPEC/IMP existentes |
 
 ### Utilitarios
 
@@ -27,17 +29,20 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | `/git-prune-branches` | Remove branches locais cujas remotas ja foram deletadas |
 | `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees |
 
-### Depreciados
+### Versoes anteriores
 
-Versoes anteriores dos commands estao em `deprecated/commands/` para referencia:
-- `v1` — versoes iniciais independentes
-- `v2` — versoes SDD com pipeline formal (PRD -> Spec -> Executor -> Review)
+- **v6** — versao estavel anterior, mantida em `commands/v6/` como fallback. Se a v7 piorar para algum projeto, basta copiar os arquivos de `v6/` por cima dos de `commands/`
+- **v1-v5** — versoes historicas em `deprecated/commands/` e `commands/deprecated/`
 
 ## Principios
 
 - **Zero Inferencia** — Nunca assume comportamento de APIs ou padroes. Verifica na documentacao oficial (via [Context7](https://context7.com/)) ou no codigo existente
 - **Constitution-first** — Commands leem `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer acao
 - **TDD como contrato** — Testes unitarios sao escritos antes do codigo. Se quebram, paramos e discutimos
+- **Memoria persistente** — `thoughts/STATE.md` guarda decisoes/blockers/licoes entre sessoes. Escrita sempre sob confirmacao
+- **Auto-sizing** — Complexidade determina profundidade: Quick (`/quick-task`), Medium (SPEC combinado), Large/Complex (SPEC + DESIGN opt-in)
+- **Test count protection** — Toda tarefa declara `Test count: N tests pass`. Cair = bloqueio (previne silent deletion)
+- **Paralelismo seguro** — Tarefas `[P]` rodam em sub-agents simultaneos, com checagem de conflito de arquivos
 - **Adaptavel ao projeto** — Segue convencoes, skills e estrutura de cada projeto
 - **Pair programming** — Estilo colaborativo, nao pipeline burocratico
 
@@ -76,57 +81,118 @@ cp commands/*.md /seu-projeto/.claude/commands/
 ### 3. Fluxo Recomendado
 
 ```
-Tarefa complexa/desconhecida:
-  /gerador-prd    -> pesquisa e entendimento
-    limpar sessao
-  /gerador-spec   -> entender + dividir em tarefas
-    limpar sessao
-  /executor-plan  -> codar com TDD, tarefa por tarefa
+Quick — mudanca pequena (≤3 arquivos, 1 frase):
+  /quick-task     -> executa direto com TDD onde aplicavel
+                     (safety valve: se crescer, sugere fluxo formal)
 
-Tarefa clara:
-  /gerador-spec   -> dividir em tarefas (ou pular)
-  /executor-plan  -> codar direto
+Medium/Large/Complex — feature normal:
+  /gerador-prd    -> pesquisa + mapeia design docs existentes
+    limpar sessao
+  /gerador-spec   -> classifica escopo, planeja tarefas com Phases + [P]
+                     3 checks pre-aprovacao (Granularity, Diagram, Test Co-location)
+    limpar sessao
+  /executor-plan  -> codar com TDD. Sub-agents paralelos para [P].
+                     Test count protection.
+
+Multi-feature (visao de cima):
+  /roadmap                       -> sincroniza status com PRDs/SPECs/IMPs
+  /roadmap add "<descricao>"     -> adiciona ao Backlog
+  /roadmap add #123              -> importa de issue GH
 ```
 
-> Limpe a sessao entre commands para maximizar a janela de contexto. Os artefatos em `thoughts/` servem como handoff entre sessoes.
+> Limpe a sessao entre commands grandes (PRD -> SPEC -> Executor) para maximizar a janela de contexto. Os artefatos em `thoughts/` servem como handoff entre sessoes.
 
-### 4. Testes
+### 4. STATE.md (memoria persistente)
+
+`thoughts/STATE.md` guarda contexto entre sessoes:
+- **Decisoes arquiteturais** — decisoes que persistem alem de uma feature
+- **Blockers conhecidos** — coisas que ja travaram trabalho, com sintoma para reconhecer
+- **Licoes aprendidas** — abordagens testadas que nao funcionaram, padroes que provaram valor
+- **Ideias adiadas** — coisas que apareceram mas nao entraram no escopo atual
+- **Preferencias do usuario** — estilo de trabalho, ferramentas, padroes de comunicacao
+
+Todos os commands leem o STATE no inicio. **Escrita sempre sob confirmacao do usuario** — o command propoe entradas, voce aprova caso a caso. O executor escreve naturalmente ao final, mas qualquer command pode perguntar "isso parece util pro STATE?" se detectar padrao novo.
+
+### 5. Testes
 
 - **Testes unitarios**: Sempre em `thoughts/tests/`, escritos antes do codigo (TDD). Nao sao commitados, sao nosso andaime de trabalho
+- **Test count protection**: Toda tarefa declara `Test count: N tests pass`. Se cair durante execucao = parada obrigatoria (previne silent deletion)
 - **Testes de integracao/e2e**: Quando o projeto usa, vao onde o projeto manda e sao commitados
+- **Test co-location**: Testes vao na MESMA tarefa que cria o codigo. Defer = anti-pattern bloqueado pelo gerador-spec
 - Se testes que passavam comecam a falhar: parada obrigatoria para discutir
 
 ## Estrutura
 
+### Toolkit
+
 ```
 commands/
-  gerador-prd.md            # Pesquisar
-  gerador-spec.md           # Entender + Tarefas
-  executor-plan.md          # Codar com TDD
+  gerador-prd.md            # v7 — Pesquisar
+  gerador-spec.md           # v7 — Entender + Tarefas
+  executor-plan.md          # v7 — Codar com TDD + paralelismo
+  quick-task.md             # v7 — Modo rapido
+  roadmap.md                # v7 — Gerenciar ROADMAP.md
   sdd-review.md             # Review
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree
   sync-tests.md             # Sincronizar testes TDD
   git-prune-branches.md     # Limpar branches
   worktree-detect.md        # Analisar worktrees
+  v6/                       # Versao anterior (fallback)
+    gerador-prd.md
+    gerador-spec.md
+    executor-plan.md
+  deprecated/               # v3, v4, v5
 deprecated/
-  commands/
-    gerador-prd.v1.md       # Pesquisa v1
-    gerador-spec.v1.md      # Spec v1
-    executor-plan.v1.md     # Executor v1
-    gerador-prd.v2.md       # Pesquisa v2 (SDD formal)
-    gerador-spec.v2.md      # Spec v2 (SDD formal)
-    executor-plan.v2.md     # Executor v2 (SDD formal)
+  commands/                 # v1, v2
 ```
+
+### Outputs em `thoughts/` (no projeto onde os commands rodam)
+
+```
+thoughts/
+  ROADMAP.md                  # Visao multi-feature (opcional)
+  STATE.md                    # Memoria persistente (opcional, criado sob confirmacao)
+  research/
+    PRD-DD-MM-YYYY-slug.md    # Output do /gerador-prd
+  plans/
+    SPEC-DD-MM-YYYY-slug.md   # Output do /gerador-spec
+    DESIGN-DD-MM-YYYY-slug.md # Output opcional do /gerador-spec (Large/Complex)
+  history/
+    IMP-DD-MM-YYYY-slug.md    # Output do /executor-plan
+  reviews/
+    (output do /sdd-review)
+  quick/
+    NNN-slug/
+      TASK.md                 # Input do /quick-task
+      SUMMARY.md              # Output do /quick-task
+  tests/                      # Andaime TDD (NAO commitado)
+```
+
+> Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`.
 
 ## Inspiracoes
 
 - **[spec-kit](https://github.com/github/spec-kit)** — Toolkit oficial do GitHub para Spec-Driven Development
+- **[tlc-spec-driven (Tech Lead's Club)](https://github.com/tech-leads-club/agent-skills/blob/main/packages/skills-catalog/skills/(development)/tlc-spec-driven/SKILL.md)** — Skill de Spec-Driven Development com 4 fases adaptativas (Specify, Design, Tasks, Execute), auto-sizing por complexidade, STATE.md persistente, Test Co-location Validation e formalizacao de paralelismo (`[P]`, `Depends on:`, `Gate:`). Autor: Felipe Rodrigues. A partir da v7 deste toolkit, varios conceitos sao adaptados desta skill — veja [Atribuicoes](#atribuicoes-e-licencas-de-terceiros)
 - **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Padroes de context engineering para agentes de IA
 - **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Exemplos praticos de commands
 - **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Walkthrough de um workflow SDD real
 - Extreme Programming (XP) — Pair programming, TDD, small releases
 
+## Atribuicoes e Licencas de Terceiros
+
+Este toolkit incorpora conceitos adaptados de obras de terceiros. As licencas originais sao preservadas e atribuicao e dada conforme exigido.
+
+### tlc-spec-driven
+
+- **Autor**: Felipe Rodrigues — https://github.com/felipfr
+- **Fonte**: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/tlc-spec-driven
+- **Licenca original**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Status**: adaptado (nao copiado literalmente). Conceitos incorporados a partir da v7 deste toolkit: auto-sizing por complexidade (Quick/Medium/Large/Complex), `STATE.md` persistente, marcadores `[P]` / `Depends on:` / `Gate:` em tarefas, Granularity Check, Diagram-Definition Cross-Check, Test Co-location Validation, agrupamento em Phases (Foundation/Core/Integration), `Test count: N tests pass (no silent deletions)`
+
+A CC-BY-4.0 e uma licenca permissiva e compativel com a MIT — permite uso, modificacao e redistribuicao desde que se atribua o autor original e se indiquem modificacoes feitas. Esta secao cumpre essa exigencia.
+
 ## Licenca
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) — codigo proprio deste toolkit. Trechos adaptados de obras de terceiros mantem suas licencas originais (ver [Atribuicoes](#atribuicoes-e-licencas-de-terceiros)).

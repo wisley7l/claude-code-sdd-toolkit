@@ -8,28 +8,31 @@ These commands turn Claude Code into a structured development partner that follo
 
 ## What's Inside
 
-### SDD Workflow (3-phase pipeline)
+### Main Workflow v7 (auto-sizing)
 
 | Phase | Command | Description |
 |-------|---------|-------------|
-| 0 — Research | `/gerador-prd` | Scouts the codebase and external docs, producing a PRD (Preliminary Design Research) without prescribing solutions |
-| 1 — Spec + Plan | `/gerador-spec` | Reads the PRD and produces a two-part document: **Part A** (what & why) and **Part B** (how — atomic micro-tasks) |
-| 2 — Execute | `/executor-plan` | Executes micro-tasks one at a time, pausing for user approval after each step |
-| Review | `/sdd-review` | Analyzes a PR, branch, or diff and generates a private review report with confidence scoring |
+| Research | `/gerador-prd` | Scouts the codebase, queries docs, maps existing design docs. Reads and proposes writes to `thoughts/STATE.md` |
+| Plan | `/gerador-spec` | Reads PRD, classifies complexity (Medium/Large/Complex), reconciles with project docs, breaks down into tasks with Phases + `[P]`/`Depends on:`/`Gate:`. 3 pre-approval checks (Granularity, Diagram-Definition Cross-Check, Test Co-location). Optional separate DESIGN.md |
+| Execute | `/executor-plan` | Pair programming with TDD. Parallel sub-agents for `[P]` tasks. Test count protection (blocks silent deletion). Pauses between tasks. Updates STATE.md |
+| Quick | `/quick-task` | Quick mode for small changes (≤3 files, 1 sentence). Skips PRD/SPEC. Safety valve escalates to formal flow if scope grows |
+| Roadmap | `/roadmap` | Manages `thoughts/ROADMAP.md`. Adds entries, imports from GH issues, syncs status with existing PRD/SPEC/IMP |
 
 ### Git Utilities
 
 | Command | Description |
 |---------|-------------|
+| `/sdd-review` | Analyzes a PR, branch, or diff and generates a private review report with confidence scoring |
 | `/git-worktree` | Creates an isolated worktree from the default branch for parallel work |
 | `/git-remove-worktree` | Safely removes a worktree, syncing TDD tests before deletion |
 | `/sync-tests` | Syncs TDD tests between worktree and root, showing diffs before acting |
 | `/git-prune-branches` | Removes local branches whose remotes have been deleted |
 | `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
 
-### Deprecated (v1)
+### Previous Versions
 
-Older versions of the SDD commands are kept in `deprecated/commands/` for reference. They work independently but lack some features of the current versions (worktree integration, checkpoint tracking, diagram generation).
+- **v6** — previous stable version, kept in `commands/v6/` as fallback. If v7 doesn't work for a project, copy `v6/` files over `commands/`
+- **v1-v5** — historical versions in `deprecated/commands/` and `commands/deprecated/`
 
 ## Core Principles
 
@@ -37,6 +40,10 @@ These commands enforce a few non-negotiable rules:
 
 - **Zero Inference** — Never assume API behavior or patterns. Always verify against official documentation (via [Context7](https://context7.com/) MCP) or existing project code. If no verifiable source is found, mark as `[NEEDS VERIFICATION]`
 - **Constitution-first** — Commands always read `CLAUDE.md` and `ARCHITECTURE.md` before any action, making them stack-agnostic
+- **Persistent memory** — `thoughts/STATE.md` holds decisions/blockers/lessons across sessions. Writes always require user confirmation
+- **Auto-sizing** — Complexity determines depth: Quick (`/quick-task`), Medium (combined SPEC), Large/Complex (SPEC + optional DESIGN)
+- **Test count protection** — Every task declares `Test count: N tests pass`. If it drops = block (prevents silent deletion)
+- **Safe parallelism** — `[P]` tasks run in concurrent sub-agents, with file conflict checks
 - **Atomic execution** — The executor never advances to the next task without explicit user approval
 - **Source transparency** — Every external reference used by subagents must appear in the final document with a verifiable link
 
@@ -88,54 +95,128 @@ In Claude Code, invoke any command with `/`:
 /gerador-prd
 /gerador-spec
 /executor-plan
+/quick-task
+/roadmap
 /sdd-review
 ```
 
-### Recommended SDD Flow
+### Recommended Flow
 
 ```
-/gerador-prd          → produces PRD in thoughts/shared/research/
-  ↓ review the PRD, resolve [NEEDS CLARIFICATION], fix any inaccuracies
-/gerador-spec          → reads PRD, produces SPEC in thoughts/shared/plans/
-  ↓ review the SPEC, resolve [NEEDS CLARIFICATION], approve before Plan
-/executor-plan         → reads SPEC, executes micro-tasks with user checkpoints
-  ↓ review the implementation, approve each micro-task
-  ↓ generates implementation report in thoughts/shared/history/
-/sdd-review            → reviews the resulting PR/branch
+Quick — small change (≤3 files, 1 sentence):
+  /quick-task     -> runs directly with TDD where applicable
+                     (safety valve: escalates to formal flow if scope grows)
+
+Medium/Large/Complex — normal feature:
+  /gerador-prd    -> research + maps existing design docs
+    ↓ clear session
+  /gerador-spec   -> classifies scope, plans tasks with Phases + [P]
+                     3 pre-approval checks (Granularity, Diagram, Test Co-location)
+    ↓ clear session
+  /executor-plan  -> codes with TDD. Parallel sub-agents for [P].
+                     Test count protection.
+
+Multi-feature view:
+  /roadmap                       -> syncs status with PRDs/SPECs/IMPs
+  /roadmap add "<description>"   -> adds to Backlog
+  /roadmap add #123              -> imports from GH issue
 ```
 
-> **Important**: Always review the output of each phase before moving to the next. Resolve any `[NEEDS CLARIFICATION]` items and correct inaccuracies — the next phase uses the previous one as its source of truth.
+> **Important**: Clear the session between large commands (PRD → SPEC → Executor) to maximize the context window. Artifacts in `thoughts/` serve as handoff between sessions.
 
-## Directory Structure
+### 4. STATE.md (persistent memory)
+
+`thoughts/STATE.md` holds context across sessions:
+- **Architectural decisions** — decisions that persist beyond a single feature
+- **Known blockers** — things that have blocked work before, with symptoms to recognize them
+- **Lessons learned** — approaches that didn't work, patterns that proved valuable
+- **Deferred ideas** — things that came up but didn't fit current scope
+- **User preferences** — work style, preferred tools, communication patterns
+
+All commands read STATE at startup. **Writes always under user confirmation** — the command proposes entries, you approve case by case. Executor naturally writes at the end, but any command can ask "is this useful for STATE?" when it detects a new pattern.
+
+### 5. Tests
+
+- **Unit tests**: Always in `thoughts/tests/`, written before code (TDD). Not committed — they're our scaffolding
+- **Test count protection**: Every task declares `Test count: N tests pass`. If it drops during execution = mandatory stop (prevents silent deletion)
+- **Integration/e2e tests**: When the project uses them, go where the project mandates and are committed
+- **Test co-location**: Tests go in the SAME task that creates the code. Defer = anti-pattern, blocked by gerador-spec
+- If passing tests start failing: mandatory stop to discuss
+
+## Structure
+
+### Toolkit
 
 ```
 commands/
-  gerador-prd.md            # Phase 0 — Research
-  gerador-spec.md           # Phase 1 — Spec + Plan
-  executor-plan.md          # Phase 2 — Execute
+  gerador-prd.md            # v7 — Research
+  gerador-spec.md           # v7 — Plan + Tasks
+  executor-plan.md          # v7 — Code with TDD + parallelism
+  quick-task.md             # v7 — Quick mode
+  roadmap.md                # v7 — Manage ROADMAP.md
   sdd-review.md             # Review
   git-worktree.md           # Create worktree
   git-remove-worktree.md    # Remove worktree
   sync-tests.md             # Sync TDD tests
-  git-prune-branches.md     # Prune local branches
-  worktree-detect.md        # Analyze worktree opportunities
+  git-prune-branches.md     # Prune branches
+  worktree-detect.md        # Analyze worktrees
+  v6/                       # Previous version (fallback)
+    gerador-prd.md
+    gerador-spec.md
+    executor-plan.md
+  deprecated/               # v3, v4, v5
 deprecated/
-  commands/
-    gerador-prd.v1.md       # Legacy research (v1)
-    gerador-spec.v1.md      # Legacy spec (v1)
-    executor-plan.v1.md     # Legacy executor (v1)
+  commands/                 # v1, v2
 ```
+
+### Outputs in `thoughts/` (in the project where commands run)
+
+```
+thoughts/
+  ROADMAP.md                  # Multi-feature view (optional)
+  STATE.md                    # Persistent memory (optional, created under confirmation)
+  research/
+    PRD-DD-MM-YYYY-slug.md    # Output of /gerador-prd
+  plans/
+    SPEC-DD-MM-YYYY-slug.md   # Output of /gerador-spec
+    DESIGN-DD-MM-YYYY-slug.md # Optional output of /gerador-spec (Large/Complex)
+  history/
+    IMP-DD-MM-YYYY-slug.md    # Output of /executor-plan
+  reviews/
+    (output of /sdd-review)
+  quick/
+    NNN-slug/
+      TASK.md                 # Input of /quick-task
+      SUMMARY.md              # Output of /quick-task
+  tests/                      # TDD scaffolding (NOT committed)
+```
+
+> Before v7, artifacts were in `thoughts/shared/`. v7 simplifies by removing `shared/` — TDD tests remain isolated in `thoughts/tests/`.
 
 ## Inspiration
 
 This toolkit was heavily inspired by the following resources:
 
 - **[spec-kit](https://github.com/github/spec-kit)** — GitHub's official toolkit for Spec-Driven Development. The foundation of the SDD methodology used here
+- **[tlc-spec-driven (Tech Lead's Club)](https://github.com/tech-leads-club/agent-skills/blob/main/packages/skills-catalog/skills/(development)/tlc-spec-driven/SKILL.md)** — Spec-Driven Development skill with 4 adaptive phases (Specify, Design, Tasks, Execute), complexity-based auto-sizing, persistent `STATE.md`, Test Co-location Validation, and formalized parallelism (`[P]`, `Depends on:`, `Gate:`). Author: Felipe Rodrigues. Starting at v7 of this toolkit, several concepts are adapted from this skill — see [Attributions](#third-party-attributions--licenses)
 - **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Deep dive into context engineering patterns for AI agents
 - **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Practical examples of PRD generation and structured development commands
 - **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Detailed walkthrough of a real-world SDD workflow with Claude Code
 - Various YouTube videos on Spec-Driven Development and AI-assisted coding workflows
 
+## Third-Party Attributions & Licenses
+
+This toolkit incorporates concepts adapted from third-party works. Original licenses are preserved and attribution is given as required.
+
+### tlc-spec-driven
+
+- **Author**: Felipe Rodrigues — https://github.com/felipfr
+- **Source**: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/tlc-spec-driven
+- **Original license**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
+- **Status**: adapted (not copied verbatim). Concepts incorporated starting at v7 of this toolkit: complexity-based auto-sizing (Quick/Medium/Large/Complex), persistent `STATE.md`, `[P]` / `Depends on:` / `Gate:` task markers, Granularity Check, Diagram-Definition Cross-Check, Test Co-location Validation, Phase grouping (Foundation/Core/Integration), `Test count: N tests pass (no silent deletions)`
+
+CC-BY-4.0 is a permissive license compatible with MIT — it allows use, modification, and redistribution provided the original author is credited and modifications are indicated. This section fulfills that requirement.
+
 ## License
 
-[MIT](./LICENSE)
+[MIT](./LICENSE) — original code of this toolkit. Excerpts adapted from third-party works retain their original licenses (see [Attributions](#third-party-attributions--licenses)).
