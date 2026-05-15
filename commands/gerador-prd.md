@@ -15,7 +15,7 @@ Voce e um **pesquisador** que mapeia o terreno antes de qualquer plano. Le o cod
 ## Principios
 
 - **Constitution-first**: Leia `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer pesquisa
-- **STATE.md como memoria**: Leia `thoughts/STATE.md` para recuperar decisoes/blockers/licoes de sessoes anteriores
+- **Memoria persistente**: Recupere decisoes/blockers/licoes de sessoes anteriores — em vault central se `CLAUDE_VAULT_PATH` configurado, ou em `thoughts/STATE.md` (modo legacy). Detalhes do modo vault: ver `/vault-memory`
 - **Knowledge Verification Chain**: Codebase → Project docs → Context7 → Web → Flag como incerto. Nunca pule etapas
 - **Zero Inferencia**: Toda afirmacao tecnica embasada em fonte verificavel. Sem fonte = `[NEEDS VERIFICATION]`
 - **Fonte obrigatoria**: Toda referencia externa (lib, API, servico) DEVE ter `[Fonte: url]` ou `[Fonte: path:line]`
@@ -41,10 +41,18 @@ Ao ser invocado:
 ### 1. Ler Constitution
 Leia `CLAUDE.md` e `ARCHITECTURE.md`.
 
-### 2. Ler STATE.md (se existir)
-Leia `thoughts/STATE.md`. Se nao existir, marque mentalmente que voce pode propor criar ao final. **Nao crie automaticamente** — so quando aparecer conteudo real para registrar.
+### 2. Ler memoria persistente
 
-Use o STATE para:
+Detecte o modo:
+
+```bash
+test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
+```
+
+- **Modo vault** (variavel definida + path existe): siga o algoritmo de leitura em `/vault-memory` secao 5. Resolva `<org>/<projeto>` pelo cwd e carregue notas relevantes de `state/decisoes/`, `state/blockers/`, `state/licoes/`.
+- **Modo legacy** (qualquer falha): leia `thoughts/STATE.md` se existir. Se nao existir, marque mentalmente que voce pode propor criar ao final. **Nao crie automaticamente** — so quando aparecer conteudo real para registrar.
+
+Em qualquer modo, use a memoria para:
 - Recuperar decisoes arquiteturais ja tomadas
 - Identificar blockers persistentes
 - Lembrar de ideias adiadas que podem se conectar a esta feature
@@ -128,7 +136,7 @@ gh pr view <numero>
 
 Inclua resumo no PRD.
 
-### Passo 5 — Propor Atualizacao do STATE.md
+### Passo 5 — Propor Registro de Memoria
 
 Durante a pesquisa, se voce identificar:
 - Decisao arquitetural recorrente (ex: "todo endpoint novo deve passar pelo gateway X")
@@ -138,15 +146,18 @@ Durante a pesquisa, se voce identificar:
 
 Pergunte ao usuario:
 ```
-Identifiquei algo que parece util registrar no STATE.md:
+Identifiquei algo util registrar como memoria persistente:
 
 [Item identificado]
+[Tipo: decisao | blocker | licao | ideia]
 [Por que parece relevante para futuras sessoes]
 
-Adicionar ao STATE.md? (s/n)
+Salvar? (s/n)
 ```
 
-Se aprovado, adicione ao STATE.md (criando o arquivo se nao existir — ver template no final).
+Se aprovado, salve conforme o modo detectado no passo 2:
+- **Modo vault**: crie nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` seguindo o formato de `/vault-memory` secao 4.
+- **Modo legacy**: adicione entrada ao `thoughts/STATE.md` na secao correspondente (criando o arquivo se nao existir — ver template no final).
 
 ---
 
@@ -213,9 +224,9 @@ Slug: [slug]
 ### 5.4 [NEEDS VERIFICATION]
 [Claims sem fonte verificavel — verificar antes de planejar]
 
-## 6. Contexto Recuperado do STATE.md
+## 6. Contexto Recuperado de Memoria Persistente
 
-[Decisoes/blockers/licoes anteriores que se aplicam a esta feature. Se STATE nao existe, omita esta secao]
+[Decisoes/blockers/licoes anteriores que se aplicam a esta feature. Origem: vault (`$CLAUDE_VAULT_PATH/<org>/<projeto>/state/`) ou `thoughts/STATE.md`. Se nenhum existe, omita esta secao]
 
 ## 7. Sugestao de Escopo
 
@@ -265,7 +276,9 @@ Proximo: /gerador-spec quando estiver pronto.
 
 ---
 
-## Template STATE.md
+## Template STATE.md (modo legacy)
+
+> **Em modo vault** (`CLAUDE_VAULT_PATH` configurado), entradas viram notas atomicas em subpastas — ver `/vault-memory` secao 4. Este template e usado apenas no fallback.
 
 Se for criar o STATE.md pela primeira vez, use este template em `thoughts/STATE.md`:
 
@@ -319,7 +332,7 @@ Memoria entre sessoes do toolkit SDD. Cada entrada deve ser nao-obvia (algo que 
 - **Nunca pule a verificacao de links**: PRD com link quebrado tem decisao baseada em ar
 - **Fonte ou NEEDS VERIFICATION**: sem `[Fonte: url]` ou `[Fonte: path:line]`, e automaticamente nao verificado
 - **Nunca invente**: prefira "nao encontrei" a chutar comportamento
-- **STATE.md pergunta antes**: nunca escreva sem confirmar com o usuario
+- **Memoria pergunta antes**: nunca escreva (vault ou STATE.md) sem confirmar com o usuario
 - **Skills do projeto**: liste, nao ignore — o spec e o executor vao usar
 - **Design docs primeiro**: nao replique informacao que ja existe documentada — referencie
 - **Pesquisa proporcional**: nao infle PRD pequeno com pesquisa profunda desnecessaria

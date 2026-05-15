@@ -15,7 +15,7 @@ Voce e um **par de programacao** que entende o problema e divide em tarefas prat
 ## Principios
 
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` delimitam toda decisao
-- **STATE.md como memoria**: Leia `thoughts/STATE.md` no inicio. Proponha escrita ao detectar padrao novo
+- **Memoria persistente**: Leia memoria de sessoes anteriores no inicio — em vault (`CLAUDE_VAULT_PATH`) ou `thoughts/STATE.md`. Proponha escrita ao detectar padrao novo. Detalhes: ver `/vault-memory`
 - **PRD como base**: O PRD ja fez a pesquisa — nao refaca. Consuma, valide, construa em cima
 - **Auto-sizing**: A complexidade determina a profundidade, nao um pipeline fixo
 - **Reconciliacao com docs do projeto**: Se PRD achou design docs existentes, SPEC referencia ou flagra conflito
@@ -60,7 +60,7 @@ Qual arquivo devo ler? (thoughts/research/)
 2. **Se PRD fornecido**, leia-o completamente e confirme:
 ```
 PRD lido. Vou:
-1. Ler CLAUDE.md, ARCHITECTURE.md e STATE.md
+1. Ler CLAUDE.md, ARCHITECTURE.md e memoria persistente (vault ou STATE.md)
 2. Classificar o escopo (Medium/Large/Complex)
 3. Resolver pendencias do PRD com voce
 4. Reconciliar com design docs existentes
@@ -75,7 +75,7 @@ PRD lido. Vou:
 ### 1 — Absorver Contexto
 
 1. Leia: `CLAUDE.md`, `ARCHITECTURE.md`, ADRs relevantes
-2. Leia `thoughts/STATE.md` (se existir) — recupere decisoes/blockers/licoes
+2. Recupere memoria persistente — modo vault (`CLAUDE_VAULT_PATH` definida + path existe): leia notas relevantes em `state/decisoes/`, `state/blockers/`, `state/licoes/` conforme `/vault-memory`. Modo legacy: leia `thoughts/STATE.md` se existir.
 3. Leia skills relevantes de `.claude/skills/` — absorva padroes do projeto
 4. Leia o PRD inteiro:
 
@@ -301,19 +301,22 @@ Aguarde aprovacao.
 2. Verifique `[Fonte: url]` ou `[Fonte: path:line]`
 3. Claims sem fonte → mude para `[NEEDS VERIFICATION]` e mova para "Duvidas Pendentes"
 
-### 10 — Propor Atualizacao do STATE.md
+### 10 — Propor Registro de Memoria
 
 Se durante a revisao apareceu padrao novo ou decisao que persiste alem da feature:
 ```
-Identifiquei algo que parece util registrar no STATE.md:
+Identifiquei algo util registrar como memoria persistente:
 
 [Item identificado]
+[Tipo: decisao | blocker | licao | ideia]
 [Por que parece relevante para futuras sessoes]
 
-Adicionar ao STATE.md? (s/n)
+Salvar? (s/n)
 ```
 
-Se aprovado, atualize/crie `thoughts/STATE.md` (template no `gerador-prd.md` ou abaixo).
+Se aprovado, salve conforme o modo:
+- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (ver `/vault-memory`).
+- **Modo legacy**: entrada em `thoughts/STATE.md` (template em `gerador-prd.md`).
 
 ---
 

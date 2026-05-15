@@ -102,16 +102,45 @@ Multi-feature (visao de cima):
 
 > Limpe a sessao entre commands grandes (PRD -> SPEC -> Executor) para maximizar a janela de contexto. Os artefatos em `thoughts/` servem como handoff entre sessoes.
 
-### 4. STATE.md (memoria persistente)
+### 4. Memoria persistente (STATE.md ou vault)
 
-`thoughts/STATE.md` guarda contexto entre sessoes:
+Os commands recuperam contexto entre sessoes via memoria persistente. **Dois modos**:
+
+**Modo legacy (default)** — `thoughts/STATE.md` monolitico:
 - **Decisoes arquiteturais** — decisoes que persistem alem de uma feature
 - **Blockers conhecidos** — coisas que ja travaram trabalho, com sintoma para reconhecer
 - **Licoes aprendidas** — abordagens testadas que nao funcionaram, padroes que provaram valor
 - **Ideias adiadas** — coisas que apareceram mas nao entraram no escopo atual
 - **Preferencias do usuario** — estilo de trabalho, ferramentas, padroes de comunicacao
 
-Todos os commands leem o STATE no inicio. **Escrita sempre sob confirmacao do usuario** — o command propoe entradas, voce aprova caso a caso. O executor escreve naturalmente ao final, mas qualquer command pode perguntar "isso parece util pro STATE?" se detectar padrao novo.
+**Modo vault (opcional)** — notas atomicas em vault central (segundo cerebro Obsidian):
+
+```bash
+export CLAUDE_VAULT_PATH=~/caminho/para/seu/vault
+```
+
+Se a variavel `$CLAUDE_VAULT_PATH` apontar para um diretorio existente, os commands passam a ler/escrever em:
+
+```
+$CLAUDE_VAULT_PATH/<org>/<projeto>/state/
+├── decisoes/   # 1 nota por decisao, com frontmatter
+├── blockers/
+├── licoes/
+├── ideias/
+└── preferencias/
+```
+
+Vantagens do modo vault:
+- **Versionamento independente** do projeto (state nao polui o repo)
+- **Grafo unificado** entre projetos (Obsidian conecta decisoes cross-projeto)
+- **Notas atomicas** (1 arquivo por decisao) — busca e filtragem melhores
+- **Promocao** de decisoes para escopo de organizacao ou global
+
+Convencao de path: o `<org>` e `<projeto>` sao derivados do `cwd` (heuristica `~/codigos/<org>/<projeto>/`). Se a heuristica falhar, o command pergunta. Ver `/vault-memory` para o protocolo completo.
+
+**A integracao e completamente opt-in** — sem `CLAUDE_VAULT_PATH`, o toolkit funciona exatamente como antes (STATE.md monolitico). Voce pode adotar gradualmente.
+
+Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command propoe entradas, voce aprova caso a caso.
 
 ### 5. Testes
 

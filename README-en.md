@@ -124,16 +124,45 @@ Multi-feature view:
 
 > **Important**: Clear the session between large commands (PRD → SPEC → Executor) to maximize the context window. Artifacts in `thoughts/` serve as handoff between sessions.
 
-### 4. STATE.md (persistent memory)
+### 4. Persistent memory (STATE.md or vault)
 
-`thoughts/STATE.md` holds context across sessions:
+Commands recover context across sessions through persistent memory. **Two modes**:
+
+**Legacy mode (default)** — monolithic `thoughts/STATE.md`:
 - **Architectural decisions** — decisions that persist beyond a single feature
 - **Known blockers** — things that have blocked work before, with symptoms to recognize them
 - **Lessons learned** — approaches that didn't work, patterns that proved valuable
 - **Deferred ideas** — things that came up but didn't fit current scope
 - **User preferences** — work style, preferred tools, communication patterns
 
-All commands read STATE at startup. **Writes always under user confirmation** — the command proposes entries, you approve case by case. Executor naturally writes at the end, but any command can ask "is this useful for STATE?" when it detects a new pattern.
+**Vault mode (optional)** — atomic notes in a central vault (Obsidian second brain):
+
+```bash
+export CLAUDE_VAULT_PATH=~/path/to/your/vault
+```
+
+If `$CLAUDE_VAULT_PATH` points to an existing directory, commands switch to reading/writing in:
+
+```
+$CLAUDE_VAULT_PATH/<org>/<project>/state/
+├── decisoes/    # one note per decision, with frontmatter
+├── blockers/
+├── licoes/
+├── ideias/
+└── preferencias/
+```
+
+Vault mode benefits:
+- **Independent versioning** from the project (state doesn't pollute the repo)
+- **Unified graph** across projects (Obsidian connects cross-project decisions)
+- **Atomic notes** (one file per decision) — better search and filtering
+- **Promotion** of decisions to organization or global scope
+
+Path convention: `<org>` and `<project>` are derived from `cwd` (heuristic `~/codigos/<org>/<project>/`). If the heuristic fails, the command asks. See `/vault-memory` for the full protocol.
+
+**Integration is fully opt-in** — without `CLAUDE_VAULT_PATH`, the toolkit behaves exactly as before (monolithic STATE.md). You can adopt it gradually.
+
+In either mode: **writes always under user confirmation** — the command proposes entries, you approve case by case.
 
 ### 5. Tests
 

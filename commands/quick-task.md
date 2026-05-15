@@ -22,7 +22,7 @@ Voce executa **mudancas pequenas** sem rodar PRD nem SPEC formais. Use quando:
 - **Baixa ceremonia**: 1 arquivo de input (`TASK.md`) + 1 de output (`SUMMARY.md`)
 - **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/gerador-prd`
 - **TDD quando aplicavel**: codigo de lib/dominio = TDD obrigatorio. Config/typo = nao
-- **STATE.md como memoria leve**: leia para nao repetir blockers conhecidos
+- **Memoria persistente leve**: leia memoria de sessoes anteriores (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`) para nao repetir blockers conhecidos. Detalhes: `/vault-memory`
 - **Zero Inferencia**: API externa = verifique antes (Context7/WebFetch). Sem verificacao = pare
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` mesmo no quick mode
 
@@ -65,7 +65,7 @@ Esta mudanca parece [pequena/media]. Confirmar quick mode ou prefere fluxo forma
 ### 3. Ler context minimo
 - `CLAUDE.md`
 - `ARCHITECTURE.md`
-- `thoughts/STATE.md` (se existir) — so para blockers conhecidos
+- Memoria persistente — so blockers conhecidos. Modo vault (`CLAUDE_VAULT_PATH`): `state/blockers/*.md`. Modo legacy: `thoughts/STATE.md`. Ver `/vault-memory`.
 - Skills aplicaveis em `.claude/skills/`
 
 ### 4. Decidir o numero da task
@@ -220,22 +220,27 @@ Commit: [hash + mensagem]
 [Se algo surgiu fora do escopo previsto, registre aqui]
 ```
 
-### Passo 10 — Propor STATE.md (se aplicavel)
+### Passo 10 — Propor Memoria (se aplicavel)
 
 Se durante a execucao apareceu:
-- Padrao novo
-- Blocker resolvido (importante para futuro)
-- Licao aprendida
+- Padrao novo → tipo `decisao` ou `licao`
+- Blocker resolvido (importante para futuro) → tipo `blocker`
+- Licao aprendida → tipo `licao`
 
 Pergunte:
 ```
-Identifiquei algo util para STATE.md:
+Identifiquei algo util como memoria:
 
 [Item]
+[Tipo: decisao | blocker | licao]
 [Por que importa]
 
-Adicionar? (s/n)
+Salvar? (s/n)
 ```
+
+Se aprovado:
+- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato em `/vault-memory`).
+- **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
 ### Passo 11 — Informar ao usuario
 
@@ -245,7 +250,7 @@ Quick Task NNN concluida.
 Resumo: thoughts/quick/NNN-slug/SUMMARY.md
 Commit: [hash]
 Gate: PASSOU
-[STATE.md: K entradas adicionadas / nao alterado]
+[Memoria: K entradas adicionadas / nao alterada]
 ```
 
 ---
@@ -259,6 +264,6 @@ Gate: PASSOU
 - **Constitution mesmo aqui**: CLAUDE.md + ARCHITECTURE.md
 - **Commit atomico**: 1 quick task = 1 commit (ou 2 se houver passada do simplifier)
 - **Nunca invente API**: verifique em doc oficial ou codigo existente
-- **STATE.md sob confirmacao**: nunca escreva sem perguntar
+- **Memoria sob confirmacao**: nunca escreva (vault ou STATE.md) sem perguntar
 - **Skills nao opcionais**: se a task tem skills, ative
 - **GitHub via `gh` CLI**: nunca tokens manuais

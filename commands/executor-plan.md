@@ -19,7 +19,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Testes unitarios sao contrato**: Em `thoughts/tests/`, nao commitados. Se quebram, paramos e discutimos
 - **Teste apenas exports reais**: Nunca exporte funcao so para testar. Testes cobrem so API publica
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer codigo
-- **STATE.md como memoria**: Leia no inicio. Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo
+- **Memoria persistente**: Leia no inicio (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`). Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo. Detalhes: `/vault-memory`
 - **Reconciliacao com docs**: Se a tarefa altera arquitetura documentada, pergunte se atualiza o doc do projeto
 - **Zero Inferencia**: Verifique comportamento de API no codigo, Context7, WebFetch/Search, ou pergunte. Sem verificacao = pare
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
@@ -48,8 +48,17 @@ Ao ser invocado:
 ### 1. Ler Constitution
 `CLAUDE.md` e `ARCHITECTURE.md`.
 
-### 2. Ler STATE.md
-`thoughts/STATE.md` (se existir). Use para:
+### 2. Ler memoria persistente
+
+Detecte o modo:
+```bash
+test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
+```
+
+- **Modo vault**: leia notas relevantes em `state/decisoes/`, `state/blockers/`, `state/licoes/` conforme `/vault-memory`.
+- **Modo legacy**: leia `thoughts/STATE.md` (se existir).
+
+Use para:
 - Decisoes arquiteturais que se aplicam
 - Blockers conhecidos (para reconhecer rapido)
 - Licoes aprendidas
@@ -312,7 +321,7 @@ Quando encontrar problema com multiplas causas possiveis ou solucao nao obvia:
 
 **Nunca** aplique a primeira solucao que compila sem validar se e o local certo.
 
-Se a encruzilhada e bloqueante (nao consegue avancar): **anote no STATE.md** apos resolver — vira licao para o futuro.
+Se a encruzilhada e bloqueante (nao consegue avancar): **anote como licao na memoria persistente** apos resolver (modo vault: `state/licoes/<data>-<slug>.md`; modo legacy: `thoughts/STATE.md`) — vira licao para o futuro.
 
 ---
 
@@ -350,23 +359,28 @@ Se aprovado:
 - Se quebrar: PARE
 - Se passar: commit separado `refactor: simplify [feature]`
 
-### 4. Propor atualizacao do STATE.md
+### 4. Propor registro de memoria
 
 Itere sobre o que aconteceu na execucao:
-- Padroes novos que apareceram?
-- Decisoes arquiteturais tomadas durante (nao previstas no plano)?
-- Blockers encontrados e resolvidos?
-- Licoes uteis para o futuro?
+- Padroes novos que apareceram? → tipo `decisao` (ou `licao` se foi "tentamos X, nao funcionou")
+- Decisoes arquiteturais tomadas durante (nao previstas no plano)? → tipo `decisao`
+- Blockers encontrados e resolvidos? → tipo `blocker`
+- Licoes uteis para o futuro? → tipo `licao`
 
 Para cada um, pergunte:
 ```
-Identifiquei algo util para STATE.md:
+Identifiquei algo util registrar como memoria:
 
 [Item]
+[Tipo: decisao | blocker | licao | ideia]
 [Por que importa]
 
-Adicionar ao STATE.md? (s/n)
+Salvar? (s/n)
 ```
+
+Se aprovado:
+- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato em `/vault-memory` secao 4).
+- **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
 ### 5. Informar resultado
 
@@ -376,7 +390,7 @@ Feature concluida.
 - [X] testes unitarios passando
 - [Y] testes integracao/e2e passando
 - Test count: PRESERVADO em todas tarefas
-- STATE.md: [K entradas adicionadas / nao alterado]
+- Memoria persistente: [K entradas adicionadas / nao alterada]
 - Doc do projeto: [atualizado / nao precisava]
 
 Relatorio: thoughts/history/IMP-DD-MM-YYYY-[slug].md
