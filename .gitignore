@@ -1,0 +1,12 @@
+# Obsidian (este repo nao e um vault — qualquer .obsidian/ aqui e acidental,
+# tipicamente criado quando o repo foi aberto como vault por engano)
+.obsidian/
+
+# SO / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
