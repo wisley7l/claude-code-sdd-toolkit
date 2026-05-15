@@ -75,26 +75,49 @@ tags: [opcional, palavras-chave]
 - POC: `thoughts/pocs/poc-X.md`
 - PR: #NNN (se aplicavel)
 
-↑ [[Comecar-aqui]]
+↑ [[<NomeDoHub>]]
 ```
 
 **Regras**:
 - Frontmatter `tipo` deve bater com a subpasta (`tipo: decisao` em `decisoes/`)
 - `data` no frontmatter = data da decisao/observacao, nao do registro
 - Use wikilinks `[[outra-nota]]` para conectar a outras memorias (Obsidian renderiza)
+- O rodape **sempre aponta para o hub do projeto**, nunca direto para `Comecar-aqui`. Apenas o hub aponta para `Comecar-aqui`. Isso mantem o grafo do Obsidian hierarquico (Comecar-aqui → hubs → notas).
+
+## 4.1 Hub do projeto
+
+Cada projeto no vault tem um arquivo de **hub** na raiz da pasta do projeto. Ele e o indice das memorias daquele projeto.
+
+**Localizacao**: `$CLAUDE_VAULT_PATH/<org>/<projeto>/<NomeDoHub>.md`
+
+**Como descobrir o nome do hub**:
+```bash
+ls "$CLAUDE_VAULT_PATH/<org>/<projeto>/"*.md 2>/dev/null
+```
+Pega o primeiro `*.md` na raiz (nao em subpastas) — esse e o hub. Cada projeto tem **um unico hub**.
+
+**Se nao existir** (projeto novo no vault): voce vai criar — ver secao 7.
+
+**Convencao de nome**: capitalize-first cada segmento separado por hyphen do slug do projeto. Ex: `gopay` → `Gopay.md`, `claude-code-sdd-toolkit` → `Claude-Code-Sdd-Toolkit.md`. Se ja existir um hub com nome diferente (apelido), use o existente (nao renomeie).
 
 ## 5. Algoritmo de leitura (inicio do command)
 
 ```
 1. Se vault detectado E `<org>/<projeto>` resolvido:
-   - Liste `state/decisoes/*.md`, `state/blockers/*.md`, `state/licoes/*.md`
-   - Carregue notas cuja frontmatter `titulo` ou `tags` pareca relevante a tarefa atual
-   - Use isso como contexto recuperado (mesma funcao que "Ler STATE.md" tinha)
+   a. PRIMEIRO leia o **hub** do projeto (secao 4.1) — ele lista todas as memorias
+      organizadas por categoria com hooks curtos. E o jeito eficiente de descobrir
+      o que existe sem abrir cada arquivo.
+   b. Identifique pelo hub quais notas individuais valem a pena abrir para a tarefa
+      atual (filtre pelo hook, nao abra tudo).
+   c. Abra apenas as notas individuais marcadas como relevantes.
+   d. Se o hub nao existe ainda, caia para varredura direta:
+      `state/decisoes/*.md`, `state/blockers/*.md`, `state/licoes/*.md` — carregue
+      notas cuja `titulo`/`tags` no frontmatter pareca relevante.
 2. Senao:
    - Leia `thoughts/STATE.md` se existir (comportamento legado)
 ```
 
-Voce NUNCA carrega todas as notas indiscriminadamente — filtre por relevancia ao analisar o titulo de cada arquivo. Se uma das categorias estiver vazia, ignore.
+Voce NUNCA carrega todas as notas indiscriminadamente — o hub e o filtro primario.
 
 ## 6. Algoritmo de escrita (fim do command)
 
@@ -110,22 +133,65 @@ Salvar? (s/n)
 
 Se aprovado:
 
-- **Modo vault**: crie `state/<tipo>s/<data>-<slug>.md` com o frontmatter e o formato da secao 4. Crie a subpasta se nao existir.
+- **Modo vault** — 3 passos sempre:
+  1. Crie `state/<tipo>s/<data>-<slug>.md` com o frontmatter e o formato da secao 4, terminando com `↑ [[<NomeDoHub>]]`. Crie a subpasta se nao existir.
+  2. **Atualize o hub** (`<NomeDoHub>.md`): adicione uma linha na secao correspondente (Decisões arquiteturais / Lições aprendidas / Blockers / Ideias / Preferências) no formato:
+     ```
+     - [[<slug-do-arquivo-sem-md>]] — hook curto da decisao (1 linha)
+     ```
+     Se a secao ainda nao existe no hub, crie-a (ver template do hub em [[##7-criacao-da-estrutura]]).
+  3. Sem isso a nota fica orfa no indice — so descobrivel via graph view.
+
 - **Modo legacy**: adicione entrada ao `thoughts/STATE.md` na secao correspondente (formato linha-unica conforme template original).
 
 ## 7. Criacao da estrutura (primeira vez)
 
-Se o vault esta detectado mas `<vault>/<org>/<projeto>/state/` ainda nao existe:
+Crie apenas quando voce de fato tiver uma entrada para salvar (lazy) — nao crie estrutura vazia em todo `/gerador-prd`.
+
+### 7.1 Pasta do projeto e subpasta da categoria
 
 ```bash
-mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/decisoes"
-mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/blockers"
-mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/licoes"
-mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/ideias"
-mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/preferencias"
+mkdir -p "$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<categoria>"
+# <categoria> = decisoes | blockers | licoes | ideias | preferencias
 ```
 
-Crie apenas quando voce de fato tiver uma entrada para salvar (lazy) — nao crie estrutura vazia em todo `/gerador-prd`.
+So crie a subpasta da categoria que voce vai usar agora. As outras nascem na proxima vez que aparecer entrada do tipo (tambem lazy).
+
+### 7.2 Hub do projeto (se ainda nao existe)
+
+Se `ls $CLAUDE_VAULT_PATH/<org>/<projeto>/*.md` retorna vazio, crie o hub:
+
+**Path**: `$CLAUDE_VAULT_PATH/<org>/<projeto>/<NomeDoHub>.md` (convencao de nome na secao 4.1)
+
+**Template minimo** (preencha as secoes conforme for adicionando notas):
+
+```markdown
+# <Nome do Projeto>
+
+[1-2 linhas descrevendo o projeto.]
+
+Fonte autoritativa do projeto: `<path-do-repo>/` (`CLAUDE.md`, `ARCHITECTURE.md`, `.claude/skills/` se aplicavel). As memorias aqui sao complementares.
+
+## Memórias do projeto
+
+### Decisões arquiteturais
+
+- [[<slug-da-primeira-nota>]] — hook curto
+
+↑ [[Comecar-aqui]]
+```
+
+### 7.3 Registrar projeto no indice raiz
+
+Apos criar o hub pela primeira vez, **atualize** `$CLAUDE_VAULT_PATH/Comecar-aqui.md` adicionando uma linha na secao da org correspondente:
+
+```markdown
+### <Org capitalizada>
+
+- [[<NomeDoHub>]] — descricao curta do projeto
+```
+
+Se a secao da org ainda nao existe, crie-a. Sem isso o projeto fica invisivel no indice raiz.
 
 ## 8. Fallback gracioso
 
