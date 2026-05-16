@@ -8,15 +8,14 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 
 ## O que tem aqui
 
-### Workflow Principal v7 (auto-sizing)
+### Workflow Principal v7 (auto-sizing, single-doc spec)
 
 | Fase | Command | Descricao |
 |------|---------|-----------|
-| Pesquisar | `/gerador-prd` | Investiga o problema: analisa codebase, consulta docs, mapeia design docs existentes. Le e propoe escrita em `thoughts/STATE.md` |
-| Entender | `/gerador-spec` | Le a pesquisa, classifica complexidade (Medium/Large/Complex), reconcilia com docs do projeto, divide em tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). DESIGN.md separado opcional |
+| Plan | `/sdd-plan` | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
 | Codar | `/executor-plan` | Pair programming com TDD. Sub-agents paralelos para tarefas `[P]`. Test count protection (bloqueia silent deletion). Pausa entre tarefas. Atualiza STATE.md |
-| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula PRD/SPEC. Safety valve sobe para fluxo formal se escopo crescer |
-| Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com PRD/SPEC/IMP existentes |
+| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer |
+| Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
 ### Utilitarios
 
@@ -31,6 +30,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 
 ### Versoes anteriores
 
+- **Split v7 (gerador-prd + gerador-spec)** — versao anterior do workflow tinha 2 fases separadas (PRD em `thoughts/research/` + SPEC em `thoughts/plans/`). Foram fundidas em `/sdd-plan` (1 doc auto-sized) por causar ~40-50% de duplicacao entre os 2 outputs. Arquivos preservados em `commands/deprecated/gerador-prd.v7.md` e `commands/deprecated/gerador-spec.v7.md`
 - **v6** — versao estavel anterior, mantida em `commands/v6/` como fallback. Se a v7 piorar para algum projeto, basta copiar os arquivos de `v6/` por cima dos de `commands/`
 - **v1-v5** — versoes historicas em `deprecated/commands/` e `commands/deprecated/`
 
@@ -40,7 +40,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 - **Constitution-first** — Commands leem `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer acao
 - **TDD como contrato** — Testes unitarios sao escritos antes do codigo. Se quebram, paramos e discutimos
 - **Memoria persistente** — `thoughts/STATE.md` guarda decisoes/blockers/licoes entre sessoes. Escrita sempre sob confirmacao
-- **Auto-sizing** — Complexidade determina profundidade: Quick (`/quick-task`), Medium (SPEC combinado), Large/Complex (SPEC + DESIGN opt-in)
+- **Auto-sizing** — Complexidade determina profundidade: Quick (`/quick-task`), Medium/Large/Complex (1 SPEC em `/sdd-plan`)
 - **Test count protection** — Toda tarefa declara `Test count: N tests pass`. Cair = bloqueio (previne silent deletion)
 - **Paralelismo seguro** — Tarefas `[P]` rodam em sub-agents simultaneos, com checagem de conflito de arquivos
 - **Adaptavel ao projeto** — Segue convencoes, skills e estrutura de cada projeto
@@ -86,16 +86,15 @@ Quick — mudanca pequena (≤3 arquivos, 1 frase):
                      (safety valve: se crescer, sugere fluxo formal)
 
 Medium/Large/Complex — feature normal:
-  /gerador-prd    -> pesquisa + mapeia design docs existentes
-    limpar sessao
-  /gerador-spec   -> classifica escopo, planeja tarefas com Phases + [P]
-                     3 checks pre-aprovacao (Granularity, Diagram, Test Co-location)
+  /sdd-plan       -> pesquisa + entendimento + tarefas em 1 doc auto-sized
+                     (Mapeia design docs, classifica escopo, quebra tarefas com [P],
+                      3 checks pre-aprovacao: Granularity, Diagram, Test Co-location)
     limpar sessao
   /executor-plan  -> codar com TDD. Sub-agents paralelos para [P].
                      Test count protection.
 
 Multi-feature (visao de cima):
-  /roadmap                       -> sincroniza status com PRDs/SPECs/IMPs
+  /roadmap                       -> sincroniza status com SPECs/IMPs
   /roadmap add "<descricao>"     -> adiciona ao Backlog
   /roadmap add #123              -> importa de issue GH
 ```
@@ -136,7 +135,7 @@ Vantagens do modo vault:
 - **Notas atomicas** (1 arquivo por decisao) — busca e filtragem melhores
 - **Promocao** de decisoes para escopo de organizacao ou global
 
-Convencao de path: o `<org>` e `<projeto>` sao derivados do `cwd` (heuristica `~/codigos/<org>/<projeto>/`). Se a heuristica falhar, o command pergunta. Ver `/vault-memory` para o protocolo completo.
+Convencao de path: o `<org>` e `<projeto>` sao derivados do `cwd` (heuristica `~/codigos/<org>/<projeto>/`). Se a heuristica falhar, o command pergunta. Ver o skill `vault-memory` para o protocolo completo.
 
 **A integracao e completamente opt-in** — sem `CLAUDE_VAULT_PATH`, o toolkit funciona exatamente como antes (STATE.md monolitico). Voce pode adotar gradualmente.
 
@@ -147,7 +146,7 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 - **Testes unitarios**: Sempre em `thoughts/tests/`, escritos antes do codigo (TDD). Nao sao commitados, sao nosso andaime de trabalho
 - **Test count protection**: Toda tarefa declara `Test count: N tests pass`. Se cair durante execucao = parada obrigatoria (previne silent deletion)
 - **Testes de integracao/e2e**: Quando o projeto usa, vao onde o projeto manda e sao commitados
-- **Test co-location**: Testes vao na MESMA tarefa que cria o codigo. Defer = anti-pattern bloqueado pelo gerador-spec
+- **Test co-location**: Testes vao na MESMA tarefa que cria o codigo. Defer = anti-pattern bloqueado pelo sdd-plan
 - Se testes que passavam comecam a falhar: parada obrigatoria para discutir
 
 ## Estrutura
@@ -156,8 +155,7 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 
 ```
 commands/
-  gerador-prd.md            # v7 — Pesquisar
-  gerador-spec.md           # v7 — Entender + Tarefas
+  sdd-plan.md               # v7+ — Pesquisar + Entender + Tarefas (1 doc auto-sized)
   executor-plan.md          # v7 — Codar com TDD + paralelismo
   quick-task.md             # v7 — Modo rapido
   roadmap.md                # v7 — Gerenciar ROADMAP.md
@@ -171,7 +169,10 @@ commands/
     gerador-prd.md
     gerador-spec.md
     executor-plan.md
-  deprecated/               # v3, v4, v5
+  deprecated/               # v3, v4, v5, v7 (split PRD+SPEC, vault-memory→skill)
+    gerador-prd.v7.md       # Substituido por sdd-plan
+    gerador-spec.v7.md      # Substituido por sdd-plan
+    vault-memory.v7.md      # Promovido para skill (fica fora de commands/)
 deprecated/
   commands/                 # v1, v2
 ```
@@ -182,11 +183,8 @@ deprecated/
 thoughts/
   ROADMAP.md                  # Visao multi-feature (opcional)
   STATE.md                    # Memoria persistente (opcional, criado sob confirmacao)
-  research/
-    PRD-DD-MM-YYYY-slug.md    # Output do /gerador-prd
   plans/
-    SPEC-DD-MM-YYYY-slug.md   # Output do /gerador-spec
-    DESIGN-DD-MM-YYYY-slug.md # Output opcional do /gerador-spec (Large/Complex)
+    SPEC-DD-MM-YYYY-slug.md   # Output do /sdd-plan (1 doc auto-sized)
   history/
     IMP-DD-MM-YYYY-slug.md    # Output do /executor-plan
   reviews/
@@ -198,7 +196,7 @@ thoughts/
   tests/                      # Andaime TDD (NAO commitado)
 ```
 
-> Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`.
+> Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`. A pasta `thoughts/research/` (usada pelo `gerador-prd`) foi removida — `/sdd-plan` salva direto em `thoughts/plans/`.
 
 ## Inspiracoes
 

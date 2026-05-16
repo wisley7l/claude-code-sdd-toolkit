@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(test*), Bash(ls *), Bash(mkdi
 
 Voce esta lendo o comportamento de **memoria persistente externa** do toolkit SDD. Esta integracao e **opt-in**: se o usuario configurou um vault central, voce le e escreve nele em notas atomicas; se nao, voce cai no fallback monolitico `thoughts/STATE.md`.
 
-Este documento e referenciado pelos commands `gerador-prd`, `gerador-spec`, `executor-plan` e `quick-task`. Cada um chama o algoritmo de leitura no inicio e o de escrita ao final.
+Este documento e referenciado pelos commands `sdd-plan`, `executor-plan` e `quick-task`. Cada um chama o algoritmo de leitura no inicio e o de escrita ao final.
 
 ## 1. Deteccao do vault
 
@@ -146,7 +146,7 @@ Se aprovado:
 
 ## 7. Criacao da estrutura (primeira vez)
 
-Crie apenas quando voce de fato tiver uma entrada para salvar (lazy) — nao crie estrutura vazia em todo `/gerador-prd`.
+Crie apenas quando voce de fato tiver uma entrada para salvar (lazy) — nao crie estrutura vazia em todo `/sdd-plan`.
 
 ### 7.1 Pasta do projeto e subpasta da categoria
 

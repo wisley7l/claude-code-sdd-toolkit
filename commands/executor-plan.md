@@ -19,7 +19,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Testes unitarios sao contrato**: Em `thoughts/tests/`, nao commitados. Se quebram, paramos e discutimos
 - **Teste apenas exports reais**: Nunca exporte funcao so para testar. Testes cobrem so API publica
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer codigo
-- **Memoria persistente**: Leia no inicio (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`). Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo. Detalhes: `/vault-memory`
+- **Memoria persistente**: Leia no inicio (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`). Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo. Detalhes: skill `vault-memory`
 - **Reconciliacao com docs**: Se a tarefa altera arquitetura documentada, pergunte se atualiza o doc do projeto
 - **Zero Inferencia**: Verifique comportamento de API no codigo, Context7, WebFetch/Search, ou pergunte. Sem verificacao = pare
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
@@ -55,7 +55,7 @@ Detecte o modo:
 test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
 ```
 
-- **Modo vault**: leia notas relevantes em `state/decisoes/`, `state/blockers/`, `state/licoes/` conforme `/vault-memory`.
+- **Modo vault**: leia notas relevantes em `state/decisoes/`, `state/blockers/`, `state/licoes/` conforme skill `vault-memory`.
 - **Modo legacy**: leia `thoughts/STATE.md` (se existir).
 
 Use para:
@@ -379,7 +379,7 @@ Salvar? (s/n)
 ```
 
 Se aprovado:
-- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato em `/vault-memory` secao 4).
+- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
 ### 5. Informar resultado

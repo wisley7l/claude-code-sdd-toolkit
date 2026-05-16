@@ -8,15 +8,14 @@ These commands turn Claude Code into a structured development partner that follo
 
 ## What's Inside
 
-### Main Workflow v7 (auto-sizing)
+### Main Workflow v7 (auto-sizing, single-doc spec)
 
 | Phase | Command | Description |
 |-------|---------|-------------|
-| Research | `/gerador-prd` | Scouts the codebase, queries docs, maps existing design docs. Reads and proposes writes to `thoughts/STATE.md` |
-| Plan | `/gerador-spec` | Reads PRD, classifies complexity (Medium/Large/Complex), reconciles with project docs, breaks down into tasks with Phases + `[P]`/`Depends on:`/`Gate:`. 3 pre-approval checks (Granularity, Diagram-Definition Cross-Check, Test Co-location). Optional separate DESIGN.md |
+| Plan | `/sdd-plan` | Research + understanding + tasks in **1 auto-sized document** (Medium/Large/Complex). Maps existing design docs, reconciles conflicts, classifies scope, breaks down tasks with Phases + `[P]`/`Depends on:`/`Gate:`. 3 pre-approval checks (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detects Quick scope and hands off to `/quick-task` |
 | Execute | `/executor-plan` | Pair programming with TDD. Parallel sub-agents for `[P]` tasks. Test count protection (blocks silent deletion). Pauses between tasks. Updates STATE.md |
-| Quick | `/quick-task` | Quick mode for small changes (≤3 files, 1 sentence). Skips PRD/SPEC. Safety valve escalates to formal flow if scope grows |
-| Roadmap | `/roadmap` | Manages `thoughts/ROADMAP.md`. Adds entries, imports from GH issues, syncs status with existing PRD/SPEC/IMP |
+| Quick | `/quick-task` | Quick mode for small changes (≤3 files, 1 sentence). Skips formal SPEC. Safety valve escalates to formal flow if scope grows |
+| Roadmap | `/roadmap` | Manages `thoughts/ROADMAP.md`. Adds entries, imports from GH issues, syncs status with existing SPEC/IMP |
 
 ### Git Utilities
 
@@ -31,6 +30,7 @@ These commands turn Claude Code into a structured development partner that follo
 
 ### Previous Versions
 
+- **Split v7 (gerador-prd + gerador-spec)** — earlier v7 workflow had 2 separate phases (PRD in `thoughts/research/` + SPEC in `thoughts/plans/`). Merged into `/sdd-plan` (single auto-sized doc) because they duplicated ~40-50% of content between outputs. Files preserved at `commands/deprecated/gerador-prd.v7.md` and `commands/deprecated/gerador-spec.v7.md`
 - **v6** — previous stable version, kept in `commands/v6/` as fallback. If v7 doesn't work for a project, copy `v6/` files over `commands/`
 - **v1-v5** — historical versions in `deprecated/commands/` and `commands/deprecated/`
 
@@ -41,7 +41,7 @@ These commands enforce a few non-negotiable rules:
 - **Zero Inference** — Never assume API behavior or patterns. Always verify against official documentation (via [Context7](https://context7.com/) MCP) or existing project code. If no verifiable source is found, mark as `[NEEDS VERIFICATION]`
 - **Constitution-first** — Commands always read `CLAUDE.md` and `ARCHITECTURE.md` before any action, making them stack-agnostic
 - **Persistent memory** — `thoughts/STATE.md` holds decisions/blockers/lessons across sessions. Writes always require user confirmation
-- **Auto-sizing** — Complexity determines depth: Quick (`/quick-task`), Medium (combined SPEC), Large/Complex (SPEC + optional DESIGN)
+- **Auto-sizing** — Complexity determines depth: Quick (`/quick-task`), Medium/Large/Complex (1 SPEC via `/sdd-plan`)
 - **Test count protection** — Every task declares `Test count: N tests pass`. If it drops = block (prevents silent deletion)
 - **Safe parallelism** — `[P]` tasks run in concurrent sub-agents, with file conflict checks
 - **Atomic execution** — The executor never advances to the next task without explicit user approval
@@ -92,8 +92,7 @@ To set it up, add to your Claude Code MCP config (`~/.claude.json` or project `.
 In Claude Code, invoke any command with `/`:
 
 ```
-/gerador-prd
-/gerador-spec
+/sdd-plan
 /executor-plan
 /quick-task
 /roadmap
@@ -108,16 +107,15 @@ Quick — small change (≤3 files, 1 sentence):
                      (safety valve: escalates to formal flow if scope grows)
 
 Medium/Large/Complex — normal feature:
-  /gerador-prd    -> research + maps existing design docs
-    ↓ clear session
-  /gerador-spec   -> classifies scope, plans tasks with Phases + [P]
-                     3 pre-approval checks (Granularity, Diagram, Test Co-location)
+  /sdd-plan       -> research + understanding + tasks in 1 auto-sized doc
+                     (Maps design docs, classifies scope, breaks tasks with [P],
+                      3 pre-approval checks: Granularity, Diagram, Test Co-location)
     ↓ clear session
   /executor-plan  -> codes with TDD. Parallel sub-agents for [P].
                      Test count protection.
 
 Multi-feature view:
-  /roadmap                       -> syncs status with PRDs/SPECs/IMPs
+  /roadmap                       -> syncs status with SPECs/IMPs
   /roadmap add "<description>"   -> adds to Backlog
   /roadmap add #123              -> imports from GH issue
 ```
@@ -158,7 +156,7 @@ Vault mode benefits:
 - **Atomic notes** (one file per decision) — better search and filtering
 - **Promotion** of decisions to organization or global scope
 
-Path convention: `<org>` and `<project>` are derived from `cwd` (heuristic `~/codigos/<org>/<project>/`). If the heuristic fails, the command asks. See `/vault-memory` for the full protocol.
+Path convention: `<org>` and `<project>` are derived from `cwd` (heuristic `~/codigos/<org>/<project>/`). If the heuristic fails, the command asks. See the `vault-memory` skill for the full protocol.
 
 **Integration is fully opt-in** — without `CLAUDE_VAULT_PATH`, the toolkit behaves exactly as before (monolithic STATE.md). You can adopt it gradually.
 
@@ -169,7 +167,7 @@ In either mode: **writes always under user confirmation** — the command propos
 - **Unit tests**: Always in `thoughts/tests/`, written before code (TDD). Not committed — they're our scaffolding
 - **Test count protection**: Every task declares `Test count: N tests pass`. If it drops during execution = mandatory stop (prevents silent deletion)
 - **Integration/e2e tests**: When the project uses them, go where the project mandates and are committed
-- **Test co-location**: Tests go in the SAME task that creates the code. Defer = anti-pattern, blocked by gerador-spec
+- **Test co-location**: Tests go in the SAME task that creates the code. Defer = anti-pattern, blocked by sdd-plan
 - If passing tests start failing: mandatory stop to discuss
 
 ## Structure
@@ -178,8 +176,7 @@ In either mode: **writes always under user confirmation** — the command propos
 
 ```
 commands/
-  gerador-prd.md            # v7 — Research
-  gerador-spec.md           # v7 — Plan + Tasks
+  sdd-plan.md               # v7+ — Research + Understanding + Tasks (1 auto-sized doc)
   executor-plan.md          # v7 — Code with TDD + parallelism
   quick-task.md             # v7 — Quick mode
   roadmap.md                # v7 — Manage ROADMAP.md
@@ -193,7 +190,10 @@ commands/
     gerador-prd.md
     gerador-spec.md
     executor-plan.md
-  deprecated/               # v3, v4, v5
+  deprecated/               # v3, v4, v5, v7 (split PRD+SPEC, vault-memory→skill)
+    gerador-prd.v7.md       # Replaced by sdd-plan
+    gerador-spec.v7.md      # Replaced by sdd-plan
+    vault-memory.v7.md      # Promoted to skill (lives outside commands/)
 deprecated/
   commands/                 # v1, v2
 ```
@@ -204,11 +204,8 @@ deprecated/
 thoughts/
   ROADMAP.md                  # Multi-feature view (optional)
   STATE.md                    # Persistent memory (optional, created under confirmation)
-  research/
-    PRD-DD-MM-YYYY-slug.md    # Output of /gerador-prd
   plans/
-    SPEC-DD-MM-YYYY-slug.md   # Output of /gerador-spec
-    DESIGN-DD-MM-YYYY-slug.md # Optional output of /gerador-spec (Large/Complex)
+    SPEC-DD-MM-YYYY-slug.md   # Output of /sdd-plan (1 auto-sized doc)
   history/
     IMP-DD-MM-YYYY-slug.md    # Output of /executor-plan
   reviews/
@@ -220,7 +217,7 @@ thoughts/
   tests/                      # TDD scaffolding (NOT committed)
 ```
 
-> Before v7, artifacts were in `thoughts/shared/`. v7 simplifies by removing `shared/` — TDD tests remain isolated in `thoughts/tests/`.
+> Before v7, artifacts were in `thoughts/shared/`. v7 simplifies by removing `shared/` — TDD tests remain isolated in `thoughts/tests/`. The `thoughts/research/` folder (used by `gerador-prd`) is no longer needed — `/sdd-plan` writes directly to `thoughts/plans/`.
 
 ## Inspiration
 

@@ -8,7 +8,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bas
 
 # Quick Task — Modo Rapido
 
-Voce executa **mudancas pequenas** sem rodar PRD nem SPEC formais. Use quando:
+Voce executa **mudancas pequenas** sem rodar SPEC formal. Use quando:
 - ≤3 arquivos alterados
 - Descricao cabe em 1 frase
 - Sem decisao arquitetural nova
@@ -20,9 +20,9 @@ Voce executa **mudancas pequenas** sem rodar PRD nem SPEC formais. Use quando:
 ## Principios
 
 - **Baixa ceremonia**: 1 arquivo de input (`TASK.md`) + 1 de output (`SUMMARY.md`)
-- **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/gerador-prd`
+- **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/sdd-plan`
 - **TDD quando aplicavel**: codigo de lib/dominio = TDD obrigatorio. Config/typo = nao
-- **Memoria persistente leve**: leia memoria de sessoes anteriores (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`) para nao repetir blockers conhecidos. Detalhes: `/vault-memory`
+- **Memoria persistente leve**: leia memoria de sessoes anteriores (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`) para nao repetir blockers conhecidos. Detalhes: skill `vault-memory`
 - **Zero Inferencia**: API externa = verifique antes (Context7/WebFetch). Sem verificacao = pare
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` mesmo no quick mode
 
@@ -40,7 +40,7 @@ Use esse caminho como base para `thoughts/`.
 Se nao descreveu:
 ```
 O que voce quer fazer? (1 frase)
-Lembre: quick mode e para mudanca pequena. Se for feature, use /gerador-prd.
+Lembre: quick mode e para mudanca pequena. Se for feature, use /sdd-plan.
 ```
 
 ### 2. Validar se cabe em quick mode
@@ -55,17 +55,17 @@ Antes de criar TASK.md, avalie:
 | Sem nova lib/dependencia | Sim |
 | Sem migracao de schema | Sim |
 | Sem decisao de design | Sim |
-| >3 dos sinais acima negativos | Use `/gerador-prd` |
+| >3 dos sinais acima negativos | Use `/sdd-plan` |
 
 Se duvidoso:
 ```
-Esta mudanca parece [pequena/media]. Confirmar quick mode ou prefere fluxo formal (/gerador-prd)?
+Esta mudanca parece [pequena/media]. Confirmar quick mode ou prefere fluxo formal (/sdd-plan)?
 ```
 
 ### 3. Ler context minimo
 - `CLAUDE.md`
 - `ARCHITECTURE.md`
-- Memoria persistente — so blockers conhecidos. Modo vault (`CLAUDE_VAULT_PATH`): `state/blockers/*.md`. Modo legacy: `thoughts/STATE.md`. Ver `/vault-memory`.
+- Memoria persistente — so blockers conhecidos. Modo vault (`CLAUDE_VAULT_PATH`): `state/blockers/*.md`. Modo legacy: `thoughts/STATE.md`. Ver skill `vault-memory`.
 - Skills aplicaveis em `.claude/skills/`
 
 ### 4. Decidir o numero da task
@@ -147,7 +147,7 @@ Esta task cresceu alem do quick mode:
 
 Sugiro converter para fluxo formal:
 1. Apago thoughts/quick/NNN-slug/
-2. Voce roda /gerador-prd
+2. Voce roda /sdd-plan
 3. Continuamos no fluxo SPEC + executor
 
 Confirma escalonamento?
@@ -239,7 +239,7 @@ Salvar? (s/n)
 ```
 
 Se aprovado:
-- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato em `/vault-memory`).
+- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
 ### Passo 11 — Informar ao usuario
