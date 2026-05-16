@@ -155,7 +155,7 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 ### Toolkit
 
 ```
-commands/
+commands/                   # Slash commands (invocação manual via /)
   sdd-plan.md               # v7+ — Pesquisar + Entender + Tarefas (1 doc auto-sized)
   executor-plan.md          # v7 — Codar com TDD + paralelismo
   quick-task.md             # v7 — Modo rapido
@@ -175,9 +175,21 @@ commands/
     gerador-prd.v7.md       # Substituido por sdd-plan
     gerador-spec.v7.md      # Substituido por sdd-plan
     vault-memory.v7.md      # Promovido para skill (fica fora de commands/)
+skills/                     # Skills (auto-trigger via descrição)
+  vault-memory/             # Sabor geral: user/feedback/project/reference no vault
+    SKILL.md
+    references/
+      hub-template.md
+      nota-template.md
 deprecated/
   commands/                 # v1, v2
 ```
+
+**Por que skills/ e commands/ separados** (convenção Anthropic):
+- **`commands/`** — slash commands invocados manualmente (`/sdd-plan`, `/executor-plan`, etc). O usuário decide quando rodar.
+- **`skills/`** — auto-trigger pela descrição. O agente decide invocar quando o contexto bate. `vault-memory` é skill porque precisa estar "sempre disponível" pra ler/escrever memórias gerais sem o usuário precisar lembrar de chamar.
+
+A integração entre as duas pontas: os commands SDD (`sdd-plan`, `executor-plan`, `quick-task`, `sdd-learning`) referenciam o skill `vault-memory` para o protocolo de leitura/escrita no vault — eles cuidam do sabor "SDD persistente" (`state/`) e o skill cuida do sabor "geral" (`feedback`/`project`/`reference`/`user`).
 
 ### Outputs em `thoughts/` (no projeto onde os commands rodam)
 

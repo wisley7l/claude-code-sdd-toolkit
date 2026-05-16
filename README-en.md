@@ -176,7 +176,7 @@ In either mode: **writes always under user confirmation** — the command propos
 ### Toolkit
 
 ```
-commands/
+commands/                   # Slash commands (manual invocation via /)
   sdd-plan.md               # v7+ — Research + Understanding + Tasks (1 auto-sized doc)
   executor-plan.md          # v7 — Code with TDD + parallelism
   quick-task.md             # v7 — Quick mode
@@ -196,9 +196,21 @@ commands/
     gerador-prd.v7.md       # Replaced by sdd-plan
     gerador-spec.v7.md      # Replaced by sdd-plan
     vault-memory.v7.md      # Promoted to skill (lives outside commands/)
+skills/                     # Skills (auto-trigger via description)
+  vault-memory/             # General flavor: user/feedback/project/reference in the vault
+    SKILL.md
+    references/
+      hub-template.md
+      nota-template.md
 deprecated/
   commands/                 # v1, v2
 ```
+
+**Why skills/ and commands/ are separate** (Anthropic convention):
+- **`commands/`** — slash commands invoked manually (`/sdd-plan`, `/executor-plan`, etc). The user decides when to run them.
+- **`skills/`** — auto-triggered by description. The agent decides to invoke when context matches. `vault-memory` is a skill because it needs to be "always available" to read/write general memories without the user having to remember to call it.
+
+How the two sides integrate: the SDD commands (`sdd-plan`, `executor-plan`, `quick-task`, `sdd-learning`) reference the `vault-memory` skill for the vault read/write protocol — they handle the "SDD persistent" flavor (`state/`) and the skill handles the "general" flavor (`feedback`/`project`/`reference`/`user`).
 
 ### Outputs in `thoughts/` (in the project where commands run)
 
