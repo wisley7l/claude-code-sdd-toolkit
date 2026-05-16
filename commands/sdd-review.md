@@ -1,6 +1,6 @@
 ---
-description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/shared/reviews/
-allowed-tools: Read, Write, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(gh *)
+description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/reviews/. Ao final, lista issues CRITICAL/MAJOR (must-fix) e oferece gerar fixes via /quick-task (autônomo em cadeia OU pausando entre cada).
+allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(mkdir *), Bash(gh *)
 ---
 
 # Agente Code Reviewer — SDD Review
@@ -138,7 +138,7 @@ git worktree list | head -1 | awk '{print $1}'
 
 Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositório principal mesmo quando executando dentro de um worktree.
 
-Crie `<root>/thoughts/shared/reviews/REV-DD-MM-YYYY-[slug].md`:
+Crie `<root>/thoughts/reviews/REV-DD-MM-YYYY-[slug].md` (na v7 do toolkit; em projetos legados ainda em `thoughts/shared/reviews/` mantenha o padrão existente):
 
 ````markdown
 ---
@@ -284,6 +284,82 @@ Fontes válidas para sugestões são:
 
 ---
 
+## Etapa 6 — Action Plan (fixes via /quick-task)
+
+Após salvar o relatório, colete as issues marcadas como **CRITICAL** e **MAJOR** (must-fix). Issues MINOR ficam no relatório como informação, sem ação automática.
+
+**Se houver 0 must-fix**: pule esta etapa.
+
+**Se houver 1+ must-fix**: liste e pergunte:
+
+```
+[N] issues acionáveis encontradas (must-fix):
+
+  1. 🔴 CRITICAL — Title — arquivo:linha
+  2. 🟡 MAJOR — Title — arquivo:linha
+  3. 🟡 MAJOR — Title — arquivo:linha
+
+Quer gerar fixes via /quick-task?
+
+  (a) Sim — autônomo em cadeia (sem pausa entre fixes; staging only, sem commit)
+  (b) Sim — pausando entre cada fix (controle completo)
+  (c) Selecionar quais aplicar antes de executar
+  (d) Só gerar os TASK.md (eu executo depois com /quick-task)
+  (e) Não, deixa pra depois
+
+[a/b/c/d/e]
+```
+
+**Se (a) ou (b)**: para cada must-fix selecionada (todas em a/b; subset em c):
+
+1. Crie `<root>/thoughts/quick/NNN-fix-<slug>/TASK.md` com conteúdo derivado da issue:
+   - Descrição: o "Descrição" + "Impacto" da issue
+   - Por que: vem do contexto da issue
+   - Passos: rascunho da sugestão de correção
+   - Arquivos esperados: arquivo da issue
+   - TDD aplicável: sim se for código de lib/domínio; não se for typo/config
+   - Gate: comando do projeto (typecheck/lint/test conforme CLAUDE.md)
+   - Skills: skills do projeto relevantes ao arquivo modificado
+
+2. **Invoque o quick-task via Agent subagent**:
+   - `subagent_type: general-purpose`
+   - Prompt contém: o TASK.md, o conteúdo de `quick-task.md` (carregado via Read), o modo (`autonomo-invocado` ou `step-invocado`), instrução "não commite — só `git add` ao final" (em ambos os modos invocados)
+   - Subagent segue o protocolo do quick-task com as adaptações do modo invocado
+   - Subagent retorna: status (Complete/Blocked/Partial), files changed, gate result, test count, observações
+
+3. **Acumule resultados**. Se uma fix bloquear (escopo cresceu, decisão arquitetural surgiu), pare a cadeia e mostre ao usuário:
+   ```
+   Fix [N/M] bloqueada: [motivo]
+   Sugestão do quick-task: escalar para /sdd-plan
+   Continuo com as próximas ([X] restantes) ou paro? [continuar/parar]
+   ```
+
+**Se (c)**: liste as must-fix com checkboxes, peça seleção, depois mesmo fluxo de (a) ou (b) — pergunte qual modo após a seleção.
+
+**Se (d)**: só crie os `TASK.md` em `thoughts/quick/NNN-fix-<slug>/`. Liste paths ao final. Termine sem invocar quick-task.
+
+**Se (e)**: termine sem ação.
+
+### Resultado final (após Action Plan)
+
+```
+Review concluído.
+
+Resultado: [✅ Aprovado / ⚠️ Aprovado com ressalvas / ❌ Bloqueado]
+Issues: [N críticas, N maiores, N menores]
+
+Relatório: thoughts/reviews/REV-DD-MM-YYYY-[slug].md
+
+Fixes aplicadas:
+  - [N] de [M] must-fix aplicadas via /quick-task
+  - [X] arquivos staged (não commitados)
+  - [Y] bloqueadas (ver detalhes acima)
+
+Próximo passo: revise o diff staged no VSCode e commite quando aprovar.
+```
+
+---
+
 ## Guardrails
 
 - **Nunca comente no PR**: O relatório é local, salvo em `thoughts/shared/reviews/`. Sem excecao
@@ -294,18 +370,9 @@ Fontes válidas para sugestões são:
 - **Nunca sugira sem base**: Toda sugestão DEVE citar `[Fonte: path:line]` (padrão do projeto), `[Fonte: CLAUDE.md/ARCHITECTURE.md]` (constraint documentado), ou `[Fonte: doc oficial]` (documentação conhecida da linguagem/framework). Sugestão baseada apenas em "boas práticas" genéricas sem evidência = não inclua
 - **Nomenclatura nunca bloqueia**: Issues do Agente 4 sao sempre MINOR. Sem excecao
 - **Queries: risco futuro conta**: Query sem LIMIT "funciona hoje" mas pode ser catastrofica em producao — reporte
+- **Action Plan e opt-in**: nunca aplique fixes automaticamente sem confirmacao do usuario. A pergunta da Etapa 6 e obrigatoria
+- **Fixes via quick-task respeitam modo invocado**: subagent que executa o fix usa modo `autonomo-invocado` ou `step-invocado` conforme escolha do usuario — em ambos, NUNCA commita (so `git add`)
+- **Quick-task pode escalar**: se um fix crescer alem do escopo quick (>5 passos, decisao arquitetural), respeite o safety valve do quick-task e pause a cadeia para o usuario decidir
 - **GitHub via `gh` CLI**: Nunca tokens manuais
 
-## Formato de Conclusão
-
-Ao finalizar, informe:
-
-```
-Review concluído.
-
-Resultado: [✅ Aprovado / ⚠️ Aprovado com ressalvas / ❌ Bloqueado]
-Issues: [N críticas, N maiores, N menores]
-
-Relatório salvo em:
-thoughts/shared/reviews/REV-DD-MM-YYYY-[slug].md
-```
+> O formato de conclusão final está descrito na **Etapa 6 — Action Plan** (seção "Resultado final"). Não duplique aqui.

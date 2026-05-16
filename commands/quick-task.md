@@ -1,5 +1,5 @@
 ---
-description: Modo rapido — mudanca pequena sem PRD nem SPEC formal (bug fix, config, tweak)
+description: Modo rapido — mudanca pequena sem SPEC formal (bug fix, config, tweak). Suporta invocacao por /sdd-review (modos `autonomo-invocado` e `step-invocado` que NUNCA commitam, so fazem `git add`).
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
@@ -17,14 +17,27 @@ Voce executa **mudancas pequenas** sem rodar SPEC formal. Use quando:
 
 **Se o escopo crescer durante a execucao, voce sobe para o fluxo formal.**
 
+## Modos de execucao
+
+| Modo | Quando | Comportamento |
+|---|---|---|
+| **manual** (default) | Invocado pelo usuario direto via `/quick-task` | Confirmacoes interativas; commit atomico ao final |
+| **autonomo-invocado** | Chamado por outro command (ex: `/sdd-review` Etapa 6) com flag de autonomia | Pula confirmacoes nao-bloqueantes; **so faz `git add`, NUNCA commita** — staging fica acumulado para o caller resolver |
+| **step-invocado** | Chamado por outro command com flag de pausa | Mantem confirmacoes; **so faz `git add`, NUNCA commita** |
+
+**Como detectar o modo**: o prompt do subagent que invoca o quick-task declara explicitamente o modo (`mode: autonomo-invocado` ou `mode: step-invocado`). Se o prompt nao declara modo, assuma `manual`.
+
+**Paradas duras (sempre param em qualquer modo)**: safety valve (>5 passos, decisao arquitetural, nova lib, >3 arquivos), test count drop, gate falhando, sem fonte verificavel para claim externa.
+
 ## Principios
 
 - **Baixa ceremonia**: 1 arquivo de input (`TASK.md`) + 1 de output (`SUMMARY.md`)
-- **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/sdd-plan`
+- **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/sdd-plan`. **Vale em todos os modos.**
 - **TDD quando aplicavel**: codigo de lib/dominio = TDD obrigatorio. Config/typo = nao
 - **Memoria persistente leve**: leia memoria de sessoes anteriores (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`) para nao repetir blockers conhecidos. Detalhes: skill `vault-memory`
 - **Zero Inferencia**: API externa = verifique antes (Context7/WebFetch). Sem verificacao = pare
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` mesmo no quick mode
+- **Modos invocados nunca commitam**: em `autonomo-invocado` e `step-invocado`, `git add` ao final substitui `git commit`. O caller decide quando/como commitar.
 
 ## Resolucao do diretorio root
 
@@ -118,6 +131,7 @@ Issue/PR: [link se aplicavel]
 
 ### Passo 2 — Apresentar para aprovacao
 
+**Em modo `manual` ou `step-invocado`**:
 ```
 Quick Task NNN criada:
 
@@ -125,8 +139,13 @@ Quick Task NNN criada:
 
 Posso executar?
 ```
-
 Aguarde aprovacao.
+
+**Em modo `autonomo-invocado`**: pule a aprovacao. Mostre o TASK.md brevemente e avance direto:
+```
+Quick Task NNN (autonomo-invocado): [titulo]
+Executando...
+```
 
 ### Passo 3 — Safety Valve (apos passos detalhados)
 
@@ -183,16 +202,24 @@ Compare contagem de testes antes/depois. Se caiu, **PARE** — silent deletion.
 
 ### Passo 7 — Simplificar (opcional, com confirmacao)
 
+**Em modo `manual` ou `step-invocado`**:
 ```
 Quick task verificada. Posso passar code-simplifier antes do commit?
 [Arquivos: lista]
 ```
-
 Se aprovado, reexecute o Gate apos simplifier.
 
-### Passo 8 — Commit
+**Em modo `autonomo-invocado`**: pule o simplifier. O caller (`/sdd-review`) decide se aplica simplifier no conjunto consolidado de fixes ao final.
 
-Commit atomico. Mensagem clara descrevendo a mudanca.
+### Passo 8 — Commit (manual) ou Staging (modos invocados)
+
+**Em modo `manual`**:
+- Commit atomico. Mensagem clara descrevendo a mudanca.
+
+**Em modo `autonomo-invocado` ou `step-invocado`**:
+- **Nao commite.** Execute `git add <arquivos da task>` apenas.
+- O caller (ex: `/sdd-review`) decide quando/como commitar.
+- Anote no SUMMARY.md: "Staged, aguardando aprovacao do caller para commit."
 
 ### Passo 9 — Criar SUMMARY.md
 
@@ -242,8 +269,9 @@ Se aprovado:
 - **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
-### Passo 11 — Informar ao usuario
+### Passo 11 — Informar (manual) ou Retornar resultado (modos invocados)
 
+**Em modo `manual`** — informe ao usuario:
 ```
 Quick Task NNN concluida.
 
@@ -252,6 +280,18 @@ Commit: [hash]
 Gate: PASSOU
 [Memoria: K entradas adicionadas / nao alterada]
 ```
+
+**Em modo `autonomo-invocado` ou `step-invocado`** — retorne estruturado para o caller (`/sdd-review` ou outro):
+```
+status: Complete | Blocked | Partial
+files_staged: [lista]
+gate_result: pass | fail
+test_count: [antes / depois / esperado]
+spec_deviation: [se aplicavel]
+issues: [se aplicavel]
+summary_path: thoughts/quick/NNN-slug/SUMMARY.md
+```
+Nao escreva mensagem ao usuario final — o caller agrega.
 
 ---
 
@@ -262,7 +302,7 @@ Gate: PASSOU
 - **Test count check se TDD**: silent deletion e bloqueante mesmo em quick mode
 - **Gate obrigatorio**: toda quick task tem um comando de verificacao. Sem gate = nao e quick task, e ajuste manual nao reproduzivel
 - **Constitution mesmo aqui**: CLAUDE.md + ARCHITECTURE.md
-- **Commit atomico**: 1 quick task = 1 commit (ou 2 se houver passada do simplifier)
+- **Commit so em modo manual**: em `manual`, 1 quick task = 1 commit. Em `autonomo-invocado` e `step-invocado`, **NUNCA commite** — so `git add`. Caller decide o commit.
 - **Nunca invente API**: verifique em doc oficial ou codigo existente
 - **Memoria sob confirmacao**: nunca escreva (vault ou STATE.md) sem perguntar
 - **Skills nao opcionais**: se a task tem skills, ative

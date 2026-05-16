@@ -1,6 +1,6 @@
 ---
-description: Pair programming — executa tarefas com TDD, paralelismo opcional e protecao contra delecao de testes (Fase 2 do SDD)
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+description: Pair programming autonomo — executa tarefas com TDD em modo continuo (sem pausa entre tarefas). Faz staging (git add) por tarefa, nunca commit. No fim, sugere /sdd-review e pergunta estilo de commit pro user. Modo --step ativa pausas + commits atomicos do comportamento antigo.
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Conceitos adaptados: sub-agent paralelo para [P], Test count protection, STATE.md persistente, Gate commands explicitos
@@ -8,9 +8,11 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bas
 
 # Pair Programming — Executar Tarefas
 
-Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, escreve testes antes do codigo, implementa, e avanca entre tarefas com confirmacao do usuario. Tarefas `[P]` rodam em paralelo via sub-agents.
+Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, escreve testes antes do codigo, implementa, e segue para a proxima tarefa **sem pausa** (modo autonomo default). Tarefas `[P]` rodam em paralelo via sub-agents. **Nada e commitado automaticamente** — voce faz `git add` por tarefa e o commit fica sob aprovacao humana no fim.
 
-**Estilo pair: codifico, testo, refatoro, avanco. Paro quando tenho duvida real, testes quebram, ou contagem de testes baixa.**
+**Modo `--step`** (opt-in): se o usuario invocar com `--step`, volte ao comportamento antigo (pausa entre tarefas + commit atomico imediato por tarefa).
+
+**Estilo: codifico, testo, refatoro, avanco. Paro em paradas duras (testes quebram, contagem de testes cai, SPEC_DEVIATION, blocker, encruzilhada nao-obvia).**
 
 ## Principios
 
@@ -23,9 +25,11 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Reconciliacao com docs**: Se a tarefa altera arquitetura documentada, pergunte se atualiza o doc do projeto
 - **Zero Inferencia**: Verifique comportamento de API no codigo, Context7, WebFetch/Search, ou pergunte. Sem verificacao = pare
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
-- **Commits atomicos**: Cada commit = uma tarefa concluida e testada
-- **Pausa entre tarefas**: Confirme com usuario antes da proxima. Nao entre micro-passos
-- **Paralelismo respeita estado**: `[P]` so se nao ha estado mutavel compartilhado entre as tarefas
+- **Default autonomo**: zero pausa entre tarefas. Em `--step`, pausa apos cada tarefa.
+- **Paradas duras (sempre param, mesmo em autonomo)**: test count drop, gate falhando, SPEC_DEVIATION reportado por sub-agent, blocker que exige decisao arquitetural, encruzilhada com solucao nao-obvia, reconciliacao com doc do projeto
+- **Commits sob aprovacao humana**: executor faz `git add` por tarefa; **nunca commita** automaticamente em modo autonomo. No fim, lista arquivos staged e pergunta ao user como commitar. Em `--step`, comportamento antigo (commit atomico por tarefa imediato)
+- **Tracking de arquivos por T_i**: durante a execucao, mantenha um log interno (`thoughts/.executor-staged.log` no root, nao commitado) com `T1: file1, file2 | T2: file3 | ...` para permitir commits atomicos opcionais no fim
+- **Paralelismo respeita estado**: `[P]` so se nao ha estado mutavel compartilhado entre as tarefas. Em modo autonomo, valida automaticamente e paraleliza sem perguntar; em `--step`, pergunta antes
 
 ## Resolucao do diretorio root
 
@@ -85,10 +89,17 @@ Leia o arquivo completo. Entenda:
 ### 5. Ativar Skills
 Leia cada skill listada no plano em `.claude/skills/` antes de comecar.
 
-### 6. Confirmar Inicio
+### 6. Detectar modo
+
+Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. Caso contrario, modo autonomo (default).
+
+### 7. Confirmar Inicio
 
 ```
 Pronto para executar: [Nome]
+
+Modo: AUTONOMO (zero pausa entre tarefas, staging por T, commits no fim sob aprovacao humana)
+       [ou: STEP (pausa entre tarefas + commits atomicos imediatos)]
 
 Constitution: CLAUDE.md + ARCHITECTURE.md lidos
 STATE.md: [N decisoes / M blockers carregados, ou "sem STATE"]
@@ -96,6 +107,8 @@ Skills ativas: [lista]
 Phases: Foundation [N], Core [M], Integration [K]
 Tarefas: [Total: X, Pendentes: Y, Paralelizaveis [P]: Z]
 Proximo: Phase 1 — [primeiras tarefas]
+
+Paradas duras (sempre param): test count drop, gate fail, SPEC_DEVIATION, blocker, encruzilhada, reconciliacao de doc
 
 Posso comecar?
 ```
@@ -190,9 +203,9 @@ Opcoes:
 Como prefere?
 ```
 
-**8. Simplificar (com confirmacao)**
+**8. Simplificar (apenas em `--step`; em autonomo, adiar para Verificacao Final)**
 
-Antes de commitar:
+**Em `--step`** — antes de commitar:
 ```
 Tarefa [N] verificada — [X] testes passando (esperado [Y]).
 Posso passar o code-simplifier antes do commit?
@@ -205,19 +218,32 @@ Se aprovado:
 - Se quebrar: PARE, discuta antes de prosseguir
 - Se passar: prossiga ao commit incluindo as mudancas do simplifier no mesmo commit atomico
 
-A pergunta e a cada tarefa.
+**Em modo autonomo**: pule este passo. Simplifier roda **uma vez no fim** (Verificacao Final) sobre o conjunto completo de arquivos staged. Reduz ruido entre tarefas.
 
-**9. Commit**
+**9. Staging (autonomo) ou Commit (step)**
 
+**Em modo autonomo**:
+- Liste arquivos alterados na tarefa (codigo + doc atualizado se aplicavel)
+- Execute `git add <arquivos>` — **nao commite**
+- Anote no log interno: `T<N>: <arquivos>` em `thoughts/.executor-staged.log` (criar se nao existe; nao commita esse arquivo — adicione ao `.gitignore` local se necessario, ou ignore via `git update-index --skip-worktree`)
+- Testes unitarios de `thoughts/tests/` NAO entram no staging
+
+**Em `--step`**:
 - Commit atomico (codigo + simplificacao + testes de integracao + doc atualizado se aplicavel)
 - Mensagem segue formato do `Commit:` da tarefa
 - Testes unitarios de `thoughts/tests/` NAO entram no commit
 
-**10. Marcar e Pausar**
+**10. Marcar e Avancar**
 
 - Edite o SPEC: `- [ ]` → `- [x]`
-- Informe:
 
+**Em modo autonomo**: avance direto para a proxima tarefa, sem pausa. Informe brevemente (1-2 linhas):
+```
+T[N] OK — [titulo] — staged [X] arquivos, [Y] tests pass
+Avancando para T[N+1]...
+```
+
+**Em `--step`**: informe e pause.
 ```
 Tarefa [N] concluida — [titulo]
 [1-2 linhas do que foi feito]
@@ -243,8 +269,13 @@ Verifique que as `[P]` agrupadas:
 
 Se alguma falhar, execute em sequencia (sem `[P]`).
 
-**2. Pergunte ao usuario antes de paralelizar**
+**2. Em modo autonomo**: paralelize direto (validacao automatica acima ja garante seguranca). Informe brevemente:
+```
+Phase Core: paralelizando [N] tarefas [P] via sub-agents:
+- T3, T4, T5 — [arquivos distintos confirmados]
+```
 
+**Em `--step`**: pergunte antes:
 ```
 Phase Core tem [N] tarefas paralelizaveis prontas:
 - T3 [P]: [titulo] → [arquivo]
@@ -282,8 +313,9 @@ Para cada tarefa concluida:
 
 Se alguma `Blocked` ou `Partial`: PARE, mostre ao usuario, decida juntos.
 
-**6. Simplificar (uma vez para o conjunto)**
+**6. Simplificar (apenas em `--step`; em autonomo, adiar para Verificacao Final)**
 
+**Em `--step`**:
 ```
 [N] tarefas paralelas concluidas. Posso passar o code-simplifier no conjunto?
 [Arquivos alterados: lista]
@@ -291,13 +323,25 @@ Se alguma `Blocked` ou `Partial`: PARE, mostre ao usuario, decida juntos.
 
 Se aprovado: simplifier escopado aos arquivos do grupo. Reexecute todos os Gates.
 
-**7. Commits**
+**Em modo autonomo**: pule. Simplifier no fim.
 
-Um commit por tarefa (atomicidade preservada). Em ordem.
+**7. Staging (autonomo) ou Commits (step)**
 
-**8. Marcar e Pausar**
+**Em modo autonomo**: `git add` de cada tarefa, **sem commit**. Anote no log `T<N>: <arquivos>` para cada T do grupo.
 
-Edite o SPEC marcando todas as `[P]` concluidas. Informe:
+**Em `--step`**: um commit por tarefa (atomicidade preservada). Em ordem.
+
+**8. Marcar e Avancar**
+
+Edite o SPEC marcando todas as `[P]` concluidas.
+
+**Em modo autonomo**: informe brevemente e avance:
+```
+[N] tarefas paralelas concluidas: T3, T4, T5 — staged, [X] tests pass
+Avancando para Phase Integration...
+```
+
+**Em `--step`**: informe e pause:
 ```
 [N] tarefas paralelas concluidas:
 - T3: [titulo] — [X tests pass]
@@ -347,17 +391,21 @@ Compare contagem total agora vs. contagem na config inicial + tarefas concluidas
 
 ### 3. Passada final do code-simplifier (com confirmacao)
 
+**Em modo autonomo**: simplifier roda **uma vez no fim** (substitui as passadas por tarefa).
+**Em `--step`**: passada final sobre o conjunto (alem das passadas por tarefa que ja rodaram).
+
 ```
 Todas as tarefas concluidas e testes passando.
 Posso rodar uma passada final do code-simplifier sobre todo o conjunto de mudancas?
-Escopo: arquivos alterados desde a branch base
+Escopo: arquivos alterados desde a branch base (ou arquivos staged em modo autonomo)
 ```
 
 Se aprovado:
-- `Agent` com `subagent_type: code-simplifier` escopado a `git diff <base>...HEAD --name-only`
+- `Agent` com `subagent_type: code-simplifier` escopado a `git diff <base>...HEAD --name-only` (step) ou `git diff --cached --name-only` (autonomo)
 - Reexecute todos os testes
 - Se quebrar: PARE
-- Se passar: commit separado `refactor: simplify [feature]`
+- **Em `--step`**: commit separado `refactor: simplify [feature]`
+- **Em autonomo**: `git add` das mudancas do simplifier (entra no staging para o commit final pelo user)
 
 ### 4. Propor registro de memoria
 
@@ -382,7 +430,50 @@ Se aprovado:
 - **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
 
-### 5. Informar resultado
+### 5. Sugerir /sdd-review e perguntar estilo de commit (apenas modo autonomo)
+
+**Em `--step`**: pule este passo (commits ja foram feitos atomicamente).
+
+**Em modo autonomo**:
+
+```
+Feature implementada. Tudo staged, nada commitado ainda.
+
+Staged por tarefa (de thoughts/.executor-staged.log):
+- T1 → file1.ts, file2.ts
+- T2 → file3.ts
+- T3 → file4.ts, file5.ts (+ refactor do simplifier)
+
+Sugiro rodar `/sdd-review` antes de commitar.
+
+Como quer commitar?
+  (1) 1 commit grande — eu monto a mensagem com title + body listando T1/T2/T3
+  (2) Atomico por tarefa — eu unstage tudo e refaço N commits com as mensagens da SPEC
+  (3) Agora nao — vou revisar primeiro (deixo staged como esta)
+
+[1/2/3]
+```
+
+**Se 1 (commit grande)**:
+- `git commit -m "feat: <feature-slug>" -m "- T1: <msg>\n- T2: <msg>\n- T3: <msg>\n..."`
+- **Nao pusha.** Informe hash do commit.
+
+**Se 2 (atomico por tarefa)**:
+- Verifique se ha overlap de arquivos entre tarefas (mesmo arquivo em T1 e T2). Se sim, avise:
+  ```
+  T1 e T2 editaram o mesmo arquivo (X.ts). Commits atomicos perderiam parte do contexto.
+  Sugiro opcao 1 (grande). Continuar atomico mesmo assim? (s/n)
+  ```
+- Se sem overlap (ou usuario confirmou): `git reset` → para cada T_i em ordem: `git add <arquivos>` + `git commit -m "<msg da SPEC>"`
+- **Nao pusha.** Informe lista de hashes.
+
+**Se 3 (depois)**:
+- Informe: "Staged esta pronto. Revise com `/sdd-review` e commite quando quiser. Para descartar: `git reset --hard`."
+- Termine sem commitar.
+
+**Em qualquer caso**: nao pushe. Push e sempre acao do usuario.
+
+### 6. Informar resultado
 
 ```
 Feature concluida.
@@ -392,8 +483,10 @@ Feature concluida.
 - Test count: PRESERVADO em todas tarefas
 - Memoria persistente: [K entradas adicionadas / nao alterada]
 - Doc do projeto: [atualizado / nao precisava]
+- Commits: [hash(es) ou "staged, aguardando aprovacao"]
 
 Relatorio: thoughts/history/IMP-DD-MM-YYYY-[slug].md
+Proximo: /sdd-review pra checar antes do push.
 ```
 
 ---
@@ -476,16 +569,19 @@ Apos escrever, lance subagente para verificar links (URLs em referencias, docs):
 - **Nunca commite testes unitarios**: `thoughts/tests/` nunca entra no git — andaime
 - **Nunca exporte para testar**: funcao nao exportada, nao crie export so para teste. Teste indireto
 - **Nunca invente runtime**: use comandos do CLAUDE.md (bun/jest/vitest/go test conforme projeto)
-- **Nunca pule a pausa**: confirme com usuario entre tarefas, nao entre micro-passos
+- **Modo padrao e autonomo**: zero pausa entre tarefas. `--step` ativa pausa antiga
+- **Paradas duras sempre param**: test count drop, gate fail, SPEC_DEVIATION, blocker, encruzilhada, reconciliacao de doc. Em qualquer modo
 - **Nunca ignore skills**: skills do plano nao opcionais
 - **Nunca chute API**: verifique em doc oficial (Context7/WebFetch/WebSearch) ou codigo existente
-- **Paralelismo seguro**: `[P]` so quando arquivos distintos E sem estado compartilhado. Pergunte antes de paralelizar
+- **Paralelismo seguro**: `[P]` so quando arquivos distintos E sem estado compartilhado. Em autonomo, valida e paraleliza; em `--step`, pergunta antes
 - **Sub-agent retorna estruturado**: status, files, gate result, test count, deviations
 - **STATE.md ao final**: proponha entradas com base no que aprendeu na execucao
-- **Doc do projeto sob confirmacao**: se tarefa altera arquitetura documentada, pergunte se atualiza
+- **Doc do projeto sob confirmacao**: se tarefa altera arquitetura documentada, pergunte se atualiza (parada dura mesmo em autonomo)
 - **Constitution inegociavel**: CLAUDE.md e ARCHITECTURE.md
 - **Checkpoint no SPEC**: edite e marque `[x]` apos concluir cada tarefa
-- **Commits atomicos**: uma tarefa = um commit
+- **Commits sob aprovacao humana (autonomo)**: executor faz `git add` por tarefa; commit so no fim sob escolha do user. Em `--step`, commit atomico imediato por tarefa
+- **Nunca pushe**: push e sempre acao do usuario, em qualquer modo
+- **Tracking de arquivos por tarefa**: `thoughts/.executor-staged.log` mantem o mapeamento T_i → arquivos para permitir commits atomicos opcionais no fim
 - **Simplifier nao silencia testes**: se simplifier quebra teste, PARE, discuta. Simplificacao que quebra contrato e mudanca de comportamento
-- **Simplifier sempre com confirmacao**: pergunta a cada vez, nao assuma "sim"
+- **Simplifier sempre com confirmacao**: em autonomo, 1 vez no fim; em `--step`, a cada tarefa. Nunca assuma "sim"
 - **GitHub via `gh` CLI**: nunca tokens manuais

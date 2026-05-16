@@ -13,8 +13,8 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Fase | Command | Descricao |
 |------|---------|-----------|
 | Plan | `/sdd-plan` | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
-| Codar | `/executor-plan` | Pair programming com TDD. Sub-agents paralelos para tarefas `[P]`. Test count protection (bloqueia silent deletion). Pausa entre tarefas. Atualiza STATE.md |
-| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer |
+| Codar | `/executor-plan` | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
+| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
 | Aprender | `/sdd-learning` | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no vault (sabor SDD em `state/` ou geral em `feedback`/`project`/`reference`). Confirma por item. Atualiza > cria. |
 | Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
@@ -91,14 +91,26 @@ Medium/Large/Complex — feature normal:
                      (Mapeia design docs, classifica escopo, quebra tarefas com [P],
                       3 checks pre-aprovacao: Granularity, Diagram, Test Co-location)
     limpar sessao
-  /executor-plan  -> codar com TDD. Sub-agents paralelos para [P].
-                     Test count protection.
+  /executor-plan  -> MODO AUTONOMO (default): codar com TDD em cadeia (sem pausa),
+                     sub-agents paralelos para [P], staging por tarefa (sem commit).
+                     /executor-plan --step volta ao comportamento antigo (pausa
+                     entre tarefas + commits atomicos imediatos)
+    limpar sessao
+  /sdd-review     -> revisa o diff staged, classifica issues (CRITICAL/MAJOR/MINOR)
+                     e oferece gerar fixes via /quick-task (autonomo em cadeia OU
+                     pausando entre cada). Fixes ficam staged junto.
+    voce revisa o diff completo no VSCode -> commit + push manualmente
+
+Apos a feature mergeada:
+  /sdd-learning   -> colhe aprendizado de IMPs+reviews -> vault
 
 Multi-feature (visao de cima):
   /roadmap                       -> sincroniza status com SPECs/IMPs
   /roadmap add "<descricao>"     -> adiciona ao Backlog
   /roadmap add #123              -> importa de issue GH
 ```
+
+> **Por que modo autonomo no executor**: o usuario relatou dificuldade de revisar mudancas no VSCode depois que cada tarefa virava commit (diff fica preso no historico do git). Com staging acumulado, o VSCode Source Control panel mostra todo o diff continuo, facilitando revisao humana antes do commit final.
 
 > Limpe a sessao entre commands grandes (PRD -> SPEC -> Executor) para maximizar a janela de contexto. Os artefatos em `thoughts/` servem como handoff entre sessoes.
 
