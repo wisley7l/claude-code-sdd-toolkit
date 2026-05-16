@@ -15,6 +15,7 @@ These commands turn Claude Code into a structured development partner that follo
 | Plan | `/sdd-plan` | Research + understanding + tasks in **1 auto-sized document** (Medium/Large/Complex). Maps existing design docs, reconciles conflicts, classifies scope, breaks down tasks with Phases + `[P]`/`Depends on:`/`Gate:`. 3 pre-approval checks (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detects Quick scope and hands off to `/quick-task` |
 | Execute | `/executor-plan` | Pair programming with TDD. Parallel sub-agents for `[P]` tasks. Test count protection (blocks silent deletion). Pauses between tasks. Updates STATE.md |
 | Quick | `/quick-task` | Quick mode for small changes (≤3 files, 1 sentence). Skips formal SPEC. Safety valve escalates to formal flow if scope grows |
+| Learn | `/sdd-learning` | Reads IMPs and reviews, extracts non-obvious learnings, proposes registration in the vault (SDD flavor in `state/` or general in `feedback`/`project`/`reference`). Confirms per item. Updates > creates. |
 | Roadmap | `/roadmap` | Manages `thoughts/ROADMAP.md`. Adds entries, imports from GH issues, syncs status with existing SPEC/IMP |
 
 ### Git Utilities
@@ -181,6 +182,7 @@ commands/
   quick-task.md             # v7 — Quick mode
   roadmap.md                # v7 — Manage ROADMAP.md
   sdd-review.md             # Review
+  sdd-learning.md           # Harvest learnings from IMPs+reviews -> vault
   git-worktree.md           # Create worktree
   git-remove-worktree.md    # Remove worktree
   sync-tests.md             # Sync TDD tests
