@@ -155,7 +155,7 @@ Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante q
 ### Formato do sub-SPEC retroativo
 
 - **Nome**: `SPEC-DD-MM-YYYY-[feature-slug]-[domínio].md`
-- **Localização**: `thoughts/shared/plans/`
+- **Localização**: `thoughts/plans/`
 - **Status**: `retroactive` (diferente de `approved`)
 
 ```markdown
