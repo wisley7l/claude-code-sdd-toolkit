@@ -193,6 +193,8 @@ skills/                     # Skills (auto-trigger via descrição)
     references/
       hub-template.md
       nota-template.md
+  conciso/                  # Modo conciso de resposta em pt-BR (lite/full/ultra)
+    SKILL.md
 deprecated/
   commands/                 # v1, v2
 ```
@@ -202,6 +204,13 @@ deprecated/
 - **`skills/`** — auto-trigger pela descrição. O agente decide invocar quando o contexto bate. `vault-memory` é skill porque precisa estar "sempre disponível" pra ler/escrever memórias gerais sem o usuário precisar lembrar de chamar.
 
 A integração entre as duas pontas: os commands SDD (`sdd-plan`, `executor-plan`, `quick-task`, `sdd-learning`) referenciam o skill `vault-memory` para o protocolo de leitura/escrita no vault — eles cuidam do sabor "SDD persistente" (`state/`) e o skill cuida do sabor "geral" (`feedback`/`project`/`reference`/`user`).
+
+**Skills disponíveis:**
+
+| Skill | Função |
+|---|---|
+| `vault-memory` | Lê/escreve memórias gerais (user/feedback/project/reference) em vault Obsidian central (`$CLAUDE_VAULT_PATH`) |
+| `conciso` | Modo de resposta enxuto em pt-BR com 3 níveis (`/conciso lite\|full\|ultra`) — corta enchimento, mantém precisão técnica. Inspirado no [caveman](https://github.com/JuliusBrussee/caveman). Economia ~25-70% nos tokens de saída |
 
 ### Outputs em `thoughts/` (no projeto onde os commands rodam)
 
@@ -231,6 +240,7 @@ thoughts/
 - **[HumanLayer — Advanced Context Engineering](https://www.humanlayer.dev/blog/advanced-context-engineering)** — Padroes de context engineering para agentes de IA
 - **[HumanLayer Claude Commands](https://github.com/humanlayer/humanlayer/tree/main/.claude/commands)** — Exemplos praticos de commands
 - **[Como eu uso o Claude Code — Workflow SDD](https://dfolloni.substack.com/p/como-eu-uso-o-claude-code-workflow)** — Walkthrough de um workflow SDD real
+- **[caveman](https://github.com/JuliusBrussee/caveman)** — Skill que reformata respostas pra cortar tokens de saida (~65-75%) sem perder substancia tecnica. Inspirou conceitualmente o skill `conciso` deste toolkit (implementacao independente em pt-BR). Autor: Julius Brussee. Veja [Atribuicoes](#atribuicoes-e-licencas-de-terceiros)
 - Extreme Programming (XP) — Pair programming, TDD, small releases
 
 ## Atribuicoes e Licencas de Terceiros
@@ -245,6 +255,15 @@ Este toolkit incorpora conceitos adaptados de obras de terceiros. As licencas or
 - **Status**: adaptado (nao copiado literalmente). Conceitos incorporados a partir da v7 deste toolkit: auto-sizing por complexidade (Quick/Medium/Large/Complex), `STATE.md` persistente, marcadores `[P]` / `Depends on:` / `Gate:` em tarefas, Granularity Check, Diagram-Definition Cross-Check, Test Co-location Validation, agrupamento em Phases (Foundation/Core/Integration), `Test count: N tests pass (no silent deletions)`
 
 A CC-BY-4.0 e uma licenca permissiva e compativel com a MIT — permite uso, modificacao e redistribuicao desde que se atribua o autor original e se indiquem modificacoes feitas. Esta secao cumpre essa exigencia.
+
+### caveman
+
+- **Autor**: Julius Brussee — https://github.com/JuliusBrussee
+- **Fonte**: https://github.com/JuliusBrussee/caveman
+- **Licenca original**: [MIT](https://github.com/JuliusBrussee/caveman/blob/main/LICENSE)
+- **Status**: inspirado conceitualmente (nao copiado). O skill `conciso` deste toolkit (`skills/conciso/SKILL.md`) usa o mesmo principio de cortar tokens de saida via reformatacao de estilo, mas a implementacao foi escrita do zero em pt-BR. Conceito incorporado: niveis ajustaveis de compressao (caveman tem `lite`/`full`/`ultra`/`wenyan`; `conciso` adapta para `lite`/`full`/`ultra` em pt-BR sem o estilo "caveman speak" telegrafico quebrado). Detalhes completos de atribuicao no proprio `SKILL.md` da skill.
+
+A MIT e uma licenca permissiva e compativel com a MIT deste toolkit. Como nao houve copia literal de codigo ou texto, basta a atribuicao acima. Esta secao cumpre essa boa pratica.
 
 ## Licenca
 
