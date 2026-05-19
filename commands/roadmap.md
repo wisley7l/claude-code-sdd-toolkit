@@ -5,9 +5,9 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git
 
 # Roadmap — Visao Multi-Feature
 
-Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto. Mantem 4 secoes: Backlog, Em planejamento (tem PRD), Em andamento (tem SPEC), Concluido.
+Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto. Mantem 3 secoes: Backlog, Em andamento (tem SPEC), Concluido.
 
-**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no PRD/SPEC/IMP correspondente.
+**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no SPEC/IMP correspondente.
 
 ## Resolucao do diretorio root
 
@@ -104,50 +104,42 @@ Issue #123 tem contexto extenso. Quer que eu adicione um resumo de 1 linha?
 
 1. Le o ROADMAP atual e extrai todas entradas com seu NNN/slug.
 
-2. Para cada entrada do **Backlog**, verifica se ha um PRD em `thoughts/research/`:
-   - Padrao: `PRD-*-<slug>.md` (slug derivado da descricao)
-   - Se encontrar: move a entrada para **Em planejamento (tem PRD)** com link
-```markdown
-- [ ] NNN — [titulo] → [PRD-DD-MM-YYYY-slug.md](research/PRD-DD-MM-YYYY-slug.md)
-```
-
-3. Para cada entrada de **Em planejamento**, verifica se ha SPEC em `thoughts/plans/`:
-   - Padrao: `SPEC-*-<slug>.md`
-   - Se encontrar: move para **Em andamento (tem SPEC)**
+2. Para cada entrada do **Backlog**, verifica se ha SPEC em `thoughts/plans/`:
+   - Padrao: `SPEC-*-<slug>.md` (slug derivado da descricao)
+   - Se encontrar: move para **Em andamento (tem SPEC)** com link
 ```markdown
 - [ ] NNN — [titulo] → [SPEC-DD-MM-YYYY-slug.md](plans/SPEC-DD-MM-YYYY-slug.md)
 ```
 
-4. Para cada entrada de **Em andamento**, verifica se ha IMP em `thoughts/history/`:
+3. Para cada entrada de **Em andamento**, verifica se ha IMP em `thoughts/history/`:
    - Padrao: `IMP-*-<slug>.md`
    - Se encontrar: move para **Concluido** (marca `[x]`)
 ```markdown
 - [x] NNN — [titulo] → [IMP-DD-MM-YYYY-slug.md](history/IMP-DD-MM-YYYY-slug.md)
 ```
 
-5. Detecta arquivos PRD/SPEC/IMP que NAO tem entrada correspondente no roadmap. Para cada:
+4. Detecta arquivos SPEC/IMP que NAO tem entrada correspondente no roadmap. Para cada:
    - Mostre ao usuario:
 ```
-Encontrei [PRD/SPEC/IMP] sem entrada no roadmap:
-- thoughts/research/PRD-DD-MM-YYYY-foo.md
+Encontrei [SPEC/IMP] sem entrada no roadmap:
+- thoughts/plans/SPEC-DD-MM-YYYY-foo.md
 
 Quer adicionar como entrada nova? (s/n)
 ```
 
-6. Apresente resumo:
+5. Apresente resumo:
 ```
 Roadmap sincronizado:
 
 - Backlog: [N]
-- Em planejamento: [M] (moveu K do Backlog)
-- Em andamento: [P] (moveu Q de Em planejamento)
+- Em andamento: [P] (moveu Q do Backlog)
 - Concluido: [R] (moveu S de Em andamento)
 
 Itens sem entrada detectados: [T] (perguntei sobre cada)
 Sugestao: itens em Backlog ha >14 dias podem precisar revisao
 ```
 
-7. Salva o ROADMAP atualizado.
+6. Salva o ROADMAP atualizado.
 
 ---
 
@@ -158,17 +150,13 @@ Quando criar pela primeira vez:
 ```markdown
 # Roadmap
 
-> Visao multi-feature do projeto. Cada linha aponta para PRD/SPEC/IMP correspondente quando existir.
+> Visao multi-feature do projeto. Cada linha aponta para SPEC/IMP correspondente quando existir.
 > Use `/roadmap add "<descricao>"` ou `/roadmap add #issue` para adicionar.
 > Use `/roadmap` para sincronizar status com arquivos existentes.
 
 ## Backlog
 
-[Itens identificados mas sem pesquisa ainda]
-
-## Em planejamento (tem PRD)
-
-[Itens com pesquisa concluida, aguardando spec]
+[Itens identificados mas sem SPEC ainda]
 
 ## Em andamento (tem SPEC)
 
@@ -184,10 +172,10 @@ Quando criar pela primeira vez:
 ## Guardrails
 
 - **NNN sequencial**: nunca reuse numero. Sempre `max(numeros existentes) + 1`
-- **Slug consistente**: o slug usado no roadmap deve bater com o slug do PRD/SPEC/IMP para a migracao automatica funcionar
+- **Slug consistente**: o slug usado no roadmap deve bater com o slug do SPEC/IMP para a migracao automatica funcionar
 - **Nunca duplique entradas**: antes de adicionar issue, verifique se ja existe (por numero #)
 - **Migracao sem perda**: ao mover entre secoes, preserve NNN e titulo. So adiciona o link do artefato
-- **Sync nao deleta**: itens sem PRD/SPEC/IMP correspondente ficam onde estao (nao move para tras)
-- **Itens orfaos**: PRD/SPEC/IMP sem entrada no roadmap perguntam ao usuario, nao adicionam automaticamente
+- **Sync nao deleta**: itens sem SPEC/IMP correspondente ficam onde estao (nao move para tras)
+- **Itens orfaos**: SPEC/IMP sem entrada no roadmap perguntam ao usuario, nao adicionam automaticamente
 - **GitHub via `gh` CLI**: nunca tokens manuais
-- **1 linha por entrada**: detalhes vivem no PRD/SPEC/IMP, nao no roadmap
+- **1 linha por entrada**: detalhes vivem no SPEC/IMP, nao no roadmap
