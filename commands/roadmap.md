@@ -1,5 +1,6 @@
 ---
 description: Gerenciar ROADMAP.md — adicionar entradas, importar de issues GH, mostrar estado
+model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git log*), Bash(git status*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *)
 ---
 

@@ -1,5 +1,6 @@
 ---
 description: Extrai aprendizados de IMPs (relatorios de implementacao) e reviews — propoe registro no vault (sabor SDD em state/, sabor geral em feedback/project/reference). Confirma por item antes de gravar. Atualizar > criar.
+model: claude-sonnet-4-6
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(find *), Bash(stat *), Bash(date*)
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills

@@ -1,5 +1,6 @@
 ---
 description: Pair programming autonomo — executa tarefas com TDD em modo continuo (sem pausa entre tarefas). Faz staging (git add) por tarefa, nunca commit. No fim, sugere /sdd-review e pergunta estilo de commit pro user. Modo --step ativa pausas + commits atomicos do comportamento antigo.
+model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
@@ -95,12 +96,18 @@ Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. C
 
 ### 7. Confirmar Inicio
 
+Antes de mostrar o resumo, verifique se modo-livre esta ativo neste projeto:
+- Cheque `thoughts/modo-livre/active` (marker do `/modo-livre`)
+- Se NAO existir: inclua a dica "Modo livre INATIVO" no resumo, sugerindo `/modo-livre on` antes de comecar (acelera a execucao autonoma cortando prompts de permissao)
+- Se existir: inclua "Modo livre ATIVO" no resumo
+
 ```
 Pronto para executar: [Nome]
 
 Modo: AUTONOMO (zero pausa entre tarefas, staging por T, commits no fim sob aprovacao humana)
        [ou: STEP (pausa entre tarefas + commits atomicos imediatos)]
 
+Modo livre: [ATIVO desde <timestamp> | INATIVO — sugiro `/modo-livre on` antes de comecar pra cortar prompts]
 Constitution: CLAUDE.md + ARCHITECTURE.md lidos
 STATE.md: [N decisoes / M blockers carregados, ou "sem STATE"]
 Skills ativas: [lista]
