@@ -207,6 +207,7 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(yarn *)",
       "Bash(npx *)",
       "Bash(bun *)",
+      "Bash(bunx *)",
       "Bash(deno *)",
       "Bash(python *)",
       "Bash(python3 *)",
@@ -220,6 +221,17 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(rustc *)",
       "Bash(make *)",
       "Bash(just *)",
+      "Bash(php *)",
+      "Bash(composer *)",
+      "Bash(artisan *)",
+      "Bash(rails *)",
+      "Bash(bundle *)",
+      "Bash(gem *)",
+      "Bash(dotnet *)",
+      "Bash(infisical *)",
+      "Bash(terraform *)",
+      "Bash(kubectl *)",
+      "Bash(helm *)",
       "Bash(docker ps)",
       "Bash(docker ps *)",
       "Bash(docker images)",
@@ -277,7 +289,16 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(yarn publish)",
       "Bash(yarn publish *)",
       "Bash(cargo publish)",
-      "Bash(cargo publish *)"
+      "Bash(cargo publish *)",
+      "Bash(terraform destroy *)",
+      "Bash(terraform apply -auto-approve *)",
+      "Bash(kubectl delete *)",
+      "Bash(helm uninstall *)",
+      "Bash(helm delete *)",
+      "Bash(php artisan migrate:fresh *)",
+      "Bash(artisan migrate:fresh *)",
+      "Bash(rails db:drop *)",
+      "Bash(rails db:reset *)"
     ]
   }
 }
@@ -325,3 +346,43 @@ NÃO tente burlar via `bash -c`, `eval`, scripts, alias, ou redirecionamento. Se
 - TaskCreate pra planejar tarefas não-triviais
 - Ao terminar um bloco: mostre `git status` + `git diff` e pergunte se pode commitar
 - Se o harness negar algo, responda direto e siga — NÃO retente
+
+### Como compor comandos Bash (importante)
+
+O harness quebra comandos por `&&`, `||`, `;`, `|`, `&`, `|&` E **newlines**. Cada subcomando precisa casar uma regra independente. Padrões anti-pattern que rebentam o pattern matching:
+
+❌ Newlines no meio de comandos compostos:
+```bash
+ls X 2>&1 || mkdir -p
+   X && echo "ok"
+```
+(O parser quebra na newline e fica com `mkdir -p` solto sem args, que não casa `Bash(mkdir *)`.)
+
+❌ Defensividade excessiva com chains:
+```bash
+test -d X || mkdir -p X && echo "ok"
+```
+(`mkdir -p` já é idempotente — não erra se X existe.)
+
+✅ Comando único idempotente:
+```bash
+mkdir -p X
+```
+
+✅ Compostos numa linha só, sem newline:
+```bash
+git status && git diff --stat
+```
+
+❌ Subshells `(...)` sem necessidade:
+```bash
+(bun run typecheck 2>&1 | tail -15 && echo "---" && bunx vitest run)
+```
+(O parêntese de abertura confunde o pattern matching — `(bun` não casa `Bash(bun *)`.)
+
+✅ Sem parênteses, em uma linha:
+```bash
+bun run typecheck 2>&1 | tail -15 && echo "---" && bunx vitest run
+```
+
+Regra prática: prefira **um Bash call por operação**. Se precisar combinar, fique em UMA LINHA, SEM parênteses, e garanta que cada subcomando tem regra de allow. Idempotência (mkdir -p, touch, cp -n) elimina a necessidade de chains "check-then-act".
