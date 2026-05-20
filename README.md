@@ -163,29 +163,31 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 - **Test co-location**: Testes vao na MESMA tarefa que cria o codigo. Defer = anti-pattern bloqueado pelo sdd-plan
 - Se testes que passavam comecam a falhar: parada obrigatoria para discutir
 
-### 6. Statusline com indicador de modo-livre e contexto (opcional)
+### 6. Statusline com contexto, rate limits e indicador de modo-livre (opcional)
 
-Configure uma barra no rodape do Claude Code que mostra **modelo + pasta + branch git + barra colorida de contexto + estado do `/modo-livre`**. Util pra saber quando dar `/clear` ou `/compact` (barra fica vermelha em ≥85% de contexto) e pra confirmar a olho se o `/modo-livre` esta ativo no projeto.
+Configure uma barra no rodape do Claude Code que mostra **modelo + pasta + barra colorida de contexto + rate limits da Anthropic (5h e 7d) com tempo ate o reset + estado do `/modo-livre`**. Util pra saber quando dar `/clear` ou `/compact` (barra vermelha em ≥85%), pra acompanhar consumo das janelas de uso e pra confirmar a olho se o `/modo-livre` esta ativo no projeto.
+
+> Nota: este layout NAO mostra branch git, partindo do princípio que o terminal/PS1 ja exibe. Se voce quiser a branch, adicione " (branch-do-git *)" entre `<pasta>` e a barra de contexto na frase abaixo.
 
 Dentro do Claude Code, rode `/statusline` colando este prompt:
 
 ```
-mostre [nome-do-modelo] entre colchetes, depois nome da pasta atual (basename de .workspace.current_dir), depois (branch-do-git) com asterisco antes do parentese de fechar se o working tree estiver dirty (omita se nao for repo git), depois uma barra de progresso de 10 blocos usando █ pra preenchido e ░ pra vazio seguida da porcentagem de contexto e da palavra "ctx", e no fim adicione (ML 🟢) quando o arquivo <workspace>/thoughts/modo-livre/active existir ou (ML 🔴) quando nao existir. cor da barra de progresso: verde se menor que 60%, amarelo se entre 60 e 84%, vermelho se 85% ou mais. salve em ~/.claude/statusline.sh com chmod +x e atualize ~/.claude/settings.json
+mostre [nome-do-modelo] entre colchetes, depois nome da pasta atual (basename de .workspace.current_dir), depois uma barra de progresso de 10 blocos usando █ pra preenchido e ░ pra vazio seguida da porcentagem de contexto e da palavra "ctx", depois " • 5h XX% (HhMm)" usando .rate_limits.five_hour.used_percentage e tempo ate .rate_limits.five_hour.resets_at (epoch), depois " • 7d XX% (Dd Hh)" com .rate_limits.seven_day.* na mesma logica; omita as secoes 5h/7d se rate_limits nao existir. e no fim adicione (ML 🟢) quando o arquivo <workspace>/thoughts/modo-livre/active existir ou (ML 🔴) quando nao existir. formato do tempo ate reset (diff = resets_at - now em segundos): se diff <= 0 omita o parentese; se diff < 60 mostre (<1m); se diff < 3600 mostre (Ym); se diff < 86400 mostre (XhYm) sem espaco; se diff >= 86400 mostre (Xd Yh) com espaco entre d e h. cor por threshold (aplicada na barra de contexto e nos numeros dos rate limits, NAO no resto do texto): verde se < 60%, amarelo se 60-84%, vermelho se >= 85%. salve em ~/.claude/statusline.sh com chmod +x e atualize ~/.claude/settings.json
 ```
 
 Resultado:
 
 ```
-[Claude Sonnet 4.5] gopay (main *) ████░░░░░░ 42% ctx (ML 🟢)
+[Claude Sonnet 4.5] gopay ████░░░░░░ 42% ctx • 5h 8% (5h30m) • 7d 18% (5d 12h) (ML 🟢)
 ```
 
 Componentes (da esquerda pra direita):
 
 - `[Claude Sonnet 4.5]` — modelo ativo na sessao
 - `gopay` — basename da pasta atual
-- `(main *)` — branch git; `*` aparece quando ha mudancas locais nao commitadas
-- `████░░░░░░` — barra de 10 blocos, colorida por threshold: **verde** < 60%, **amarelo** 60-84%, **vermelho** ≥ 85%
-- `42% ctx` — porcentagem da janela de contexto consumida
+- `████░░░░░░ 42% ctx` — barra de 10 blocos e porcentagem da janela de contexto. Colorida por threshold: **verde** < 60%, **amarelo** 60-84%, **vermelho** ≥ 85%
+- `• 5h 8% (5h30m)` — consumo da janela de 5 horas da Anthropic + tempo restante ate o reset (formato `XhYm`). Numero colorido na mesma escala da barra de contexto. Omitido se o campo `rate_limits` nao vier no JSON
+- `• 7d 18% (5d 12h)` — consumo da janela de 7 dias + tempo ate o reset (formato `Xd Yh`)
 - `(ML 🟢)` ou `(ML 🔴)` — `/modo-livre` **ATIVO** (verde) ou **INATIVO** (vermelho) no projeto atual, detectado via marker em `thoughts/modo-livre/active`
 
 Recarregue a sessao apos configurar: `Ctrl+C` e `claude` de novo.
