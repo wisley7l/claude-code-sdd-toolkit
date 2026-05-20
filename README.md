@@ -28,7 +28,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | `/sync-tests` | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
 | `/git-prune-branches` | Remove branches locais cujas remotas ja foram deletadas |
 | `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees |
-| `/modo-livre` | Modo de trabalho autônomo — agente opera sem prompts pra leitura/edição/internet/MCPs/git-read. NUNCA commita ou pusha sem autorização explícita. Guardrails negativos absolutos |
+| `/modo-livre [on\|off\|status]` | Toggle do modo autônomo. `on` faz backup do `.claude/settings.local.json` e instala um com allow amplo + deny dos perigosos (commit/push/rm/etc). `off` restaura o backup. Quando ativo, agente opera sem prompts pra leitura/edição/internet/MCPs/git-read e respeita guardrails negativos absolutos. Requer recarregar a sessão após toggle. Por-worktree: cada worktree precisa do seu próprio toggle |
 
 ### Versoes anteriores
 
