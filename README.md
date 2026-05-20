@@ -163,6 +163,33 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 - **Test co-location**: Testes vao na MESMA tarefa que cria o codigo. Defer = anti-pattern bloqueado pelo sdd-plan
 - Se testes que passavam comecam a falhar: parada obrigatoria para discutir
 
+### 6. Statusline com indicador de modo-livre e contexto (opcional)
+
+Configure uma barra no rodape do Claude Code que mostra **modelo + pasta + branch git + barra colorida de contexto + estado do `/modo-livre`**. Util pra saber quando dar `/clear` ou `/compact` (barra fica vermelha em ≥85% de contexto) e pra confirmar a olho se o `/modo-livre` esta ativo no projeto.
+
+Dentro do Claude Code, rode `/statusline` colando este prompt:
+
+```
+mostre [nome-do-modelo] entre colchetes, depois nome da pasta atual (basename de .workspace.current_dir), depois (branch-do-git) com asterisco antes do parentese de fechar se o working tree estiver dirty (omita se nao for repo git), depois uma barra de progresso de 10 blocos usando █ pra preenchido e ░ pra vazio seguida da porcentagem de contexto e da palavra "ctx", e no fim adicione (ML 🟢) quando o arquivo <workspace>/thoughts/modo-livre/active existir ou (ML 🔴) quando nao existir. cor da barra de progresso: verde se menor que 60%, amarelo se entre 60 e 84%, vermelho se 85% ou mais. salve em ~/.claude/statusline.sh com chmod +x e atualize ~/.claude/settings.json
+```
+
+Resultado:
+
+```
+[Claude Sonnet 4.5] gopay (main *) ████░░░░░░ 42% ctx (ML 🟢)
+```
+
+Componentes (da esquerda pra direita):
+
+- `[Claude Sonnet 4.5]` — modelo ativo na sessao
+- `gopay` — basename da pasta atual
+- `(main *)` — branch git; `*` aparece quando ha mudancas locais nao commitadas
+- `████░░░░░░` — barra de 10 blocos, colorida por threshold: **verde** < 60%, **amarelo** 60-84%, **vermelho** ≥ 85%
+- `42% ctx` — porcentagem da janela de contexto consumida
+- `(ML 🟢)` ou `(ML 🔴)` — `/modo-livre` **ATIVO** (verde) ou **INATIVO** (vermelho) no projeto atual, detectado via marker em `thoughts/modo-livre/active`
+
+Recarregue a sessao apos configurar: `Ctrl+C` e `claude` de novo.
+
 ## Estrutura
 
 ### Toolkit

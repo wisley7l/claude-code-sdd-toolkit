@@ -186,6 +186,33 @@ In either mode: **writes always under user confirmation** — the command propos
 - **Test co-location**: Tests go in the SAME task that creates the code. Defer = anti-pattern, blocked by sdd-plan
 - If passing tests start failing: mandatory stop to discuss
 
+### 6. Status line with modo-livre and context indicator (optional)
+
+Configure a status line at the bottom of Claude Code that shows **model + folder + git branch + colored context bar + `/modo-livre` state**. Useful to know when to `/clear` or `/compact` (bar turns red at ≥85% context) and to visually confirm whether `/modo-livre` is active in the current project.
+
+Inside Claude Code, run `/statusline` pasting this prompt (note: the prompt is in Portuguese but Claude understands either language):
+
+```
+mostre [nome-do-modelo] entre colchetes, depois nome da pasta atual (basename de .workspace.current_dir), depois (branch-do-git) com asterisco antes do parentese de fechar se o working tree estiver dirty (omita se nao for repo git), depois uma barra de progresso de 10 blocos usando █ pra preenchido e ░ pra vazio seguida da porcentagem de contexto e da palavra "ctx", e no fim adicione (ML 🟢) quando o arquivo <workspace>/thoughts/modo-livre/active existir ou (ML 🔴) quando nao existir. cor da barra de progresso: verde se menor que 60%, amarelo se entre 60 e 84%, vermelho se 85% ou mais. salve em ~/.claude/statusline.sh com chmod +x e atualize ~/.claude/settings.json
+```
+
+Resulting status line:
+
+```
+[Claude Sonnet 4.5] gopay (main *) ████░░░░░░ 42% ctx (ML 🟢)
+```
+
+Components (left to right):
+
+- `[Claude Sonnet 4.5]` — active session model
+- `gopay` — current folder basename
+- `(main *)` — git branch; `*` appears when there are uncommitted changes
+- `████░░░░░░` — 10-block bar, colored by threshold: **green** < 60%, **yellow** 60-84%, **red** ≥ 85%
+- `42% ctx` — context window usage percentage
+- `(ML 🟢)` or `(ML 🔴)` — `/modo-livre` **ACTIVE** (green) or **INACTIVE** (red) in the current project, detected via marker at `thoughts/modo-livre/active`
+
+Reload the session after configuring: `Ctrl+C` then `claude` again.
+
 ## Structure
 
 ### Toolkit
