@@ -228,7 +228,7 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(bundle *)",
       "Bash(gem *)",
       "Bash(dotnet *)",
-      "Bash(infisical *)",
+      "Bash(infisical run --env=dev *)",
       "Bash(terraform *)",
       "Bash(kubectl *)",
       "Bash(helm *)",
