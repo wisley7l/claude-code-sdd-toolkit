@@ -16,6 +16,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Codar | `/executor-plan` | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
 | Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
 | Aprender | `/sdd-learning` | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no vault (sabor SDD em `state/` ou geral em `feedback`/`project`/`reference`). Confirma por item. Atualiza > cria. |
+| Confirmar | `/sdd-confirm` | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro vault APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
 | Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
 ### Utilitarios
@@ -103,6 +104,9 @@ Medium/Large/Complex — feature normal:
     voce revisa o diff completo no VSCode -> commit + push manualmente
 
 Apos a feature mergeada:
+  /sdd-confirm    -> confirma drafts em thoughts/decisions-draft/ e move pro vault
+                     (so move drafts cuja PR foi MERGEADA; cancela drafts de PR fechado;
+                      preserva drafts de PR ainda aberto)
   /sdd-learning   -> colhe aprendizado de IMPs+reviews -> vault
 
 Multi-feature (visao de cima):
@@ -205,6 +209,7 @@ commands/                   # Slash commands (invocação manual via /)
   roadmap.md                # v7 — Gerenciar ROADMAP.md
   sdd-review.md             # Review
   sdd-learning.md           # Colher aprendizado de IMPs+reviews -> vault
+  sdd-confirm.md            # Confirmar drafts (thoughts/decisions-draft/) -> vault pos-merge
   modo-livre.md             # Modo autonomo com guardrails negativos
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree

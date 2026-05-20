@@ -16,6 +16,7 @@ These commands turn Claude Code into a structured development partner that follo
 | Execute | `/executor-plan` | Pair programming with TDD in **autonomous mode** (no pause between tasks). Parallel sub-agents for `[P]`. Test count protection (blocks silent deletion). Staging (`git add`) per task — **commits are human-approved at the end**. `--step` flag restores the old behavior (pause between tasks + atomic commits immediately) |
 | Quick | `/quick-task` | Quick mode for small changes (≤3 files, 1 sentence). Skips formal SPEC. Safety valve escalates to formal flow if scope grows. Supports invoked modes (`autonomo-invocado`/`step-invocado`) when called by `/sdd-review` |
 | Learn | `/sdd-learning` | Reads IMPs and reviews, extracts non-obvious learnings, proposes registration in the vault (SDD flavor in `state/` or general in `feedback`/`project`/`reference`). Confirms per item. Updates > creates. |
+| Confirm | `/sdd-confirm` | Confirms memory drafts (in `thoughts/decisions-draft/`) and moves them to the vault ONLY after the related PR is merged. Drafts whose PR was closed without merge are removed under confirmation. Solves the "record now → validate via PR → confirm/cancel" cycle. |
 | Roadmap | `/roadmap` | Manages `thoughts/ROADMAP.md`. Adds entries, imports from GH issues, syncs status with existing SPEC/IMP |
 
 ### Git Utilities
@@ -126,6 +127,9 @@ Medium/Large/Complex — normal feature:
     ↓ you review the full diff in VSCode -> commit + push manually
 
 After the feature is merged:
+  /sdd-confirm    -> confirms drafts in thoughts/decisions-draft/ and moves them to the vault
+                     (only moves drafts whose PR is MERGED; cancels drafts of closed PRs;
+                      preserves drafts of still-open PRs)
   /sdd-learning   -> harvests learnings from IMPs+reviews -> vault
 
 Multi-feature view:
@@ -228,6 +232,7 @@ commands/                   # Slash commands (manual invocation via /)
   roadmap.md                # v7 — Manage ROADMAP.md
   sdd-review.md             # Review
   sdd-learning.md           # Harvest learnings from IMPs+reviews -> vault
+  sdd-confirm.md            # Confirm drafts (thoughts/decisions-draft/) -> vault post-merge
   modo-livre.md             # Autonomous mode with negative guardrails
   git-worktree.md           # Create worktree
   git-remove-worktree.md    # Remove worktree

@@ -446,12 +446,34 @@ Identifiquei algo util registrar como memoria:
 [Tipo: decisao | blocker | licao | ideia]
 [Por que importa]
 
-Salvar? (s/n)
+Salvar?
+  (d) DRAFT local em thoughts/decisions-draft/ — vai pro vault depois com /sdd-confirm apos merge do PR
+  (v) VAULT direto — definitiva agora (decisao independente de revisao de PR)
+  (n) Nao salvar
 ```
 
-Se aprovado:
+**Default sugerido**: `(d) draft` quando o trabalho atual vai virar PR (que e o caso comum do executor-plan). Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null` — se ja existir PR aberto da branch atual, sugira draft. Senao, ainda sugira draft se voce sabe que a feature vai virar PR.
+
+Se `(d)` DRAFT:
+- Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
+  ```
+  ---
+  type: decisao  # ou blocker, licao, ideia
+  title: <titulo>
+  date: <YYYY-MM-DD>
+  branch: <output de git branch --show-current>
+  pr: <numero se houver PR aberto, omitir se nao>
+  projeto: <basename do cwd>
+  ---
+  ```
+- Conteudo: igual ao que seria no vault. No fim do corpo, adicione:
+  > **Draft — sera proposto ao vault via `/sdd-confirm` apos merge do PR.**
+
+Se `(v)` VAULT direto:
 - **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
+
+Se `(n)`: pule.
 
 ### 5. Sugerir /sdd-review e perguntar estilo de commit (apenas modo autonomo)
 

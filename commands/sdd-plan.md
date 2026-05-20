@@ -346,12 +346,33 @@ Identifiquei algo util como memoria persistente:
 [Tipo: decisao | blocker | licao | ideia]
 [Por que importa para futuras sessoes]
 
-Salvar? (s/n)
+Salvar?
+  (d) DRAFT local em thoughts/decisions-draft/ — vai pro vault depois com /sdd-confirm apos merge do PR
+  (v) VAULT direto — definitiva agora (decisao independente de revisao de PR)
+  (n) Nao salvar
 ```
 
-Se aprovado:
+**Default sugerido**: `(d) draft` quando o plano vai virar implementacao + PR. `(v) vault direto` quando e uma decisao puramente de planejamento que ja foi resolvida (ex: escolha de stack pre-aprovada). Detecte PR aberto com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`.
+
+Se `(d)` DRAFT:
+- Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
+  ```
+  ---
+  type: decisao  # ou blocker, licao, ideia
+  title: <titulo>
+  date: <YYYY-MM-DD>
+  branch: <git branch --show-current>
+  pr: <numero se houver, omitir se nao>
+  projeto: <basename do cwd>
+  ---
+  ```
+- Adicione no fim do corpo: `**Draft — sera proposto ao vault via /sdd-confirm apos merge do PR.**`
+
+Se `(v)` VAULT direto:
 - **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (ver skill `vault-memory`).
 - **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
+
+Se `(n)`: pule.
 
 ### Passo 14 — Informar usuario
 
