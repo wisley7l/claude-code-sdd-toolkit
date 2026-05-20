@@ -257,6 +257,9 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "mcp__*"
     ],
     "deny": [
+      "Bash(*&&*)",
+      "Bash(*||*)",
+      "Bash(*;*)",
       "Bash(git commit)",
       "Bash(git commit *)",
       "Bash(git push)",
@@ -307,6 +310,7 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
 - **Docker conservador**: só leitura (`ps`, `images`, `logs`, `inspect`). `docker exec/rm/rmi/stop/kill/run` continuam pedindo prompt.
 - **Publish bloqueado**: `npm/pnpm/yarn/cargo publish` denied pra não publicar pacote por engano.
 - **rm bloqueado em formas com flags**: `rm -rf/-fr/-r/-f` denied. `rm arquivo.txt` solto continua pedindo prompt (não tem regra que o pegue).
+- **Compound bash bloqueado**: `Bash(*&&*)`, `Bash(*||*)`, `Bash(*;*)` denied. O harness quebra o comando por esses separadores antes de fazer matching, então a deny pode ser redundante na prática — mas serve como sinal explícito + guardrail caso o parser do harness mude. Use **um Bash call por operação** (ver "Como compor comandos Bash" abaixo).
 
 ---
 
