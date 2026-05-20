@@ -384,3 +384,25 @@ bun run typecheck 2>&1 | tail -15 && echo "---" && bunx vitest run
 ```
 
 Regra prática: prefira **um Bash call por operação**. Se precisar combinar, fique em UMA LINHA, SEM parênteses, e garanta que cada subcomando tem regra de allow. Idempotência (mkdir -p, touch, cp -n) elimina a necessidade de chains "check-then-act".
+
+### Paths: prefira RELATIVOS dentro do projeto
+
+Quando o comando opera dentro do `cwd` (worktree ou repo principal), use paths **relativos**, NÃO absolutos:
+
+❌ Path absoluto fora ou ambíguo em relação ao cwd:
+```bash
+find /home/user/codigos/org/projeto/apps/api/test -name "*.ts"
+```
+(Mesmo que o path absoluto seja válido, o harness pode pedir "allow reading from `test/` and `src/`" porque detecta paths externos ao cwd — especialmente em worktrees onde o cwd é diferente do repo principal.)
+
+✅ Path relativo ao cwd:
+```bash
+find apps/api/test -name "*.ts"
+```
+
+Exceções legítimas pra path absoluto:
+- `~/.claude/`, `~/.config/`, `/tmp/`, etc. (paths do sistema/usuário fora do projeto)
+- Quando explicitamente cruzando projetos (ex: copiar arquivo do toolkit pra um projeto-alvo)
+- Quando o cwd é completamente diferente (executando script de outro lugar)
+
+**Worktrees:** se o cwd é uma worktree (ex: `~/codigos/org/projeto-feature/`) e você precisa ler arquivos do repo principal (`~/codigos/org/projeto/`), o user deve startar a sessão com `claude --add-dir /caminho/do/repo/principal`. Sem isso, o harness vai pedir prompt de "additional directory" pra cada acesso.
