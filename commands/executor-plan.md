@@ -1,7 +1,7 @@
 ---
 description: Pair programming autonomo — executa tarefas com TDD em modo continuo (sem pausa entre tarefas). Faz staging (git add) por tarefa, nunca commit. No fim, sugere /sdd-review e pergunta estilo de commit pro user. Modo --step ativa pausas + commits atomicos do comportamento antigo.
 model: claude-sonnet-4-6
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Conceitos adaptados: sub-agent paralelo para [P], Test count protection, STATE.md persistente, Gate commands explicitos
@@ -28,6 +28,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
 - **Default autonomo**: zero pausa entre tarefas. Em `--step`, pausa apos cada tarefa.
 - **Paradas duras (sempre param, mesmo em autonomo)**: test count drop, gate falhando, SPEC_DEVIATION reportado por sub-agent, blocker que exige decisao arquitetural, encruzilhada com solucao nao-obvia, reconciliacao com doc do projeto
+- **Notificar quando precisa atencao humana**: dispare `PushNotification` em (a) toda parada dura listada acima e (b) no fim de execucao autonoma antes do prompt de decisao de commit. Mensagem ≤200 chars, sem markdown, lead com o acionavel (ex: "executor-plan parou: test count caiu de 42 para 39")
 - **Commits sob aprovacao humana**: executor faz `git add` por tarefa; **nunca commita** automaticamente em modo autonomo. No fim, lista arquivos staged e pergunta ao user como commitar. Em `--step`, comportamento antigo (commit atomico por tarefa imediato)
 - **Tracking de arquivos por T_i**: durante a execucao, mantenha um log interno (`thoughts/.executor-staged.log` no root, nao commitado) com `T1: file1, file2 | T2: file3 | ...` para permitir commits atomicos opcionais no fim
 - **Paralelismo respeita estado**: `[P]` so se nao ha estado mutavel compartilhado entre as tarefas. Em modo autonomo, valida automaticamente e paraleliza sem perguntar; em `--step`, pergunta antes
@@ -481,6 +482,11 @@ Se `(n)`: pule.
 
 **Em modo autonomo**:
 
+Antes de mostrar o prompt abaixo, dispare `PushNotification`:
+- `message`: `"executor-plan terminou: <N> tasks staged em <branch>. decidir commit (1/2/3)"`
+- `status`: `"proactive"`
+- Substitua `<N>` pelo numero real de tarefas e `<branch>` pelo output de `git branch --show-current`. Mantenha ≤200 chars.
+
 ```
 Feature implementada. Tudo staged, nada commitado ainda.
 
@@ -616,6 +622,7 @@ Apos escrever, lance subagente para verificar links (URLs em referencias, docs):
 - **Nunca invente runtime**: use comandos do CLAUDE.md (bun/jest/vitest/go test conforme projeto)
 - **Modo padrao e autonomo**: zero pausa entre tarefas. `--step` ativa pausa antiga
 - **Paradas duras sempre param**: test count drop, gate fail, SPEC_DEVIATION, blocker, encruzilhada, reconciliacao de doc. Em qualquer modo
+- **PushNotification em parada dura e fim autonomo**: toda parada dura dispara push antes do prompt ao user; fim de execucao autonoma tambem dispara push antes do prompt de commit. Sem push em progresso rotineiro
 - **Nunca ignore skills**: skills do plano nao opcionais
 - **Nunca chute API**: verifique em doc oficial (Context7/WebFetch/WebSearch) ou codigo existente
 - **Paralelismo seguro**: `[P]` so quando arquivos distintos E sem estado compartilhado. Em autonomo, valida e paraleliza; em `--step`, pergunta antes
