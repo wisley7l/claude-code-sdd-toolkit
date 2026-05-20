@@ -55,18 +55,28 @@ Ao ser invocado:
 
 ### 2. Ler memoria persistente
 
+**Objetivo**: carregar contexto rico ANTES de codar — decisoes previas, blockers conhecidos, licoes, preferencias do usuario, padroes do projeto. Isso aumenta seguranca da implementacao e evita repetir erros ja documentados.
+
 Detecte o modo:
 ```bash
 test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
 ```
 
-- **Modo vault**: leia notas relevantes em `state/decisoes/`, `state/blockers/`, `state/licoes/` conforme skill `vault-memory`.
-- **Modo legacy**: leia `thoughts/STATE.md` (se existir).
+- **Modo vault**: invoque a skill `vault-memory` e leia:
+  - **Estado SDD do projeto** (`<org>/<projeto>/state/` no vault): `decisoes/`, `blockers/`, `licoes/`, `ideias/`, `preferencias/` — TODAS as 5 categorias, filtrando por relevancia para a feature
+  - **Memorias gerais do projeto** (`<org>/<projeto>/`): notas `feedback/`, `project/`, `reference/` que possam afetar a implementacao (convencoes, padroes, integracoes)
+  - **Memorias do usuario** (`user/`): preferencias de estilo, regras de colaboracao, comandos a evitar
+  - **Escopo organizacao/global** (`<org>/`, raiz do vault): so se houver indicio claro de aplicabilidade (ex: padrao corporativo de seguranca)
+- **Modo legacy**: leia `thoughts/STATE.md` (se existir) — todas as secoes (decisoes, blockers, licoes, ideias, preferencias).
 
-Use para:
-- Decisoes arquiteturais que se aplicam
-- Blockers conhecidos (para reconhecer rapido)
-- Licoes aprendidas
+Use o que voce leu para:
+- Aplicar decisoes arquiteturais previas sem reinventar
+- Reconhecer blockers conhecidos pelo sintoma (parar cedo)
+- Respeitar preferencias do usuario (estilo, ferramentas, ceremonia)
+- Evitar repetir abordagens documentadas como licao negativa
+- Considerar ideias adiadas que se conectam com a tarefa atual
+
+**Se a leitura mudar sua interpretacao do plano** (ex: decisao previa contradiz uma escolha do SPEC), pare antes da execucao e levante isso ao usuario.
 
 ### 3. Localizar o Plano
 Se nao fornecido:
@@ -109,7 +119,12 @@ Modo: AUTONOMO (zero pausa entre tarefas, staging por T, commits no fim sob apro
 
 Modo livre: [ATIVO desde <timestamp> | INATIVO — sugiro `/modo-livre on` antes de comecar pra cortar prompts]
 Constitution: CLAUDE.md + ARCHITECTURE.md lidos
-STATE.md: [N decisoes / M blockers carregados, ou "sem STATE"]
+Memoria:
+  - Vault SDD do projeto: [D decisoes / B blockers / L licoes / I ideias / P preferencias relevantes]
+  - Vault geral do projeto: [F notas feedback / J project / R reference]
+  - Vault do usuario: [U memorias user/preferencias gerais]
+  [ou, modo legacy: STATE.md com N decisoes / M blockers / L licoes]
+  [ou, sem nada: "sem memoria persistente"]
 Skills ativas: [lista]
 Phases: Foundation [N], Core [M], Integration [K]
 Tarefas: [Total: X, Pendentes: Y, Paralelizaveis [P]: Z]
@@ -366,9 +381,10 @@ Posso continuar?
 
 Quando encontrar problema com multiplas causas possiveis ou solucao nao obvia:
 
-1. **Investigar tudo**: rastrear toda a cadeia. Usar subagentes se necessario
-2. **Propor solucoes**: opcoes com pros/contras
-3. **Perguntar ao usuario**: deixar o usuario escolher
+1. **Consultar memoria primeiro**: antes de investigar do zero, busque no vault/STATE se ja existe decisao, blocker ou licao aplicavel. Se sim, cite explicitamente ("decisao 2025-XX-YY-foo diz Z, vou seguir") e siga sem perguntar.
+2. **Investigar tudo**: rastrear toda a cadeia. Usar subagentes se necessario.
+3. **Propor solucoes**: opcoes com pros/contras.
+4. **Perguntar ao usuario**: deixar o usuario escolher. Cite memoria relevante encontrada no passo 1 nas opcoes ("Opcao A alinha com decisao previa X; Opcao B contradiz").
 
 **Nunca** aplique a primeira solucao que compila sem validar se e o local certo.
 
