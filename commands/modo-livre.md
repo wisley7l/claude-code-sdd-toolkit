@@ -269,12 +269,9 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(git clean -fd *)",
       "Bash(git clean -fdx *)",
       "Bash(git checkout -- *)",
-      "Bash(gh pr create)",
-      "Bash(gh pr create *)",
       "Bash(gh pr merge)",
       "Bash(gh pr merge *)",
       "Bash(gh pr close *)",
-      "Bash(gh pr edit *)",
       "Bash(gh release create *)",
       "Bash(gh release delete *)",
       "Bash(gh repo delete *)",
@@ -323,7 +320,7 @@ Você NUNCA deve executar os comandos abaixo. Se julgar que um deles é necessá
 
 - `git commit` (qualquer variante, incluindo `--amend`)
 - `git push` (qualquer variante: `--force`, `--force-with-lease`, `-f`)
-- `gh pr create` / `gh pr merge` / `gh pr close` / `gh pr edit`
+- `gh pr merge` / `gh pr close` (criar e editar body de PR está liberado)
 - `gh release create/delete` / `gh repo delete`
 - `git reset --hard` / `git clean -f*` / `git checkout -- <path>`
 - `rm` em QUALQUER forma (mesmo `rm arquivo.txt` solto)
@@ -337,6 +334,7 @@ NÃO tente burlar via `bash -c`, `eval`, scripts, alias, ou redirecionamento. Se
 - Web (WebFetch, WebSearch), MCPs, skills, subagentes
 - Git leitura/local: `status`, `diff`, `log`, `show`, `blame`, `branch`, `checkout`, `switch`, `fetch`, `pull`, `stash`, `add`, `restore`, `rebase`, `merge`, `worktree`, `tag`
 - gh leitura: `pr/issue view/list`, `pr diff/checks`, `repo view`, `api`, `run view`
+- gh escrita não-destrutiva: `gh pr create` (abrir PR), `gh pr edit` (atualizar title/body/labels)
 - Testes, builds, linters, install de deps (npm/pnpm/yarn/pip/uv/cargo/go/make)
 - `cp`/`mv`/`mkdir`/`touch` dentro do projeto
 
