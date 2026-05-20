@@ -17,14 +17,18 @@ Parseie `$ARGUMENTS` (case-insensitive, trim espaços):
 ## Pré-cheques (toda invocação)
 
 1. Confirme `pwd` — você está na raiz do projeto onde o modo será aplicado
-2. Se `.claude/` não existe e o subcomando é `on`, crie com `mkdir -p .claude`
-3. Marker file: `.claude/.modo-livre-active`
-4. Backup file: `.claude/settings.local.json.bak-modo-livre`
+2. Se o subcomando é `on` e os diretórios não existem, crie:
+   - `mkdir -p .claude` (settings ficam aqui — o harness procura aqui)
+   - `mkdir -p thoughts/modo-livre` (marker e backup ficam aqui — `thoughts/` é convencionalmente gitignored em projetos SDD, evita poluir o repo)
+3. Marker file: `thoughts/modo-livre/active`
+4. Backup file: `thoughts/modo-livre/settings.local.json.bak`
 5. Settings file: `.claude/settings.local.json`
+
+> **Por que esses paths?** A gambiarra é deixar tudo que não é o `settings.local.json` em si dentro de `thoughts/`, que já é gitignored em projetos SDD. Assim o command NÃO precisa mexer no `.gitignore` do projeto. O `.claude/settings.local.json` em si vai aparecer em `git status` se não estiver gitignored — você decide se adiciona manualmente ou ignora.
 
 ## ATIVAR (`on`)
 
-**1.** Se `.claude/.modo-livre-active` JÁ existe → mostre:
+**1.** Se `thoughts/modo-livre/active` JÁ existe → mostre:
 ```
 Modo livre já está ATIVO desde <timestamp do marker>.
 Use `/modo-livre off` para desativar.
@@ -33,7 +37,7 @@ e pare.
 
 **2.** Se `.claude/settings.local.json` existe → faça backup:
 ```bash
-cp .claude/settings.local.json .claude/settings.local.json.bak-modo-livre
+cp .claude/settings.local.json thoughts/modo-livre/settings.local.json.bak
 ```
 Se NÃO existe → não faça backup (não havia config anterior).
 
@@ -41,21 +45,14 @@ Se NÃO existe → não faça backup (não havia config anterior).
 
 **4.** Crie o marker com timestamp ISO 8601:
 ```bash
-date -Iseconds > .claude/.modo-livre-active
+date -Iseconds > thoughts/modo-livre/active
 ```
 
-**5.** Cheque `.gitignore`:
-- Adicione `.claude/settings.local.json` se não estiver (geralmente já está)
-- Adicione `.claude/.modo-livre-active`
-- Adicione `.claude/settings.local.json.bak-modo-livre`
-
-Use `grep -F` pra checar antes de adicionar — não duplique.
-
-**6.** Avise ao usuário:
+**5.** Avise ao usuário:
 ```
 ✅ MODO LIVRE ATIVADO
-Marker: .claude/.modo-livre-active (<timestamp>)
-Backup: <"presente em .claude/settings.local.json.bak-modo-livre" OU "nenhum (sem config anterior)">
+Marker: thoughts/modo-livre/active (<timestamp>)
+Backup: <"presente em thoughts/modo-livre/settings.local.json.bak" OU "nenhum (sem config anterior)">
 
 ⚠️ RECARREGUE A SESSÃO pro harness aplicar:
    1. Ctrl+C
@@ -67,25 +64,27 @@ elas são guardrail comportamental, não só do harness.
 
 ## DESATIVAR (`off`)
 
-**1.** Se `.claude/.modo-livre-active` NÃO existe → mostre:
+**1.** Se `thoughts/modo-livre/active` NÃO existe → mostre:
 ```
 Modo livre não está ativo. Nada a desativar.
 ```
 e pare.
 
 **2.** Restaurar settings:
-- Se `.claude/settings.local.json.bak-modo-livre` existe → `mv` ele de volta:
+- Se `thoughts/modo-livre/settings.local.json.bak` existe → `mv` ele de volta:
   ```bash
-  mv .claude/settings.local.json.bak-modo-livre .claude/settings.local.json
+  mv thoughts/modo-livre/settings.local.json.bak .claude/settings.local.json
   ```
 - Se NÃO existe (não havia config antes) → `rm .claude/settings.local.json`
 
 **3.** Remova o marker:
 ```bash
-rm .claude/.modo-livre-active
+rm thoughts/modo-livre/active
 ```
 
-**4.** Se `.claude/` ficou vazio → `rmdir .claude` (tentativa, ignore erro se não vazio).
+**4.** Limpeza opcional (tentativa, ignore erro se não vazio):
+- `rmdir thoughts/modo-livre` (se vazio)
+- `rmdir .claude` (se vazio)
 
 **5.** Avise:
 ```
@@ -104,10 +103,9 @@ Mostre:
 MODO LIVRE — status no projeto <basename de pwd>
 
 Estado:        <ATIVO desde <timestamp marker> | INATIVO>
-Marker:        <.claude/.modo-livre-active existe? sim/não>
+Marker:        <thoughts/modo-livre/active existe? sim/não>
 Settings:      <.claude/settings.local.json existe? sim/não, tamanho em bytes>
-Backup:        <.claude/settings.local.json.bak-modo-livre existe? sim/não>
-.gitignore:    <todos os 3 paths listados? sim/parcial/não>
+Backup:        <thoughts/modo-livre/settings.local.json.bak existe? sim/não>
 
 Subcomandos:
   /modo-livre on     — ativa
@@ -119,7 +117,7 @@ Subcomandos:
 
 - **Já ativo + `on`**: mostre estado e não sobrescreva
 - **Não ativo + `off`**: nada a fazer
-- **Backup órfão sem marker** (`.bak-modo-livre` existe mas `.modo-livre-active` não): warning — sessão anterior travou? Pergunte se quer restaurar manualmente.
+- **Backup órfão sem marker** (`thoughts/modo-livre/settings.local.json.bak` existe mas `thoughts/modo-livre/active` não): warning — sessão anterior travou? Pergunte se quer restaurar manualmente.
 - **Marker sem backup correspondente quando havia settings prévio**: anomalia — pergunte como proceder, não sobrescreva nada.
 
 ## JSON canônico
