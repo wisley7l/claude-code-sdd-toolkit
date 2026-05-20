@@ -1,6 +1,6 @@
 ---
-description: MODO LIVRE — toggle do modo autônomo. `on` instala settings com allow amplo + deny dos perigosos. `off` restaura backup. NUNCA commita/pusha/rm sem autorização explícita.
-argument-hint: [on|off|status]
+description: MODO LIVRE — toggle do modo autônomo. `on` instala settings com allow amplo + deny dos perigosos. `off` restaura backup. `update` reescreve settings com JSON canônico atual (sem mexer no backup). NUNCA commita/pusha/rm sem autorização explícita.
+argument-hint: [on|off|update|status]
 ---
 
 # /modo-livre
@@ -11,6 +11,7 @@ Parseie `$ARGUMENTS` (case-insensitive, trim espaços):
 
 - `on`, `ativar`, `ativa`, `enable`, ou vazio → **ATIVAR**
 - `off`, `desativar`, `desativa`, `disable` → **DESATIVAR**
+- `update`, `atualizar`, `refresh`, `sync` → **ATUALIZAR**
 - `status`, `estado`, `state` → **STATUS**
 - qualquer outra coisa → mostre status + lista de subcomandos
 
@@ -96,6 +97,41 @@ Settings restaurado: <"backup aplicado" OU "removido (não havia anterior)">
    2. claude (novamente)
 ```
 
+## ATUALIZAR (`update`)
+
+Use quando o **JSON canônico** mudou (novas regras de allow/deny corrigidas) e você quer aplicar a versão atual sem desativar/reativar — preserva o backup original intacto.
+
+**1.** Se `thoughts/modo-livre/active` NÃO existe → mostre:
+```
+Modo livre não está ativo neste projeto. Use `/modo-livre on` em vez de update.
+```
+e pare.
+
+**2.** Aviso preventivo (mostre antes de sobrescrever):
+```
+⚠️ Vou sobrescrever .claude/settings.local.json com o JSON canônico atual.
+   Se você editou esse arquivo manualmente após o `on`, suas edições serão perdidas.
+   O backup ORIGINAL (pré-modo-livre) em thoughts/modo-livre/settings.local.json.bak fica intacto.
+```
+
+**3.** Sobrescreva `.claude/settings.local.json` com o conteúdo da seção [JSON canônico](#json-canônico).
+
+**4.** Atualize o timestamp do marker (opcional, ajuda no debug):
+```bash
+date -Iseconds > thoughts/modo-livre/active
+```
+
+**5.** Avise:
+```
+✅ MODO LIVRE ATUALIZADO
+Settings reescrito com o JSON canônico atual (<timestamp>).
+Backup original preservado em thoughts/modo-livre/settings.local.json.bak.
+
+⚠️ RECARREGUE A SESSÃO pro harness aplicar as novas regras:
+   1. Ctrl+C
+   2. claude (novamente)
+```
+
 ## STATUS (`status` ou sem args válidos)
 
 Mostre:
@@ -108,8 +144,9 @@ Settings:      <.claude/settings.local.json existe? sim/não, tamanho em bytes>
 Backup:        <thoughts/modo-livre/settings.local.json.bak existe? sim/não>
 
 Subcomandos:
-  /modo-livre on     — ativa
+  /modo-livre on     — ativa (backup + escreve settings novo)
   /modo-livre off    — desativa e restaura backup
+  /modo-livre update — reescreve settings com JSON canônico atual (preserva backup)
   /modo-livre status — este resumo
 ```
 

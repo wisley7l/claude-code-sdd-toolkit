@@ -28,7 +28,7 @@ These commands turn Claude Code into a structured development partner that follo
 | `/sync-tests` | Syncs TDD tests between worktree and root, showing diffs before acting |
 | `/git-prune-branches` | Removes local branches whose remotes have been deleted |
 | `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
-| `/modo-livre [on\|off\|status]` | Autonomous mode toggle. `on` backs up `.claude/settings.local.json` and installs one with broad allow + deny of dangerous ops (commit/push/rm/etc). `off` restores the backup. While active, the agent runs without prompts for read/edit/internet/MCPs/git-read and respects absolute negative guardrails. Requires session reload after toggle. Per-worktree: each worktree needs its own toggle |
+| `/modo-livre [on\|off\|update\|status]` | Autonomous mode toggle. `on` backs up `.claude/settings.local.json` and installs one with broad allow + deny of dangerous ops (commit/push/rm/etc). `off` restores the backup. `update` rewrites just the settings with the current canonical JSON (preserves backup) — useful when the command itself is updated. While active, the agent runs without prompts for read/edit/internet/MCPs/git-read and respects absolute negative guardrails. Requires session reload after toggle/update. Per-worktree: each worktree needs its own toggle |
 
 ### Previous Versions
 
