@@ -28,12 +28,13 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | `/sync-tests` | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
 | `/git-prune-branches` | Remove branches locais cujas remotas ja foram deletadas |
 | `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees |
+| `/modo-livre` | Modo de trabalho autônomo — agente opera sem prompts pra leitura/edição/internet/MCPs/git-read. NUNCA commita ou pusha sem autorização explícita. Guardrails negativos absolutos |
 
 ### Versoes anteriores
 
 - **Split v7 (gerador-prd + gerador-spec)** — versao anterior do workflow tinha 2 fases separadas (PRD em `thoughts/research/` + SPEC em `thoughts/plans/`). Foram fundidas em `/sdd-plan` (1 doc auto-sized) por causar ~40-50% de duplicacao entre os 2 outputs. Arquivos preservados em `commands/deprecated/gerador-prd.v7.md` e `commands/deprecated/gerador-spec.v7.md`
-- **v6** — versao estavel anterior, mantida em `commands/v6/` como fallback. Se a v7 piorar para algum projeto, basta copiar os arquivos de `v6/` por cima dos de `commands/`
-- **v1-v5** — versoes historicas em `deprecated/commands/` e `commands/deprecated/`
+- **v1-v6** — versoes historicas em `commands/deprecated/` com sufixo `.vN.md` (ex: `executor-plan.v6.md`, `gerador-prd.v5.md`). Pra usar uma versao antiga como fallback, copie o `.vN.md` desejado pra `~/.claude/commands/<nome>.md` (sem o sufixo)
+- **Commands promovidos a skill** — `sdd-review.v1.md`, `vault-memory.v7.md` e `worktree-detect.v1.md` em `commands/deprecated/` sao versoes antigas (eram commands) de artefatos que hoje vivem como skill ou continuam como command mas foram reescritos
 
 ## Principios
 
@@ -167,6 +168,7 @@ Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command pr
 ### Toolkit
 
 ```
+CLAUDE.md                   # Constituicao do repo (regras pro agente que edita o toolkit)
 commands/                   # Slash commands (invocação manual via /)
   sdd-plan.md               # v7+ — Pesquisar + Entender + Tarefas (1 doc auto-sized)
   executor-plan.md          # v7 — Codar com TDD + paralelismo
@@ -174,19 +176,19 @@ commands/                   # Slash commands (invocação manual via /)
   roadmap.md                # v7 — Gerenciar ROADMAP.md
   sdd-review.md             # Review
   sdd-learning.md           # Colher aprendizado de IMPs+reviews -> vault
+  modo-livre.md             # Modo autonomo com guardrails negativos
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree
   sync-tests.md             # Sincronizar testes TDD
   git-prune-branches.md     # Limpar branches
   worktree-detect.md        # Analisar worktrees
-  v6/                       # Versao anterior (fallback)
-    gerador-prd.md
-    gerador-spec.md
-    executor-plan.md
-  deprecated/               # v3, v4, v5, v7 (split PRD+SPEC, vault-memory→skill)
-    gerador-prd.v7.md       # Substituido por sdd-plan
-    gerador-spec.v7.md      # Substituido por sdd-plan
-    vault-memory.v7.md      # Promovido para skill (fica fora de commands/)
+  deprecated/               # Versoes antigas — fallback (sufixo .vN.md)
+    executor-plan.v1.md ... v6.md
+    gerador-prd.v1.md ... v7.md      # v1-v6 + v7 (split PRD+SPEC substituido por sdd-plan)
+    gerador-spec.v1.md ... v7.md     # idem
+    sdd-review.v1.md
+    vault-memory.v7.md      # Promovido para skill (atualmente em skills/vault-memory/)
+    worktree-detect.v1.md
 skills/                     # Skills (auto-trigger via descrição)
   vault-memory/             # Sabor geral: user/feedback/project/reference no vault
     SKILL.md
@@ -195,8 +197,7 @@ skills/                     # Skills (auto-trigger via descrição)
       nota-template.md
   conciso/                  # Modo conciso de resposta em pt-BR (lite/full/ultra)
     SKILL.md
-deprecated/
-  commands/                 # v1, v2
+  deprecated/               # Skills antigas — fallback (vazio por ora, .gitkeep)
 ```
 
 **Por que skills/ e commands/ separados** (convenção Anthropic):

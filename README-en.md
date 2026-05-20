@@ -28,12 +28,13 @@ These commands turn Claude Code into a structured development partner that follo
 | `/sync-tests` | Syncs TDD tests between worktree and root, showing diffs before acting |
 | `/git-prune-branches` | Removes local branches whose remotes have been deleted |
 | `/worktree-detect` | Analyzes branches/PRs and detects opportunities to split into focused worktrees |
+| `/modo-livre` | Autonomous work mode — agent operates without prompts for read/edit/internet/MCPs/git-read. NEVER commits or pushes without explicit authorization. Absolute negative guardrails |
 
 ### Previous Versions
 
 - **Split v7 (gerador-prd + gerador-spec)** — earlier v7 workflow had 2 separate phases (PRD in `thoughts/research/` + SPEC in `thoughts/plans/`). Merged into `/sdd-plan` (single auto-sized doc) because they duplicated ~40-50% of content between outputs. Files preserved at `commands/deprecated/gerador-prd.v7.md` and `commands/deprecated/gerador-spec.v7.md`
-- **v6** — previous stable version, kept in `commands/v6/` as fallback. If v7 doesn't work for a project, copy `v6/` files over `commands/`
-- **v1-v5** — historical versions in `deprecated/commands/` and `commands/deprecated/`
+- **v1-v6** — historical versions live in `commands/deprecated/` with `.vN.md` suffix (e.g. `executor-plan.v6.md`, `gerador-prd.v5.md`). To use an old version as fallback, copy the desired `.vN.md` to `~/.claude/commands/<name>.md` (without the suffix)
+- **Commands promoted to skill** — `sdd-review.v1.md`, `vault-memory.v7.md` and `worktree-detect.v1.md` in `commands/deprecated/` are older versions (originally commands) of artifacts that today live as skills or have been rewritten as commands
 
 ## Core Principles
 
@@ -190,6 +191,7 @@ In either mode: **writes always under user confirmation** — the command propos
 ### Toolkit
 
 ```
+CLAUDE.md                   # Repo constitution (rules for the agent editing the toolkit)
 commands/                   # Slash commands (manual invocation via /)
   sdd-plan.md               # v7+ — Research + Understanding + Tasks (1 auto-sized doc)
   executor-plan.md          # v7 — Code with TDD + parallelism
@@ -197,27 +199,28 @@ commands/                   # Slash commands (manual invocation via /)
   roadmap.md                # v7 — Manage ROADMAP.md
   sdd-review.md             # Review
   sdd-learning.md           # Harvest learnings from IMPs+reviews -> vault
+  modo-livre.md             # Autonomous mode with negative guardrails
   git-worktree.md           # Create worktree
   git-remove-worktree.md    # Remove worktree
   sync-tests.md             # Sync TDD tests
   git-prune-branches.md     # Prune branches
   worktree-detect.md        # Analyze worktrees
-  v6/                       # Previous version (fallback)
-    gerador-prd.md
-    gerador-spec.md
-    executor-plan.md
-  deprecated/               # v3, v4, v5, v7 (split PRD+SPEC, vault-memory→skill)
-    gerador-prd.v7.md       # Replaced by sdd-plan
-    gerador-spec.v7.md      # Replaced by sdd-plan
-    vault-memory.v7.md      # Promoted to skill (lives outside commands/)
+  deprecated/               # Older versions — fallback (`.vN.md` suffix)
+    executor-plan.v1.md ... v6.md
+    gerador-prd.v1.md ... v7.md      # v1-v6 + v7 (split PRD+SPEC replaced by sdd-plan)
+    gerador-spec.v1.md ... v7.md     # same
+    sdd-review.v1.md
+    vault-memory.v7.md      # Promoted to skill (now lives in skills/vault-memory/)
+    worktree-detect.v1.md
 skills/                     # Skills (auto-trigger via description)
   vault-memory/             # General flavor: user/feedback/project/reference in the vault
     SKILL.md
     references/
       hub-template.md
       nota-template.md
-deprecated/
-  commands/                 # v1, v2
+  conciso/                  # Concise response mode in pt-BR (lite/full/ultra)
+    SKILL.md
+  deprecated/               # Older skills — fallback (empty for now, .gitkeep)
 ```
 
 **Why skills/ and commands/ are separate** (Anthropic convention):
