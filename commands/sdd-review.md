@@ -1,5 +1,5 @@
 ---
-description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/reviews/. Ao final, lista issues CRITICAL/MAJOR (must-fix) e oferece gerar fixes via /quick-task (autônomo em cadeia OU pausando entre cada).
+description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/reviews/. Detecta PR aberto pela branch e considera reviews/comentários humanos existentes (evita duplicar issues). Ao final, lista issues CRITICAL/MAJOR (must-fix) e oferece gerar fixes via /quick-task (autônomo em cadeia OU pausando entre cada).
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(mkdir *), Bash(gh *)
 ---
 
@@ -28,13 +28,36 @@ O que devo revisar?
 ## Etapa 1 — Context Gathering
 
 1. Leia `CLAUDE.md` e `ARCHITECTURE.md` para absorver os constraints e padrões do projeto
-2. Obtenha o diff de acordo com a fonte fornecida:
-   - **PR**: `gh pr view [número] --json title,body,baseRefName,additions,deletions` e `gh pr diff [número]`
-   - **Branch**: `git diff dev...HEAD` (ou `main...HEAD` conforme o projeto)
+
+2. **Detecção de PR aberto pela branch** (antes de qualquer review local):
+   - Identifique a branch alvo:
+     - Se a fonte é **PR**: já tem o número, pule a detecção
+     - Se a fonte é **branch** específica: use o nome fornecido
+     - Se a fonte é **"branch atual"**: `git rev-parse --abbrev-ref HEAD`
+     - Se a fonte é **commit**: pule a detecção (commit não tem PR direto)
+   - Rode `gh pr list --head <branch> --state open --json number,title,url,baseRefName,author,headRefName --limit 1`
+   - Se encontrou PR aberto: **promova a fonte para PR** — passe a usar `gh pr view [número]` e `gh pr diff [número]` ao invés do diff local. Informe ao usuário que detectou o PR e está usando ele como fonte.
+   - Se não encontrou PR: siga com a fonte original (branch/commit local)
+
+3. **Captura de reviews e comentários existentes no PR** (apenas se houver PR aberto):
+   - `gh pr view [número] --json reviews,reviewDecision,comments,body` — reviews formais + comentários gerais + descrição do PR
+   - `gh api repos/{owner}/{repo}/pulls/[número]/comments` — inline comments (review comments por linha)
+   - Extraia, para cada review/comentário:
+     - Autor, data, estado (APPROVED/CHANGES_REQUESTED/COMMENTED)
+     - Corpo do review e cada comentário inline (arquivo:linha + texto)
+   - **Use esse material como contexto da análise**:
+     - **Não duplique** issues já reportadas pelos reviewers humanos — se um humano já apontou, registre no relatório como "já apontado por @user" ao invés de criar issue nova
+     - **Considere o feedback prévio** ao formar sua opinião — se um reviewer aprovou uma decisão controversa, mencione no relatório que isso já passou por revisão humana
+     - **Issues que humanos podem ter perdido** são prioridade — bugs sutis, queries problemáticas, problemas de segurança que escapam de review visual
+
+4. Obtenha o diff de acordo com a fonte (já resolvida no passo 2):
+   - **PR** (detectado ou fornecido): `gh pr view [número] --json title,body,baseRefName,additions,deletions` e `gh pr diff [número]`
+   - **Branch sem PR**: `git diff dev...HEAD` (ou `main...HEAD` conforme o projeto)
    - **Commit**: `git show [hash]`
-3. Liste arquivos modificados e volume de mudanças (`+X / -Y linhas`)
-4. Leia os **arquivos completos** modificados pelo diff — o diff sozinho não dá contexto suficiente para avaliar impacto real
-5. Se existir SPEC relacionada em `thoughts/plans/`, leia-a para contexto adicional
+
+5. Liste arquivos modificados e volume de mudanças (`+X / -Y linhas`)
+6. Leia os **arquivos completos** modificados pelo diff — o diff sozinho não dá contexto suficiente para avaliar impacto real
+7. Se existir SPEC relacionada em `thoughts/plans/`, leia-a para contexto adicional
 
 ## Etapa 2 — Análise Paralela com 6 Subagentes
 
@@ -145,6 +168,7 @@ Crie `<root>/thoughts/reviews/REV-DD-MM-YYYY-[slug].md` (na v7 do toolkit; em pr
 date: DD-MM-YYYY (UTC-3)
 reviewer: Claude Code
 source: "[PR #123 / branch feat/xxx / commit abc1234]"
+pr_detected: "[#123 ou null se não houver PR aberto]"
 status: reviewed
 ---
 
@@ -159,7 +183,24 @@ status: reviewed
 | Issues críticas | N |
 | Issues maiores | N |
 | Issues menores | N |
+| Reviews humanos prévios | N (ver seção abaixo) |
 | Aprovação | ✅ Aprovado / ⚠️ Aprovado com ressalvas / ❌ Bloqueado |
+
+## Reviews Anteriores Considerados
+
+> Preencha apenas se houver PR aberto com reviews/comentários humanos. Caso contrário: "Nenhum PR aberto detectado para esta branch — análise puramente local."
+
+| Reviewer | Estado | Data | Resumo |
+|---|---|---|---|
+| @fulano | CHANGES_REQUESTED | DD-MM-YYYY | [1 linha resumindo os pontos principais] |
+| @ciclana | APPROVED | DD-MM-YYYY | [1 linha — ex: aprovou após ajuste de error handling] |
+
+**Issues já apontadas pelos humanos** (não duplicadas neste relatório):
+
+- [arquivo:linha] — @fulano apontou [resumo] → confirmo / não confirmo / parcialmente confirmo
+- [arquivo:linha] — @ciclana sugeriu [resumo] → status do feedback prévio
+
+**Decisões controversas já aprovadas por humano**: [se houver, listar — ex: "uso de `any` em X:Y foi aprovado por @fulano com justificativa Z"]
 
 ## Mapa de Impacto
 
@@ -374,5 +415,9 @@ Próximo passo: revise o diff staged no VSCode e commite quando aprovar.
 - **Fixes via quick-task respeitam modo invocado**: subagent que executa o fix usa modo `autonomo-invocado` ou `step-invocado` conforme escolha do usuario — em ambos, NUNCA commita (so `git add`)
 - **Quick-task pode escalar**: se um fix crescer alem do escopo quick (>5 passos, decisao arquitetural), respeite o safety valve do quick-task e pause a cadeia para o usuario decidir
 - **GitHub via `gh` CLI**: Nunca tokens manuais
+- **PR detection é obrigatória antes do review**: se a fonte é branch ou "branch atual", SEMPRE rode `gh pr list --head <branch>` antes de pegar o diff. Se achar PR aberto, promova a fonte pra PR
+- **Reviews humanos prévios são contexto, não verdade absoluta**: leia os reviews/comentários existentes antes de analisar, mas você ainda pode discordar de um humano se tiver evidência concreta — registre no relatório com a sua opinião + a do humano
+- **Não duplicar issues humanas**: se um reviewer já apontou X em arquivo:linha, NÃO crie uma issue nova com o mesmo conteúdo. Mencione na seção "Reviews Anteriores Considerados" e indique se você confirma, refuta ou complementa o ponto
+- **Nunca comente no PR**: mesmo tendo lido os reviews do PR, o relatório continua sendo local. Sem exceção
 
 > O formato de conclusão final está descrito na **Etapa 6 — Action Plan** (seção "Resultado final"). Não duplique aqui.
