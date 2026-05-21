@@ -25,11 +25,37 @@ Use o **root do worktree** pra centralizar memorias (mesmo path quando rodado da
 ```bash
 ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
 PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
-MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
-test -d "$MEM_DIR" || { echo "Auto-memory não existe em $MEM_DIR. Saindo."; exit 0; }
+PROJ_DIR="$HOME/.claude/projects/$PROJ_ENC"
+MEM_DIR="$PROJ_DIR/memory"
 ```
 
-Se não existir, reportar e sair (não criar).
+**Antes de prosseguir**, validar nessa ordem:
+
+1. **Se `$MEM_DIR` não existe**: procurar siblings com nome `*-memory/` em `$PROJ_DIR/` (ex: `gopay-memory/`, `backup-memory/`). Esses dirs podem ser renames antigos ou backups esquecidos.
+   - **Encontrou sibling com conteúdo** (>1 arquivo `.md` além de `MEMORY.md`): **NÃO criar stub vazio**. Reportar pro usuário e perguntar:
+     ```
+     ⚠️ memory/ não existe, mas achei sibling com dados:
+       /home/.../projects/<proj>/<sibling>/  (N notas, MEMORY.md X linhas)
+
+     O que fazer?
+       (r) renomear sibling → memory/ (convenção padrão)
+       (s) sair sem mexer (você organiza manual)
+       (c) continuar criando memory/ vazio (sibling fica intacto)
+     ```
+   - **Não encontrou sibling** (projeto realmente novo): seguir o caso "MEMORY.md ainda não existe" (criar stub vazio).
+
+2. **Se `$MEM_DIR` existe**: seguir normal pra próxima etapa.
+
+```bash
+# Pseudocódigo da detecção:
+test -d "$MEM_DIR" || {
+  siblings=$(find "$PROJ_DIR" -maxdepth 1 -type d -name '*-memory' 2>/dev/null)
+  for s in $siblings; do
+    count=$(ls "$s"/*.md 2>/dev/null | wc -l)
+    [ "$count" -gt 1 ] && echo "Candidate: $s ($count .md files)"
+  done
+}
+```
 
 ### 2. Levantamento
 
