@@ -20,8 +20,11 @@ Comando de manutenção sob-demanda do auto-memory deste projeto (`~/.claude/pro
 
 ### 1. Resolver path do auto-memory
 
+Use o **root do worktree** pra centralizar memorias (mesmo path quando rodado da raiz ou de uma worktree):
+
 ```bash
-PROJ_ENC=$(pwd | sed 's|/|-|g')
+ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
 MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 test -d "$MEM_DIR" || { echo "Auto-memory não existe em $MEM_DIR. Saindo."; exit 0; }
 ```
@@ -181,9 +184,76 @@ Próximo /memory-organize sugerido quando MEMORY.md voltar a >150 linhas.
 - **Sub-sumário órfão** (`_summary_X.md` existe mas não está listado em `## Sub-sumários` do `MEMORY.md`): adicionar linha.
 - **Sub-sumário desatualizado** (tabela do sub-sumário não bate com as notas reais daquele tipo): regenerar conteúdo do sub-sumário sob confirmação.
 
+---
+
+## Modo relink — centralizar memorias de worktrees
+
+`/memory-organize relink` é um sub-modo focado em **centralizar** o auto-memory de worktrees: garante que cada worktree do projeto atual tem `memory/` como symlink pro `memory/` do root.
+
+**Quando usar**:
+- **Retroativo** — depois de adotar a centralizacao, worktrees criados antes (ou que tiveram sessao Claude antes do `/git-worktree` ser atualizado) ainda tem `memory/` separado.
+- **Auditoria** — checar inconsistencias: symlink quebrado, worktree apontando pra root errado, etc.
+
+### Fluxo
+
+1. **Identificar root** + listar worktrees:
+   ```bash
+   ROOT=$(git worktree list | head -1 | awk '{print $1}')
+   ROOT_ENC=$(echo "$ROOT" | sed 's|/|-|g')
+   ROOT_MEM="$HOME/.claude/projects/$ROOT_ENC/memory"
+   mkdir -p "$ROOT_MEM"
+
+   # Lista paths dos worktrees (sem o root)
+   git worktree list | tail -n +2 | awk '{print $1}'
+   ```
+
+2. **Pra cada worktree** `WT`:
+   ```bash
+   WT_ENC=$(echo "$WT" | sed 's|/|-|g')
+   WT_MEM="$HOME/.claude/projects/$WT_ENC/memory"
+   ```
+   Casos:
+   - **Nao existe**: cria diretorio pai + symlink. Reporta *"Linked $WT → root"*.
+   - **E symlink pro root certo** (`readlink "$WT_MEM"` = `$ROOT_MEM`): skip (idempotente). Reporta *"OK (ja linkado)"*.
+   - **E symlink pra outro destino**: mostra destino atual, pergunta — substituir, cancelar ou skip esse worktree.
+   - **E diretorio real** (caso conservador — **NUNCA descartar sozinho**): faca diff de notas:
+     ```bash
+     # Listar nomes de notas do worktree e do root
+     diff <(ls "$WT_MEM"/*.md 2>/dev/null | xargs -n1 basename | sort) \
+          <(ls "$ROOT_MEM"/*.md 2>/dev/null | xargs -n1 basename | sort)
+     ```
+     - **Sem notas unicas no worktree** (tudo ja existe no root): pergunta *"Posso descartar $WT_MEM e criar symlink?"* (s/n).
+     - **Com notas unicas no worktree**: lista os arquivos unicos, oferece:
+       - `(m)` Mover unicos pro root (`mv`) e entao criar symlink
+       - `(k)` Manter ambos — skip symlink (usuario resolve depois)
+       - `(c)` Cancelar relink desse worktree
+     - **MEMORY.md ou `_summary_*.md` divergentes**: caso especial — pergunta caso a caso. Geralmente o MEMORY.md do root deve prevalecer (ele e a fonte canonica), mas pode haver entradas locais que faltam la.
+   - **E dir vazio**: `rmdir` + cria symlink. Reporta.
+
+3. **Sumario final**:
+   ```
+   /memory-organize relink concluido:
+     Worktrees verificados:        N
+     ✅ Ja linkados (skip):         K
+     🔗 Novos symlinks criados:     M
+     📦 Notas movidas pro root:     J
+     ⏸️ Pulados (manual):           P
+     ❌ Cancelados:                 C
+   ```
+
+### Importante (seguranca)
+
+- **Nunca `rm -rf` em `$WT_MEM`** — se for symlink (mesmo quebrado), `rm -rf` pode seguir e apagar `memory/` do root. Use:
+  - `unlink "$WT_MEM"` pra symlinks
+  - `rmdir "$WT_MEM"` pra dirs vazios
+  - `mv "$WT_MEM"/<arquivo>.md "$ROOT_MEM"/` pra mover conteudo
+  - **Perguntas explicitas** antes de qualquer destruicao.
+- **Diretorio pai do worktree** (`~/.claude/projects/<worktree-encoded>/`) nao e tocado — fica intacto (pode ter historico de sessoes). So o `memory/` dentro dele e gerenciado.
+
 ## O que este comando NÃO faz
 
 - **Não cria notas novas** — só reorganiza as existentes. Pra criar, use a skill `memory-keeper` (escrita sob pedido do usuário).
 - **Não deleta notas** sem confirmação explícita por item — só remove linhas órfãs do `MEMORY.md`.
 - **Não normaliza convenção de nome** retroativamente — se uma nota antiga tem nome fora do padrão `<tipo>_<slug>.md`, deixar (a menos que o usuário peça).
 - **Não migra do vault Obsidian** — esse trabalho é one-shot, não cabe aqui.
+- **Modo relink nao apaga `<worktree-encoded>/`** — so gerencia o `memory/` dentro. Outros artefatos do harness ficam intactos.

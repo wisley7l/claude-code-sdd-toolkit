@@ -68,12 +68,12 @@ Em duvida: SDD para coisa tecnica especifica; geral para coisa transversal.
 ## Resolucao de paths
 
 ```bash
-ROOT=$(git worktree list | head -1 | awk '{print $1}')
-PROJ_ENC=$(pwd | sed 's|/|-|g')
+ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
 MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
 
-Use `$ROOT` como base para `thoughts/`. Use `$MEM_DIR` para escrever memoria.
+Use `$ROOT` como base para `thoughts/`. Use `$MEM_DIR` para escrever memoria — o encoded do **root** garante que worktrees compartilhem o mesmo `memory/` (sem fragmentacao).
 
 ## Configuracao inicial
 

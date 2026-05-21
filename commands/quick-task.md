@@ -284,9 +284,10 @@ Se `(d)` DRAFT:
 - Adicione no fim do corpo: `**Draft — sera proposto a memoria via /sdd-confirm apos merge do PR.**`
 
 Se `(m)` MEMORY direto:
-- Resolva o path do auto-memory:
+- Resolva o path do auto-memory (via root do worktree pra centralizar memorias):
   ```bash
-  PROJ_ENC=$(pwd | sed 's|/|-|g')
+  ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+  PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
   MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
   ```
 - Crie `$MEM_DIR/<tipo>_<slug>.md` no formato da skill `memory-keeper`.

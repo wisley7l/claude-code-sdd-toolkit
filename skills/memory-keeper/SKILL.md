@@ -15,12 +15,24 @@ Path do auto-memory por projeto (gerenciado pelo harness):
 ~/.claude/projects/<projeto-encoded>/memory/
 ```
 
-`<projeto-encoded>` é o cwd com `/` substituído por `-`. Pra descobrir o path real:
+`<projeto-encoded>` é o **root do repo** com `/` substituído por `-`. Sempre resolva via root — mesmo quando trabalha em worktree — pra **centralizar memórias do projeto**:
 
 ```bash
-PROJ_ENC=$(pwd | sed 's|/|-|g')
-echo "$HOME/.claude/projects/$PROJ_ENC/memory/"
+ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
+MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
+
+Sem repo git → fallback pra `$(pwd)`.
+
+**Centralização de worktrees**: quando você cria worktree via `/git-worktree`, ele cria automaticamente um symlink `~/.claude/projects/<worktree-encoded>/memory → <root-encoded>/memory`. Isso garante que:
+- O `MEMORY.md` **pré-carregado pelo harness** no system prompt é o do root (independente de qual worktree)
+- Qualquer escrita explícita via path resolvido acima também cai no root
+- Worktrees compartilham `memory/`, sem fragmentação
+
+Quando você remove worktree via `/git-remove-worktree`, ele faz `unlink` do symlink (jamais `rm -rf` — seguir o symlink apagaria o memory do root).
+
+Pra worktrees criados antes desse comportamento (retroativo): rode `/memory-organize relink`.
 
 O harness já carrega `MEMORY.md` no system prompt no início de cada sessão (primeiras 200 linhas ou 25KB). Topic files (notas individuais) **não** são carregados automaticamente — só sob demanda via Read.
 

@@ -94,10 +94,11 @@ O `MEMORY.md` do auto-memory ja esta carregado pelo harness no system prompt. Us
 - Abra apenas as notas individuais (`<tipo>_<slug>.md`) que importam para o plano em construcao.
 - Se houver sub-sumarios (`_summary_<tipo>.md`), abra apenas quando o tipo for relevante.
 
-Resolva o path do auto-memory pra escritas (Passo 13):
+Resolva o path do auto-memory pra escritas (Passo 13). Use o **root do worktree** pra centralizar memorias:
 
 ```bash
-PROJ_ENC=$(pwd | sed 's|/|-|g')
+ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
 MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
 

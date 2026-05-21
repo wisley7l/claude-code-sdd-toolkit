@@ -16,9 +16,10 @@ A persistencia final segue a skill `memory-keeper`: arquivo `<tipo>_<slug>.md` n
 
 ## Pre-cheques
 
-1. **Auto-memory existe**:
+1. **Auto-memory existe** (resolve via root do worktree pra centralizar memorias):
    ```bash
-   PROJ_ENC=$(pwd | sed 's|/|-|g')
+   ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
+   PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
    MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
    test -d "$MEM_DIR"
    ```
