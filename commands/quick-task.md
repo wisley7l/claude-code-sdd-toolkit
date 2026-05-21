@@ -34,7 +34,7 @@ Voce executa **mudancas pequenas** sem rodar SPEC formal. Use quando:
 - **Baixa ceremonia**: 1 arquivo de input (`TASK.md`) + 1 de output (`SUMMARY.md`)
 - **Safety valve**: se passos passarem de 5 OU surgir decisao arquitetural OU dependencia nao obvia, PARE e sugira `/sdd-plan`. **Vale em todos os modos.**
 - **TDD quando aplicavel**: codigo de lib/dominio = TDD obrigatorio. Config/typo = nao
-- **Memoria persistente leve**: leia memoria de sessoes anteriores (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`) para nao repetir blockers conhecidos. Detalhes: skill `vault-memory`
+- **Memoria persistente leve**: leia `MEMORY.md` (ja carregado pelo harness) para nao repetir blockers conhecidos. Detalhes: skill `memory-keeper`
 - **Zero Inferencia**: API externa = verifique antes (Context7/WebFetch). Sem verificacao = pare
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` mesmo no quick mode
 - **Modos invocados nunca commitam**: em `autonomo-invocado` e `step-invocado`, `git add` ao final substitui `git commit`. O caller decide quando/como commitar.
@@ -78,7 +78,7 @@ Esta mudanca parece [pequena/media]. Confirmar quick mode ou prefere fluxo forma
 ### 3. Ler context minimo
 - `CLAUDE.md`
 - `ARCHITECTURE.md`
-- Memoria persistente — so blockers conhecidos. Modo vault (`CLAUDE_VAULT_PATH`): `state/blockers/*.md`. Modo legacy: `thoughts/STATE.md`. Ver skill `vault-memory`.
+- Memoria persistente — so blockers conhecidos. Pelo `MEMORY.md` ja carregado, identifique linhas da secao `## Blocker` e abra so as relevantes. Ver skill `memory-keeper`.
 - Skills aplicaveis em `.claude/skills/`
 
 ### 4. Decidir o numero da task
@@ -250,43 +250,47 @@ Commit: [hash + mensagem]
 ### Passo 10 — Propor Memoria (se aplicavel)
 
 Se durante a execucao apareceu:
-- Padrao novo → tipo `decisao` ou `licao`
+- Padrao novo → tipo `decision` ou `lesson`
 - Blocker resolvido (importante para futuro) → tipo `blocker`
-- Licao aprendida → tipo `licao`
+- Licao aprendida → tipo `lesson`
 
 Pergunte:
 ```
 Identifiquei algo util como memoria:
 
 [Item]
-[Tipo: decisao | blocker | licao]
+[Tipo: decision | blocker | lesson]
 [Por que importa]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pro vault depois com /sdd-confirm apos merge do PR
-  (v) VAULT direto — definitiva agora (decisao independente de revisao de PR)
+  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
+  (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(d) draft` se ha PR aberto na branch atual (a quick-task tipicamente faz `git add` mas commit/PR fica com user). Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`. Se nao ha PR, `(v) vault direto` faz sentido quando voce esta certo que a decisao vale independente de review futuro.
+**Default sugerido**: `(d) draft` se ha PR aberto na branch atual (a quick-task tipicamente faz `git add` mas commit/PR fica com user). Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`. Se nao ha PR, `(m) memory direto` faz sentido quando voce esta certo que a decisao vale independente de review futuro.
 
 Se `(d)` DRAFT:
 - Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
   ```
   ---
-  type: decisao  # ou blocker, licao
+  type: decision  # ou blocker, lesson
   title: <titulo>
   date: <YYYY-MM-DD>
   branch: <git branch --show-current>
   pr: <numero se houver, omitir se nao>
-  projeto: <basename do cwd>
   ---
   ```
-- Adicione no fim do corpo: `**Draft — sera proposto ao vault via /sdd-confirm apos merge do PR.**`
+- Adicione no fim do corpo: `**Draft — sera proposto a memoria via /sdd-confirm apos merge do PR.**`
 
-Se `(v)` VAULT direto:
-- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
-- **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
+Se `(m)` MEMORY direto:
+- Resolva o path do auto-memory:
+  ```bash
+  PROJ_ENC=$(pwd | sed 's|/|-|g')
+  MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
+  ```
+- Crie `$MEM_DIR/<tipo>_<slug>.md` no formato da skill `memory-keeper`.
+- Atualize o `MEMORY.md` (secao `## <Type capitalizado>`, adicionar linha na tabela).
 
 Se `(n)`: pule.
 
@@ -325,6 +329,6 @@ Nao escreva mensagem ao usuario final — o caller agrega.
 - **Constitution mesmo aqui**: CLAUDE.md + ARCHITECTURE.md
 - **Commit so em modo manual**: em `manual`, 1 quick task = 1 commit. Em `autonomo-invocado` e `step-invocado`, **NUNCA commite** — so `git add`. Caller decide o commit.
 - **Nunca invente API**: verifique em doc oficial ou codigo existente
-- **Memoria sob confirmacao**: nunca escreva (vault ou STATE.md) sem perguntar
+- **Memoria sob confirmacao**: nunca escreva no `memory/` (ou em draft) sem perguntar
 - **Skills nao opcionais**: se a task tem skills, ative
 - **GitHub via `gh` CLI**: nunca tokens manuais

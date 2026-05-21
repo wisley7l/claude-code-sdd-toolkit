@@ -1,6 +1,6 @@
 ---
 description: Pesquisar e planejar feature em 1 doc auto-sized (substitui gerador-prd + gerador-spec). Para Medium/Large/Complex. Quick delega para /quick-task.
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Conceitos adaptados: 1 doc auto-sized (substitui pipeline PRD->SPEC), Knowledge Verification Chain,
@@ -22,7 +22,7 @@ Voce e um **par tecnico** que entende o problema, pesquisa o que precisa, decide
 ## Principios
 
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` delimitam toda decisao
-- **Memoria persistente**: leia notas de sessoes anteriores no inicio (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`). Proponha registro novo so com confirmacao. Detalhes no skill `vault-memory`
+- **Memoria persistente**: o `MEMORY.md` ja vem carregado pelo harness no inicio da sessao. Abra notas individuais relevantes sob demanda. Proponha registro novo so com confirmacao. Detalhes no skill `memory-keeper`
 - **Knowledge Verification Chain**: Codebase → Project docs → Context7 → Web → Flag como incerto. Nunca pule etapas
 - **Zero Inferencia**: toda afirmacao tecnica com `[Fonte: url]` ou `[Fonte: path:line]`. Sem fonte = `[NEEDS VERIFICATION]`
 - **Nunca fabrique**: prefira "nao encontrei documentacao para X" a chutar
@@ -88,16 +88,20 @@ Se for mudanca pequena (≤3 arquivos, 1 frase), prefiro encaminhar para /quick-
 
 ### 3. Ler memoria persistente
 
-Detecte o modo:
+O `MEMORY.md` do auto-memory ja esta carregado pelo harness no system prompt. Use ele como indice:
+
+- Pelas linhas das tabelas, identifique notas relevantes pra demanda atual (decisoes ja tomadas no projeto, blockers conhecidos, licoes aplicaveis, ideias adiadas).
+- Abra apenas as notas individuais (`<tipo>_<slug>.md`) que importam para o plano em construcao.
+- Se houver sub-sumarios (`_summary_<tipo>.md`), abra apenas quando o tipo for relevante.
+
+Resolva o path do auto-memory pra escritas (Passo 13):
 
 ```bash
-test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
+PROJ_ENC=$(pwd | sed 's|/|-|g')
+MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
 
-- **Modo vault**: siga o skill `vault-memory`. Resolva `<org>/<projeto>` pelo cwd e carregue notas de `state/decisoes/`, `state/blockers/`, `state/licoes/` relevantes.
-- **Modo legacy**: leia `thoughts/STATE.md` se existir. Se nao existir, propor criar so quando aparecer conteudo real para registrar.
-
-Use para: recuperar decisoes ja tomadas, identificar blockers persistentes, lembrar ideias adiadas, aplicar licoes.
+Detalhes no skill `memory-keeper`.
 
 ### 4. Ler skills do projeto
 `.claude/skills/` — absorva padroes que vao virar `Skills:` nas tarefas.
@@ -343,34 +347,33 @@ Pergunte:
 Identifiquei algo util como memoria persistente:
 
 [Item]
-[Tipo: decisao | blocker | licao | ideia]
+[Tipo: decision | blocker | lesson | idea]
 [Por que importa para futuras sessoes]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pro vault depois com /sdd-confirm apos merge do PR
-  (v) VAULT direto — definitiva agora (decisao independente de revisao de PR)
+  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
+  (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(d) draft` quando o plano vai virar implementacao + PR. `(v) vault direto` quando e uma decisao puramente de planejamento que ja foi resolvida (ex: escolha de stack pre-aprovada). Detecte PR aberto com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`.
+**Default sugerido**: `(d) draft` quando o plano vai virar implementacao + PR. `(m) memory direto` quando e uma decisao puramente de planejamento que ja foi resolvida (ex: escolha de stack pre-aprovada). Detecte PR aberto com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`.
 
 Se `(d)` DRAFT:
 - Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
   ```
   ---
-  type: decisao  # ou blocker, licao, ideia
+  type: decision  # ou blocker, lesson, idea
   title: <titulo>
   date: <YYYY-MM-DD>
   branch: <git branch --show-current>
   pr: <numero se houver, omitir se nao>
-  projeto: <basename do cwd>
   ---
   ```
-- Adicione no fim do corpo: `**Draft — sera proposto ao vault via /sdd-confirm apos merge do PR.**`
+- Adicione no fim do corpo: `**Draft — sera proposto a memoria via /sdd-confirm apos merge do PR.**`
 
-Se `(v)` VAULT direto:
-- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (ver skill `vault-memory`).
-- **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
+Se `(m)` MEMORY direto:
+- Nota em `$MEM_DIR/<tipo>_<slug>.md` (ver skill `memory-keeper` para formato completo).
+- Atualize o `MEMORY.md`: adicione linha na tabela da secao `## <Type capitalizado>`.
 
 Se `(n)`: pule.
 
@@ -584,7 +587,7 @@ Confirmacao a cada vez — usuario decide tarefa a tarefa.
 - **Fonte ou NEEDS VERIFICATION**: claim externa sem fonte verificavel nao entra nas tarefas
 - **Skills nao opcionais**: identifique e liste — executor as ativa
 - **Constitution inegociavel**: CLAUDE.md/ARCHITECTURE.md
-- **Memoria pergunta antes**: nunca escreva (vault ou STATE.md) sem confirmar
+- **Memoria pergunta antes**: nunca escreva no `memory/` (ou em draft) sem confirmar
 - **Diagrama mapeia arquitetura real**: nao copia exemplo
 - **Resumo Executivo por ultimo**: bullets espelham conteudo real das secoes
 - **GitHub via `gh` CLI**: nunca tokens manuais

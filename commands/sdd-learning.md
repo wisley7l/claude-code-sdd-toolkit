@@ -1,7 +1,7 @@
 ---
-description: Extrai aprendizados de IMPs (relatorios de implementacao) e reviews — propoe registro no vault (sabor SDD em state/, sabor geral em feedback/project/reference). Confirma por item antes de gravar. Atualizar > criar.
+description: Extrai aprendizados de IMPs (relatorios de implementacao) e reviews — propoe registro no auto-memory via skill memory-keeper. Confirma por item antes de gravar. Atualizar > criar.
 model: claude-sonnet-4-6
-allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(find *), Bash(stat *), Bash(date*)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(find *), Bash(stat *), Bash(date*)
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Fecha o loop: implementacao -> aprendizado nao-obvio -> memoria persistente
@@ -9,7 +9,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(test*), Bash(ls *), Ba
 
 # SDD Learning — Colheita de Aprendizados
 
-Voce e um **destilador de aprendizado**. Le relatorios de implementacao (`IMP-*.md`) e reviews (`thoughts/reviews/*.md`), identifica o que vale virar memoria persistente, e propoe registro no vault (sabor SDD em `state/` ou sabor geral em `feedback`/`project`/`reference`) — sempre sob confirmacao por item.
+Voce e um **destilador de aprendizado**. Le relatorios de implementacao (`IMP-*.md`) e reviews (`thoughts/reviews/*.md`), identifica o que vale virar memoria persistente, e propoe registro no auto-memory via skill `memory-keeper` — sempre sob confirmacao por item.
 
 **Voce nao cria nota por iniciativa.** Cada candidato e proposto e o usuario aprova caso a caso. Notas similares ja existentes sao atualizadas, nao duplicadas.
 
@@ -20,38 +20,38 @@ Aplique cada candidato contra estes filtros. Falhou em qualquer um → **descart
 1. **Nao-obvio**: removendo a nota, um futuro agente que le o codigo + git log perderia algo? Se nao, descarte.
 2. **Tem "por que"**: a nota tem motivo/contexto que justifica o registro? Sem por que = ruido futuro.
 3. **Persiste**: vale alem da feature atual? Se for so detalhe operacional de uma sessao, descarte.
-4. **Nao redundante**: ja existe nota similar no vault? **Atualizar** > criar.
+4. **Nao redundante**: ja existe nota similar no `MEMORY.md`? **Atualizar** > criar.
 5. **Nao capturado em commit/PR**: se o commit message ou descricao do PR ja conta a historia, git log resolve — descarte.
 
-## Sabores e tipos
+## Tipos (9 no total, ver skill `memory-keeper`)
 
-**Sabor SDD (notas em `<org>/<projeto>/state/<tipo>s/`):**
+**Sabor SDD** (gerados durante execucao/review):
 
 | Tipo | Captura | Exemplo |
 |---|---|---|
-| `decisao` | Decisao arquitetural que persiste alem da feature | "Vitess sem FK; validar `orderId` em camada de aplicacao" |
-| `blocker` | Problema conhecido com sintoma e workaround | "Infisical falha local sem `CLAUDE_VAULT_PATH=...`; rodar `infisical login` antes" |
-| `licao` | Abordagem testada que nao funcionou OU padrao que provou valor | "Tentamos mock do PlanetScale — divergiu de prod. Sempre branch dev real" |
-| `ideia` | Algo que apareceu fora de escopo, pra retomar | "Migrar webhook ERP pra Cloudflare Queues quando tiver tempo" |
-| `preferencia` | Estilo de trabalho do usuario neste projeto | "Confirmar com user antes de stage de migration SQL" |
+| `decision` | Decisao arquitetural que persiste alem da feature | "Vitess sem FK; validar `orderId` em camada de aplicacao" |
+| `blocker` | Problema conhecido com sintoma e workaround | "Infisical falha local sem `X`; rodar `infisical login` antes" |
+| `lesson` | Abordagem testada que nao funcionou OU padrao que provou valor | "Tentamos mock do PlanetScale — divergiu de prod. Sempre branch dev real" |
+| `idea` | Algo que apareceu fora de escopo, pra retomar | "Migrar webhook ERP pra Cloudflare Queues quando tiver tempo" |
+| `preference` | Estilo de trabalho do usuario neste projeto | "Confirmar com user antes de stage de migration SQL" |
 
-**Sabor geral (skill `vault-memory`, notas em `<escopo>/<tipo>/`):**
+**Sabor geral** (regras transversais):
 
-| Tipo | Captura | Escopo tipico |
-|---|---|---|
-| `user` | Perfil, papel, conhecimento do usuario | **so `global`** |
-| `feedback` | Regra de colaboracao ("faca X / nunca Y") | qualquer |
-| `project` | Decisao/contexto/deadline nao-obvio sobre o trabalho | `<org>/<projeto>` (ou `<org>` se vale na org) |
-| `reference` | Ponteiro para sistema externo (URL, dashboard, tracker) | qualquer |
+| Tipo | Captura |
+|---|---|
+| `user` | Perfil, papel, conhecimento do usuario |
+| `feedback` | Regra de colaboracao ("faca X / nunca Y") |
+| `project` | Decisao/contexto/deadline nao-obvio sobre o trabalho |
+| `reference` | Ponteiro para sistema externo (URL, dashboard, tracker) |
 
-**Quando o aprendizado e SDD vs geral?**
+**Quando e SDD vs geral?**
 
-- Especifico do estado do projeto (decisao tecnica, blocker tecnico, licao de implementacao) → **SDD** em `state/`
-- Regra de colaboracao entre user e agente, ou pattern cross-project → **geral** em `feedback/`
-- Decisao de produto/deadline/contexto de negocio → **geral** em `project/`
-- Link para Linear/Grafana/dashboard externo → **geral** em `reference/`
+- Especifico do estado tecnico do projeto (decisao, blocker, licao de implementacao) → SDD
+- Regra de colaboracao entre user e agente → `feedback`
+- Decisao de produto/deadline/contexto de negocio → `project`
+- Link para Linear/Grafana/dashboard externo → `reference`
 
-Em duvida: SDD para coisa tecnica do projeto especifico; geral para coisa transversal.
+Em duvida: SDD para coisa tecnica especifica; geral para coisa transversal.
 
 ## Args
 
@@ -65,32 +65,29 @@ Em duvida: SDD para coisa tecnica do projeto especifico; geral para coisa transv
 | `--include-insights` | Adiciona `thoughts/insights/*.md` as fontes (opt-in) |
 | `--all` | Processa tudo. **Alerta o user antes**: pode gerar muitos candidatos. Pergunta confirmacao. |
 
-## Resolucao do diretorio root
+## Resolucao de paths
 
 ```bash
-git worktree list | head -1 | awk '{print $1}'
+ROOT=$(git worktree list | head -1 | awk '{print $1}')
+PROJ_ENC=$(pwd | sed 's|/|-|g')
+MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
 
-Use esse caminho como base para `thoughts/`. Garante que outputs sejam lidos do repo principal mesmo executando dentro de worktree.
+Use `$ROOT` como base para `thoughts/`. Use `$MEM_DIR` para escrever memoria.
 
 ## Configuracao inicial
 
-### 1. Detectar vault
+### 1. Validar auto-memory
+
 ```bash
-test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
+test -d "$MEM_DIR" || { echo "Auto-memory nao existe. O harness cria na primeira sessao."; exit 0; }
 ```
 
-- **Falhou** → o sabor SDD escreve em `thoughts/STATE.md` (modo legacy). O sabor geral nao tem onde morar; **so processe candidatos SDD** e avise: "Sabor geral exige vault — exporte `CLAUDE_VAULT_PATH` para habilitar."
-- **OK** → siga o skill `vault-memory` para o protocolo. Resolva `<org>/<projeto>` pelo cwd e carregue hubs (global + org + projeto).
+### 2. Ler MEMORY.md (para contexto + dedupe)
 
-### 2. Ler hubs do vault (para contexto + dedupe)
+O `MEMORY.md` ja esta carregado pelo harness no system prompt. Use ele como indice primario pra detectar duplicacao antes de propor criar.
 
-- `$CLAUDE_VAULT_PATH/Comecar-aqui.md` (indice raiz)
-- `$CLAUDE_VAULT_PATH/global/Global.md` (hub global)
-- `$CLAUDE_VAULT_PATH/<org>/<NomeDaOrg>.md` (se existir)
-- `$CLAUDE_VAULT_PATH/<org>/<projeto>/<NomeDoHub>.md` (hub do projeto)
-
-Esses hubs listam as memorias existentes com hooks de 1 linha. Use para **detectar duplicacao** antes de propor criar.
+Se houver sub-sumarios (`_summary_<tipo>.md`), abra apenas os relevantes pros tipos que voce vai propor.
 
 ### 3. Listar fontes disponiveis (segundo os args)
 
@@ -158,30 +155,19 @@ Candidato passa nos filtros? Capture:
 
 Para cada candidato:
 
-1. **Sabor**:
-   - Estado tecnico do projeto especifico (arquitetura, blocker tecnico, padrao de implementacao) → **SDD**
-   - Regra de colaboracao, contexto de produto, ponteiro externo, pattern cross-project → **geral**
+1. **Tipo** (conforme tabelas acima): decision/blocker/lesson/idea/preference (SDD) ou feedback/project/reference (geral). `user` raramente sai de aprendizado de IMP/review.
+2. **Slug proposto**: kebab-case curto da frase nuclear (ex: `vitess-sem-fk-validar-aplicacao`)
 
-2. **Tipo** (conforme tabelas acima)
-
-3. **Escopo**:
-   - Pattern especifico deste projeto → `<org>/<projeto>` (SDD sempre fica aqui)
-   - Vale em toda a org → `<org>` (raro, so se claramente transversal)
-   - Vale em qualquer projeto → `global` (raro, regras universais)
-
-4. **Slug proposto**: kebab-case curto da frase nuclear (ex: `vitess-sem-fk-validar-aplicacao`)
-
-### Passo 5 — Dedupe contra vault
+### Passo 5 — Dedupe contra MEMORY.md
 
 Para cada candidato classificado:
 
-1. Pelo hub do escopo, busque por slug similar ou hook que cubra o tema:
-   - SDD: `ls $CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/*.md` + match por slug e leitura do frontmatter de candidatas
-   - Geral: leia entries do hub `<NomeDoHub>.md` ou `Global.md` na secao do tipo
-2. Se encontrar similar:
+1. Pelo `MEMORY.md` (ja carregado), busque na secao do tipo por slug similar ou hook que cubra o tema.
+2. Se houver `_summary_<tipo>.md` para o tipo do candidato, abra-o tambem.
+3. Se encontrar similar:
    - **Atualizar** a nota existente (acrescentar referencias, refinar "por que", adicionar contexto)
    - **Nao duplicar**
-3. Se nao encontrar: candidato vira proposta de **criar**.
+4. Se nao encontrar: candidato vira proposta de **criar**.
 
 ### Passo 6 — Apresentacao + confirmacao por item
 
@@ -200,18 +186,16 @@ Aplicar quando:
 "Sempre que adicionar tabela com referencia a outra (orderId, storeId, etc)."
 
 Proposta:
-- Sabor: SDD
-- Tipo: decisao
-- Escopo: gocase/gopay
+- Tipo: decision
 - Slug: vitess-sem-fk-validar-aplicacao
-- Acao: CRIAR (nao achei similar no vault)
+- Acao: CRIAR (nao achei similar no MEMORY.md)
 
-Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo/escopo)
+Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
 ```
 
 **Edicao** (e): permitir editar frase nuclear, por que, aplicar quando, slug. Reapresentar.
 
-**Mudar tipo/escopo** (t): permitir mudar classificacao. Reapresentar.
+**Mudar tipo** (t): permitir mudar classificacao. Reapresentar.
 
 **Atualizar** (quando dedupe acha similar):
 
@@ -222,12 +206,13 @@ Frase nuclear:
 "satisfies cross-check entre Drizzle e ArkType evita drift de schema."
 
 Encontrei nota similar:
-  $CLAUDE_VAULT_PATH/gocase/gopay/state/decisoes/2026-04-09-drizzle-arktype-satisfies.md
+  $MEM_DIR/decision_drizzle_arktype_satisfies.md
   "Hooks of-the-day para evitar drift Drizzle/ArkType"
 
 Diff proposto:
 - Acrescentar referencia: review-pr-253.md
 - Adicionar contexto: "padrao replicado em order_invoices (PR #..)"
+- Atualizar metadata.updated: <hoje>
 
 Acao: ATUALIZAR (s = salvar, p = pular, c = criar nova mesmo assim)
 ```
@@ -236,27 +221,34 @@ Acao: ATUALIZAR (s = salvar, p = pular, c = criar nova mesmo assim)
 
 **Para cada candidato aprovado:**
 
-**SDD — modo vault:**
-1. Crie `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md`
+**CRIAR** — escreva nota seguindo a skill `memory-keeper`:
+
+1. Path: `$MEM_DIR/<tipo>_<slug>.md`
 2. Frontmatter:
    ```yaml
    ---
-   data: YYYY-MM-DD
-   tipo: decisao | blocker | licao | ideia | preferencia
-   titulo: Titulo legivel curto
-   tags: [opcional]
-   origem: IMP-... | review-...
+   name: <tipo>-<slug-kebab>
+   description: <frase nuclear curta, ≤120 chars>
+   metadata:
+     type: <decision|blocker|lesson|idea|preference|feedback|project|reference>
+     created: <YYYY-MM-DD>
+     updated: <YYYY-MM-DD>
+     origem: <IMP-... | review-...>
    ---
    ```
-3. Corpo: frase nuclear + `## Por que` + `## Aplicar quando` + `## Referencias` + rodape `↑ [[<NomeDoHub>]]`
-4. **Atualize o hub do projeto** (`<NomeDoHub>.md`): adicione linha na secao do tipo
-5. Se primeira nota do projeto/org no vault: atualize `Comecar-aqui.md`
+3. Corpo conforme template (ver `references/nota-template.md` da skill):
+   - Frase nuclear no topo
+   - `**Why:**` (motivo/contexto)
+   - `**How to apply:**` (quando aplicar)
+   - `**Referencias:**` (path:linha, PR #, etc)
+4. **Atualize o `MEMORY.md`**: adicione linha na tabela da secao `## <Type capitalizado>`, respeitando ordem canonica.
 
-**SDD — modo legacy** (sem vault): adicione entrada em `thoughts/STATE.md` na secao correspondente.
+**ATUALIZAR** — edite a nota existente:
 
-**Geral**: siga o skill `vault-memory`. Crie nota em `<escopo>/<tipo>/<slug>.md` com frontmatter do sabor geral (sem `data` no nome), atualize hub e `Comecar-aqui.md` se aplicavel.
-
-**Para cada candidato a atualizar**: edite a nota existente acrescentando referencias e refinando, **sem reescrever do zero**.
+- Acrescente referencias na secao apropriada
+- Refine `**Why:**` se houver contexto novo
+- Atualize `metadata.updated: <hoje>`
+- **Nao reescreva do zero** — preserve o conteudo existente
 
 ### Passo 8 — Resumo final
 
@@ -272,15 +264,15 @@ Candidatos detectados: K
 - Pulados: P
 - Descartados pelos filtros: D
 
-Arquivos criados/atualizados:
-- $CLAUDE_VAULT_PATH/.../decisoes/2026-05-15-vitess-sem-fk.md (novo)
-- $CLAUDE_VAULT_PATH/.../licoes/2026-04-09-drizzle-arktype.md (atualizado)
+Arquivos criados/atualizados em $MEM_DIR:
+- decision_vitess_sem_fk.md (novo)
+- decision_drizzle_arktype_satisfies.md (atualizado)
 ...
 
-Hubs atualizados:
-- Gopay.md
-- Comecar-aqui.md (primeira nota de gocase/gopay)
+MEMORY.md atualizado.
 ```
+
+Se o `MEMORY.md` cresceu muito (> 150 linhas), sugira rodar `/memory-organize` ao final.
 
 ---
 
@@ -290,9 +282,8 @@ Hubs atualizados:
 - **Atualizar > criar**: se ha similar, sempre proponha atualizar primeiro
 - **Filtros sao bloqueantes**: candidato que falha em qualquer um dos 5 filtros e descartado sem mostrar ao usuario
 - **1 candidato por vez**: nao bulk approval — usuario decide caso a caso
-- **Origem rastreavel**: toda nota gerada por este command guarda no frontmatter qual IMP/review originou
-- **Hub e indice obrigatorio**: nota criada sem entrada no hub vira orfa — sempre atualize o hub
-- **Modo legacy sem vault**: sabor geral so existe com vault; SDD cai para `thoughts/STATE.md`
+- **Origem rastreavel**: toda nota gerada por este command guarda `metadata.origem` apontando pro IMP/review
+- **MEMORY.md obrigatorio**: nota criada sem linha no `MEMORY.md` vira orfa — sempre atualize o indice
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` ja sao contexto do projeto, nao precisam virar memoria
 - **Sem fonte = `[NEEDS VERIFICATION]`**: claim que veio do IMP sem fonte verificavel marca a nota como verificar antes de virar canonica
 - **GitHub via `gh` CLI**: se a nota referencia PR, valide o numero via `gh pr view <N>` antes de salvar

@@ -4,7 +4,7 @@ model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
-# Conceitos adaptados: sub-agent paralelo para [P], Test count protection, STATE.md persistente, Gate commands explicitos
+# Conceitos adaptados: sub-agent paralelo para [P], Test count protection, memoria persistente via memory-keeper, Gate commands explicitos
 ---
 
 # Pair Programming — Executar Tarefas
@@ -22,7 +22,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Testes unitarios sao contrato**: Em `thoughts/tests/`, nao commitados. Se quebram, paramos e discutimos
 - **Teste apenas exports reais**: Nunca exporte funcao so para testar. Testes cobrem so API publica
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer codigo
-- **Memoria persistente**: Leia no inicio (vault `CLAUDE_VAULT_PATH` ou `thoughts/STATE.md`). Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo. Detalhes: skill `vault-memory`
+- **Memoria persistente**: O `MEMORY.md` ja vem carregado pelo harness no inicio da sessao. Abra notas individuais relevantes sob demanda. Escreva ao final + ao encontrar blocker. Proponha durante se aparecer padrao novo. Detalhes: skill `memory-keeper`
 - **Reconciliacao com docs**: Se a tarefa altera arquitetura documentada, pergunte se atualiza o doc do projeto
 - **Zero Inferencia**: Verifique comportamento de API no codigo, Context7, WebFetch/Search, ou pergunte. Sem verificacao = pare
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
@@ -58,26 +58,30 @@ Ao ser invocado:
 
 **Objetivo**: carregar contexto rico ANTES de codar — decisoes previas, blockers conhecidos, licoes, preferencias do usuario, padroes do projeto. Isso aumenta seguranca da implementacao e evita repetir erros ja documentados.
 
-Detecte o modo:
+O `MEMORY.md` do auto-memory ja esta carregado pelo harness no system prompt. Use ele como indice primario:
+
+1. Identifique linhas nas tabelas relevantes pra feature em execucao — em **todas as 9 secoes**: User, Feedback, Project, Reference, Decision, Blocker, Lesson, Idea, Preference.
+2. Abra apenas as notas individuais (`<tipo>_<slug>.md`) que importam pra execucao em curso.
+3. Se houver sub-sumarios (`_summary_<tipo>.md`), abra-os apenas para os tipos relevantes.
+
+Resolva o path do auto-memory pra escritas:
+
 ```bash
-test -n "$CLAUDE_VAULT_PATH" && test -d "$CLAUDE_VAULT_PATH"
+PROJ_ENC=$(pwd | sed 's|/|-|g')
+MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
 
-- **Modo vault**: invoque a skill `vault-memory` e leia:
-  - **Estado SDD do projeto** (`<org>/<projeto>/state/` no vault): `decisoes/`, `blockers/`, `licoes/`, `ideias/`, `preferencias/` — TODAS as 5 categorias, filtrando por relevancia para a feature
-  - **Memorias gerais do projeto** (`<org>/<projeto>/`): notas `feedback/`, `project/`, `reference/` que possam afetar a implementacao (convencoes, padroes, integracoes)
-  - **Memorias do usuario** (`user/`): preferencias de estilo, regras de colaboracao, comandos a evitar
-  - **Escopo organizacao/global** (`<org>/`, raiz do vault): so se houver indicio claro de aplicabilidade (ex: padrao corporativo de seguranca)
-- **Modo legacy**: leia `thoughts/STATE.md` (se existir) — todas as secoes (decisoes, blockers, licoes, ideias, preferencias).
-
 Use o que voce leu para:
-- Aplicar decisoes arquiteturais previas sem reinventar
-- Reconhecer blockers conhecidos pelo sintoma (parar cedo)
-- Respeitar preferencias do usuario (estilo, ferramentas, ceremonia)
-- Evitar repetir abordagens documentadas como licao negativa
-- Considerar ideias adiadas que se conectam com a tarefa atual
+- Aplicar decisoes arquiteturais previas (`decision`) sem reinventar
+- Reconhecer blockers conhecidos (`blocker`) pelo sintoma — parar cedo
+- Respeitar preferencias do usuario (`user`, `preference`) — estilo, ferramentas, ceremonia
+- Evitar repetir abordagens documentadas como licao negativa (`lesson`)
+- Considerar ideias adiadas (`idea`) que se conectam com a tarefa atual
+- Respeitar regras de colaboracao (`feedback`) e contexto de projeto (`project`)
 
 **Se a leitura mudar sua interpretacao do plano** (ex: decisao previa contradiz uma escolha do SPEC), pare antes da execucao e levante isso ao usuario.
+
+Detalhes no skill `memory-keeper`.
 
 ### 3. Localizar o Plano
 Se nao fornecido:
@@ -120,12 +124,10 @@ Modo: AUTONOMO (zero pausa entre tarefas, staging por T, commits no fim sob apro
 
 Modo livre: [ATIVO desde <timestamp> | INATIVO — sugiro `/modo-livre on` antes de comecar pra cortar prompts]
 Constitution: CLAUDE.md + ARCHITECTURE.md lidos
-Memoria:
-  - Vault SDD do projeto: [D decisoes / B blockers / L licoes / I ideias / P preferencias relevantes]
-  - Vault geral do projeto: [F notas feedback / J project / R reference]
-  - Vault do usuario: [U memorias user/preferencias gerais]
-  [ou, modo legacy: STATE.md com N decisoes / M blockers / L licoes]
-  [ou, sem nada: "sem memoria persistente"]
+Memoria (via memory-keeper, em $MEM_DIR):
+  - SDD relevantes: [D decision / B blocker / L lesson / I idea / P preference]
+  - Geral relevantes: [U user / F feedback / J project / R reference]
+  [ou, se vazio: "sem memoria persistente — MEMORY.md vazio"]
 Skills ativas: [lista]
 Phases: Foundation [N], Core [M], Integration [K]
 Tarefas: [Total: X, Pendentes: Y, Paralelizaveis [P]: Z]
@@ -382,14 +384,14 @@ Posso continuar?
 
 Quando encontrar problema com multiplas causas possiveis ou solucao nao obvia:
 
-1. **Consultar memoria primeiro**: antes de investigar do zero, busque no vault/STATE se ja existe decisao, blocker ou licao aplicavel. Se sim, cite explicitamente ("decisao 2025-XX-YY-foo diz Z, vou seguir") e siga sem perguntar.
+1. **Consultar memoria primeiro**: antes de investigar do zero, busque no `MEMORY.md` (ja carregado) se ja existe `decision`, `blocker` ou `lesson` aplicavel. Se sim, cite explicitamente ("decision_foo diz Z, vou seguir") e siga sem perguntar.
 2. **Investigar tudo**: rastrear toda a cadeia. Usar subagentes se necessario.
 3. **Propor solucoes**: opcoes com pros/contras.
 4. **Perguntar ao usuario**: deixar o usuario escolher. Cite memoria relevante encontrada no passo 1 nas opcoes ("Opcao A alinha com decisao previa X; Opcao B contradiz").
 
 **Nunca** aplique a primeira solucao que compila sem validar se e o local certo.
 
-Se a encruzilhada e bloqueante (nao consegue avancar): **anote como licao na memoria persistente** apos resolver (modo vault: `state/licoes/<data>-<slug>.md`; modo legacy: `thoughts/STATE.md`) — vira licao para o futuro.
+Se a encruzilhada e bloqueante (nao consegue avancar): **anote como `lesson` na memoria persistente** apos resolver (via skill `memory-keeper`: arquivo `$MEM_DIR/lesson_<slug>.md` + linha no `MEMORY.md`) — vira licao para o futuro.
 
 ---
 
@@ -434,22 +436,22 @@ Se aprovado:
 ### 4. Propor registro de memoria
 
 Itere sobre o que aconteceu na execucao:
-- Padroes novos que apareceram? → tipo `decisao` (ou `licao` se foi "tentamos X, nao funcionou")
-- Decisoes arquiteturais tomadas durante (nao previstas no plano)? → tipo `decisao`
+- Padroes novos que apareceram? → tipo `decision` (ou `lesson` se foi "tentamos X, nao funcionou")
+- Decisoes arquiteturais tomadas durante (nao previstas no plano)? → tipo `decision`
 - Blockers encontrados e resolvidos? → tipo `blocker`
-- Licoes uteis para o futuro? → tipo `licao`
+- Licoes uteis para o futuro? → tipo `lesson`
 
 Para cada um, pergunte:
 ```
 Identifiquei algo util registrar como memoria:
 
 [Item]
-[Tipo: decisao | blocker | licao | ideia]
+[Tipo: decision | blocker | lesson | idea]
 [Por que importa]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pro vault depois com /sdd-confirm apos merge do PR
-  (v) VAULT direto — definitiva agora (decisao independente de revisao de PR)
+  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
+  (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
   (n) Nao salvar
 ```
 
@@ -459,20 +461,19 @@ Se `(d)` DRAFT:
 - Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
   ```
   ---
-  type: decisao  # ou blocker, licao, ideia
+  type: decision  # ou blocker, lesson, idea
   title: <titulo>
   date: <YYYY-MM-DD>
   branch: <output de git branch --show-current>
   pr: <numero se houver PR aberto, omitir se nao>
-  projeto: <basename do cwd>
   ---
   ```
-- Conteudo: igual ao que seria no vault. No fim do corpo, adicione:
-  > **Draft — sera proposto ao vault via `/sdd-confirm` apos merge do PR.**
+- Conteudo: igual ao que iria pra memoria. No fim do corpo, adicione:
+  > **Draft — sera proposto a memoria via `/sdd-confirm` apos merge do PR.**
 
-Se `(v)` VAULT direto:
-- **Modo vault**: nota atomica em `$CLAUDE_VAULT_PATH/<org>/<projeto>/state/<tipo>s/<YYYY-MM-DD>-<slug>.md` (formato no skill `vault-memory`).
-- **Modo legacy**: entrada em `thoughts/STATE.md` na secao correspondente.
+Se `(m)` MEMORY direto:
+- Nota em `$MEM_DIR/<tipo>_<slug>.md` (formato no skill `memory-keeper`).
+- Atualize o `MEMORY.md`: adicione linha na tabela da secao `## <Type capitalizado>`.
 
 Se `(n)`: pule.
 
@@ -532,7 +533,7 @@ Feature concluida.
 - [X] testes unitarios passando
 - [Y] testes integracao/e2e passando
 - Test count: PRESERVADO em todas tarefas
-- Memoria persistente: [K entradas adicionadas / nao alterada]
+- Memoria persistente: [K entradas adicionadas em $MEM_DIR / nao alterada]
 - Doc do projeto: [atualizado / nao precisava]
 - Commits: [hash(es) ou "staged, aguardando aprovacao"]
 
@@ -577,10 +578,10 @@ SPEC: [caminho]
 
 [Mudancas que surgiram durante e por que. Inclui SPEC_DEVIATION reportados por sub-agents]
 
-## STATE.md
+## Memoria persistente
 
-- Entradas adicionadas: [N — listar]
-- Decisoes/licoes preservadas para futuro
+- Entradas adicionadas em $MEM_DIR: [N — listar tipos e slugs]
+- Drafts em thoughts/decisions-draft/ aguardando merge: [K — listar]
 
 ## Reconciliacao com Docs
 
@@ -627,7 +628,7 @@ Apos escrever, lance subagente para verificar links (URLs em referencias, docs):
 - **Nunca chute API**: verifique em doc oficial (Context7/WebFetch/WebSearch) ou codigo existente
 - **Paralelismo seguro**: `[P]` so quando arquivos distintos E sem estado compartilhado. Em autonomo, valida e paraleliza; em `--step`, pergunta antes
 - **Sub-agent retorna estruturado**: status, files, gate result, test count, deviations
-- **STATE.md ao final**: proponha entradas com base no que aprendeu na execucao
+- **Memoria ao final**: proponha entradas com base no que aprendeu na execucao (via memory-keeper)
 - **Doc do projeto sob confirmacao**: se tarefa altera arquitetura documentada, pergunte se atualiza (parada dura mesmo em autonomo)
 - **Constitution inegociavel**: CLAUDE.md e ARCHITECTURE.md
 - **Checkpoint no SPEC**: edite e marque `[x]` apos concluir cada tarefa

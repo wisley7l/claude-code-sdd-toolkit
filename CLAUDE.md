@@ -41,6 +41,12 @@ LICENSE
 - `/quick-task` → atalho pra mudança pequena (≤3 arquivos), sem SPEC formal
 - `/sdd-review` → review de PR/branch/diff, oferece gerar fixes via `/quick-task`
 - `/sdd-learning` → extrai aprendizados não-óbvios de IMPs/reviews e propõe registro em memória
+- `/sdd-confirm` → move drafts de `thoughts/decisions-draft/` pra memória após merge do PR
+- `/memory-organize` → reorganiza auto-memory: detecta órfãs/links quebrados, propõe sub-sumários quando MEMORY.md cresce
+
+### Memória persistente
+
+O toolkit usa o **auto-memory nativo do Claude Code** (`~/.claude/projects/<projeto>/memory/`) — sem dependências externas. A skill `memory-keeper` define o contrato (9 tipos, convenção flat, formato tabela do MEMORY.md). A skill `vault-memory` foi depreciada em favor desse modelo (ver `skills/deprecated/vault-memory/` como referência histórica).
 
 Detalhes e fluxo recomendado: [`README.md`](./README.md).
 
@@ -64,4 +70,5 @@ Detalhes e fluxo recomendado: [`README.md`](./README.md).
 
 - `CLAUDE.md` e `ARCHITECTURE.md` no projeto-alvo
 - MCP Context7 configurado pra consultar documentação oficial
-- `thoughts/` pra outputs persistentes (specs, IMPs, reviews, ROADMAP, STATE)
+- `thoughts/` pra outputs persistentes (specs, IMPs, reviews, ROADMAP, drafts em `decisions-draft/`)
+- Auto-memory do Claude Code (nativo, em `~/.claude/projects/<projeto>/memory/`) — gerenciado pela skill `memory-keeper`

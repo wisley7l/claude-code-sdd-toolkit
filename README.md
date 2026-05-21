@@ -15,8 +15,9 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Plan | `/sdd-plan` | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
 | Codar | `/executor-plan` | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
 | Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
-| Aprender | `/sdd-learning` | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no vault (sabor SDD em `state/` ou geral em `feedback`/`project`/`reference`). Confirma por item. Atualiza > cria. |
-| Confirmar | `/sdd-confirm` | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro vault APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
+| Aprender | `/sdd-learning` | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no auto-memory via skill `memory-keeper` (9 tipos: 4 nativos + 5 SDD). Confirma por item. Atualiza > cria. |
+| Confirmar | `/sdd-confirm` | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro auto-memory APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
+| Manutencao | `/memory-organize` | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
 | Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
 ### Utilitarios
@@ -42,7 +43,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 - **Zero Inferencia** — Nunca assume comportamento de APIs ou padroes. Verifica na documentacao oficial (via [Context7](https://context7.com/)) ou no codigo existente
 - **Constitution-first** — Commands leem `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer acao
 - **TDD como contrato** — Testes unitarios sao escritos antes do codigo. Se quebram, paramos e discutimos
-- **Memoria persistente** — `thoughts/STATE.md` guarda decisoes/blockers/licoes entre sessoes. Escrita sempre sob confirmacao
+- **Memoria persistente** — auto-memory nativo do Claude Code (`~/.claude/projects/<projeto>/memory/`) guarda decisoes/blockers/licoes/etc entre sessoes, gerenciado pela skill `memory-keeper`. Escrita sempre sob confirmacao
 - **Auto-sizing** — Complexidade determina profundidade: Quick (`/quick-task`), Medium/Large/Complex (1 SPEC em `/sdd-plan`)
 - **Test count protection** — Toda tarefa declara `Test count: N tests pass`. Cair = bloqueio (previne silent deletion)
 - **Paralelismo seguro** — Tarefas `[P]` rodam em sub-agents simultaneos, com checagem de conflito de arquivos
@@ -104,10 +105,13 @@ Medium/Large/Complex — feature normal:
     voce revisa o diff completo no VSCode -> commit + push manualmente
 
 Apos a feature mergeada:
-  /sdd-confirm    -> confirma drafts em thoughts/decisions-draft/ e move pro vault
+  /sdd-confirm    -> confirma drafts em thoughts/decisions-draft/ e move pro auto-memory
                      (so move drafts cuja PR foi MERGEADA; cancela drafts de PR fechado;
                       preserva drafts de PR ainda aberto)
-  /sdd-learning   -> colhe aprendizado de IMPs+reviews -> vault
+  /sdd-learning   -> colhe aprendizado de IMPs+reviews -> auto-memory
+
+Manutencao periodica:
+  /memory-organize  -> arruma o auto-memory (orfas, links quebrados, sub-sumarios)
 
 Multi-feature (visao de cima):
   /roadmap                       -> sincroniza status com SPECs/IMPs
@@ -119,45 +123,44 @@ Multi-feature (visao de cima):
 
 > Limpe a sessao entre commands grandes (PRD -> SPEC -> Executor) para maximizar a janela de contexto. Os artefatos em `thoughts/` servem como handoff entre sessoes.
 
-### 4. Memoria persistente (STATE.md ou vault)
+### 4. Memoria persistente (auto-memory)
 
-Os commands recuperam contexto entre sessoes via memoria persistente. **Dois modos**:
+Os commands recuperam contexto entre sessoes via **auto-memory nativo do Claude Code** (`~/.claude/projects/<projeto>/memory/`), gerenciado pela skill `memory-keeper`. O harness carrega `MEMORY.md` automaticamente no system prompt no inicio de cada sessao (limite 200 linhas ou 25KB).
 
-**Modo legacy (default)** — `thoughts/STATE.md` monolitico:
-- **Decisoes arquiteturais** — decisoes que persistem alem de uma feature
-- **Blockers conhecidos** — coisas que ja travaram trabalho, com sintoma para reconhecer
-- **Licoes aprendidas** — abordagens testadas que nao funcionaram, padroes que provaram valor
-- **Ideias adiadas** — coisas que apareceram mas nao entraram no escopo atual
-- **Preferencias do usuario** — estilo de trabalho, ferramentas, padroes de comunicacao
-
-**Modo vault (opcional)** — notas atomicas em vault central (segundo cerebro Obsidian):
-
-```bash
-export CLAUDE_VAULT_PATH=~/caminho/para/seu/vault
-```
-
-Se a variavel `$CLAUDE_VAULT_PATH` apontar para um diretorio existente, os commands passam a ler/escrever em:
+**Estrutura** (convencao flat — sem subpastas):
 
 ```
-$CLAUDE_VAULT_PATH/<org>/<projeto>/state/
-├── decisoes/   # 1 nota por decisao, com frontmatter
-├── blockers/
-├── licoes/
-├── ideias/
-└── preferencias/
+~/.claude/projects/<projeto>/memory/
+├── MEMORY.md                          # Indice carregado automaticamente — tabela agrupada por tipo
+├── feedback_bash_permission_syntax.md # Notas individuais (carregadas sob demanda)
+├── decision_<slug>.md
+├── blocker_<slug>.md
+├── lesson_<slug>.md
+├── _summary_<tipo>.md                 # Sub-sumarios (criados pelo /memory-organize)
+└── ...
 ```
 
-Vantagens do modo vault:
-- **Versionamento independente** do projeto (state nao polui o repo)
-- **Grafo unificado** entre projetos (Obsidian conecta decisoes cross-projeto)
-- **Notas atomicas** (1 arquivo por decisao) — busca e filtragem melhores
-- **Promocao** de decisoes para escopo de organizacao ou global
+**9 tipos** (4 nativos do harness + 5 SDD):
 
-Convencao de path: o `<org>` e `<projeto>` sao derivados do `cwd` (heuristica `~/codigos/<org>/<projeto>/`). Se a heuristica falhar, o command pergunta. Ver o skill `vault-memory` para o protocolo completo.
+| Tipo | Captura |
+|---|---|
+| `user` | Perfil, preferencias do usuario |
+| `feedback` | Regra de colaboracao (faca X / nunca Y) |
+| `project` | Decisao/contexto/deadline nao-obvio sobre o trabalho |
+| `reference` | Ponteiro pra sistema externo (Linear, Grafana, etc) |
+| `decision` | Decisao arquitetural/tecnica do projeto |
+| `blocker` | Bloqueio conhecido + workaround |
+| `lesson` | Aprendizado de execucao/review |
+| `idea` | Ideia pra explorar depois |
+| `preference` | Preferencia especifica deste projeto |
 
-**A integracao e completamente opt-in** — sem `CLAUDE_VAULT_PATH`, o toolkit funciona exatamente como antes (STATE.md monolitico). Voce pode adotar gradualmente.
+**Convencao**: arquivo flat `<tipo>_<slug>.md`. Frontmatter minimo: `name`, `description`, `metadata.type`. Veja `skills/memory-keeper/SKILL.md` para o protocolo completo e `references/nota-template.md` para os 9 templates de corpo.
 
-Em qualquer modo: **escrita sempre sob confirmacao do usuario** — o command propoe entradas, voce aprova caso a caso.
+**Drafts pre-merge**: durante o desenvolvimento de uma feature, os commands SDD criam notas como **drafts** em `thoughts/decisions-draft/` (gitignored). Apos merge do PR, `/sdd-confirm` move pro auto-memory. Drafts de PRs fechados sem merge sao removidos sob confirmacao.
+
+**Manutencao**: rode `/memory-organize` quando `MEMORY.md` crescer (>150 linhas) ou quando suspeitar de orfas/duplicatas. O command propoe sub-sumarios por tipo (`_summary_<tipo>.md`, carregados sob demanda) pra manter o indice principal enxuto.
+
+**Escrita sempre sob confirmacao do usuario** — o command propoe entradas, voce aprova caso a caso.
 
 ### 5. Testes
 
@@ -208,8 +211,9 @@ commands/                   # Slash commands (invocação manual via /)
   quick-task.md             # v7 — Modo rapido
   roadmap.md                # v7 — Gerenciar ROADMAP.md
   sdd-review.md             # Review
-  sdd-learning.md           # Colher aprendizado de IMPs+reviews -> vault
-  sdd-confirm.md            # Confirmar drafts (thoughts/decisions-draft/) -> vault pos-merge
+  sdd-learning.md           # Colher aprendizado de IMPs+reviews -> auto-memory
+  sdd-confirm.md            # Confirmar drafts (thoughts/decisions-draft/) -> auto-memory pos-merge
+  memory-organize.md        # Reorganizar auto-memory (orfas, links quebrados, sub-sumarios)
   modo-livre.md             # Modo autonomo com guardrails negativos
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree
@@ -221,30 +225,31 @@ commands/                   # Slash commands (invocação manual via /)
     gerador-prd.v1.md ... v7.md      # v1-v6 + v7 (split PRD+SPEC substituido por sdd-plan)
     gerador-spec.v1.md ... v7.md     # idem
     sdd-review.v1.md
-    vault-memory.v7.md      # Promovido para skill (atualmente em skills/vault-memory/)
+    vault-memory.v7.md      # Promovido para skill, depois substituido por memory-keeper (v7+)
     worktree-detect.v1.md
 skills/                     # Skills (auto-trigger via descrição)
-  vault-memory/             # Sabor geral: user/feedback/project/reference no vault
+  memory-keeper/            # Auto-memory: 9 tipos (4 nativos + 5 SDD), convencao flat, MEMORY.md em tabela
     SKILL.md
     references/
-      hub-template.md
       nota-template.md
+      memory-md-template.md
   conciso/                  # Modo conciso de resposta em pt-BR (lite/full/ultra)
     SKILL.md
-  deprecated/               # Skills antigas — fallback (vazio por ora, .gitkeep)
+  deprecated/               # Skills antigas — fallback
+    vault-memory/           # Substituida por memory-keeper (v7+)
 ```
 
 **Por que skills/ e commands/ separados** (convenção Anthropic):
 - **`commands/`** — slash commands invocados manualmente (`/sdd-plan`, `/executor-plan`, etc). O usuário decide quando rodar.
-- **`skills/`** — auto-trigger pela descrição. O agente decide invocar quando o contexto bate. `vault-memory` é skill porque precisa estar "sempre disponível" pra ler/escrever memórias gerais sem o usuário precisar lembrar de chamar.
+- **`skills/`** — auto-trigger pela descrição. O agente decide invocar quando o contexto bate. `memory-keeper` é skill porque precisa estar "sempre disponível" pra ler/escrever memórias persistentes sem o usuário precisar lembrar de chamar.
 
-A integração entre as duas pontas: os commands SDD (`sdd-plan`, `executor-plan`, `quick-task`, `sdd-learning`) referenciam o skill `vault-memory` para o protocolo de leitura/escrita no vault — eles cuidam do sabor "SDD persistente" (`state/`) e o skill cuida do sabor "geral" (`feedback`/`project`/`reference`/`user`).
+A integração entre as duas pontas: os commands SDD (`/sdd-plan`, `/executor-plan`, `/quick-task`, `/sdd-learning`, `/sdd-confirm`) referenciam a skill `memory-keeper` para o protocolo de leitura/escrita no auto-memory — todos os 9 tipos (4 nativos + 5 SDD) seguem o mesmo contrato. O command `/memory-organize` faz a manutencao periodica (sub-sumarios, orfas, links quebrados).
 
 **Skills disponíveis:**
 
 | Skill | Função |
 |---|---|
-| `vault-memory` | Lê/escreve memórias gerais (user/feedback/project/reference) em vault Obsidian central (`$CLAUDE_VAULT_PATH`) |
+| `memory-keeper` | Lê/escreve memórias persistentes no auto-memory nativo do Claude Code. 9 tipos (4 nativos + 5 SDD), convenção flat, MEMORY.md em formato tabela |
 | `conciso` | Modo de resposta enxuto em pt-BR com 3 níveis (`/conciso lite\|full\|ultra`) — corta enchimento, mantém precisão técnica. Inspirado no [caveman](https://github.com/JuliusBrussee/caveman). Economia ~25-70% nos tokens de saída |
 
 ### Outputs em `thoughts/` (no projeto onde os commands rodam)
@@ -252,7 +257,7 @@ A integração entre as duas pontas: os commands SDD (`sdd-plan`, `executor-plan
 ```
 thoughts/
   ROADMAP.md                  # Visao multi-feature (opcional)
-  STATE.md                    # Memoria persistente (opcional, criado sob confirmacao)
+  decisions-draft/            # Drafts de memoria aguardando merge do PR (movidos pelo /sdd-confirm)
   plans/
     SPEC-DD-MM-YYYY-slug.md   # Output do /sdd-plan (1 doc auto-sized)
   history/
@@ -287,7 +292,7 @@ Este toolkit incorpora conceitos adaptados de obras de terceiros. As licencas or
 - **Autor**: Felipe Rodrigues — https://github.com/felipfr
 - **Fonte**: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/tlc-spec-driven
 - **Licenca original**: [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/)
-- **Status**: adaptado (nao copiado literalmente). Conceitos incorporados a partir da v7 deste toolkit: auto-sizing por complexidade (Quick/Medium/Large/Complex), `STATE.md` persistente, marcadores `[P]` / `Depends on:` / `Gate:` em tarefas, Granularity Check, Diagram-Definition Cross-Check, Test Co-location Validation, agrupamento em Phases (Foundation/Core/Integration), `Test count: N tests pass (no silent deletions)`
+- **Status**: adaptado (nao copiado literalmente). Conceitos incorporados a partir da v7 deste toolkit: auto-sizing por complexidade (Quick/Medium/Large/Complex), memoria persistente entre sessoes, marcadores `[P]` / `Depends on:` / `Gate:` em tarefas, Granularity Check, Diagram-Definition Cross-Check, Test Co-location Validation, agrupamento em Phases (Foundation/Core/Integration), `Test count: N tests pass (no silent deletions)`
 
 A CC-BY-4.0 e uma licenca permissiva e compativel com a MIT — permite uso, modificacao e redistribuicao desde que se atribua o autor original e se indiquem modificacoes feitas. Esta secao cumpre essa exigencia.
 
