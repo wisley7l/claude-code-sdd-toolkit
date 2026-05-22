@@ -106,11 +106,59 @@ Leia o arquivo completo. Entenda:
 ### 5. Ativar Skills
 Leia cada skill listada no plano em `.claude/skills/` antes de comecar.
 
-### 6. Detectar modo
+### 6. Detectar agente especializado (opcional)
+
+Antes de executar no main agent, **verifique se existe um subagente de dev especializado** cuja `description` bate com o contexto da tarefa (stack, dominio, ferramentas). Se houver match forte, ofereca delegar — **default e NAO delegar** (executa no main agent atual).
+
+**Como detectar:**
+
+```bash
+# Lista agentes disponiveis (user + projeto)
+ls ~/.claude/agents/*.md 2>/dev/null
+ls .claude/agents/*.md 2>/dev/null
+```
+
+Pra cada agente, leia o frontmatter (`name`, `description`) — sem ler o corpo. Compare a `description` com o contexto extraido do plano:
+
+- **Stack/linguagem** (TypeScript, Go, Python, Rust...): bate com palavras-chave da description?
+- **Dominio** (e-commerce, payments, Shopify, infra, ML...): a description menciona?
+- **Ferramentas/integracoes** (Stripe, MercadoPago, Cloudflare Workers, AWS...): cita explicitamente?
+
+Score simples: conte quantos termos do plano aparecem na description. Se ≥3 termos especificos baterem (nao palavras genericas tipo "implementacao" / "codigo"), considere match forte.
+
+**Se achou match forte:**
+
+```
+Achei um subagente que parece bater com esta tarefa:
+
+  `dev-backend-ts` (model: sonnet)
+  Match: TypeScript, backend, payment gateway, e-commerce
+
+Delegar a execucao do plano pra ele [s/N]?
+
+[N = executar aqui no main agent (recomendado se modo livre nao esta 100% configurado)]
+```
+
+**Cuidados antes de delegar:**
+
+1. **Subagent so herda permissoes via arquivo** (`.claude/settings.local.json` + `~/.claude/settings.json`). Decisoes runtime ("aceitar este Bash pra sessao") do main **nao se propagam**.
+2. Se modo livre estiver INATIVO, delegar provavelmente vai **piorar UX** (subagent tem que pedir permissao do zero).
+3. Se modo livre estiver ATIVO mas faltar pattern no allow (ex: utilitario unix nao listado), o subagent vai pedir prompt mesmo que o main ja tenha aceitado antes.
+
+**Se o usuario aprovar (s):**
+
+Invoque o subagente via Agent tool, passando:
+- `subagent_type`: o `name` do agente (ex: `dev-backend-ts`)
+- `description`: 3-5 palavras (ex: "Executar plano IMP-042 TDD")
+- `prompt`: instrucao completa pra ele rodar `/executor-plan` no plano em questao, com o path absoluto. Repasse contexto-chave (constitution lida, modo autonomo/step, modo-livre ATIVO/INATIVO, memoria carregada). O subagente continua o fluxo a partir do passo 7.
+
+**Se rejeitar (N) ou nao houver match:** prossiga normalmente no main agent.
+
+### 7. Detectar modo
 
 Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. Caso contrario, modo autonomo (default).
 
-### 7. Confirmar Inicio
+### 8. Confirmar Inicio
 
 Antes de mostrar o resumo, verifique se modo-livre esta ativo neste projeto:
 - Cheque `thoughts/modo-livre/active` (marker do `/modo-livre`)
