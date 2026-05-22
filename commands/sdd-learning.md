@@ -13,6 +13,8 @@ Voce e um **destilador de aprendizado**. Le relatorios de implementacao (`IMP-*.
 
 **Voce nao cria nota por iniciativa.** Cada candidato e proposto e o usuario aprova caso a caso. Notas similares ja existentes sao atualizadas, nao duplicadas.
 
+**Toda persistencia delega pra skill `memory-keeper`** — voce nao escreve direto em `MEMORY.md` nem nos arquivos do auto-memory. A skill conhece o padrao atual: `## GUARDRAILs` no topo do indice (regras inviolaveis), politica "linha no MEMORY.md so se tema novo" (sub-sumario absorve variacoes), ordem canonica das secoes. Quando voce decide criar/atualizar, passa os dados pra skill — ela aplica.
+
 ## Principios duros (filtros bloqueantes)
 
 Aplique cada candidato contra estes filtros. Falhou em qualquer um → **descarte silenciosamente**, nao proponha.
@@ -29,11 +31,11 @@ Aplique cada candidato contra estes filtros. Falhou em qualquer um → **descart
 
 | Tipo | Captura | Exemplo |
 |---|---|---|
-| `decision` | Decisao arquitetural que persiste alem da feature | "Vitess sem FK; validar `orderId` em camada de aplicacao" |
-| `blocker` | Problema conhecido com sintoma e workaround | "Infisical falha local sem `X`; rodar `infisical login` antes" |
-| `lesson` | Abordagem testada que nao funcionou OU padrao que provou valor | "Tentamos mock do PlanetScale — divergiu de prod. Sempre branch dev real" |
-| `idea` | Algo que apareceu fora de escopo, pra retomar | "Migrar webhook ERP pra Cloudflare Queues quando tiver tempo" |
-| `preference` | Estilo de trabalho do usuario neste projeto | "Confirmar com user antes de stage de migration SQL" |
+| `decision` | Decisao arquitetural que persiste alem da feature | "Schema sem FK; validar referencias em camada de aplicacao" |
+| `blocker` | Problema conhecido com sintoma e workaround | "Tool externa falha local sem secret <X>; rodar `<tool> login` antes" |
+| `lesson` | Abordagem testada que nao funcionou OU padrao que provou valor | "Mock de DB divergiu de prod; usar branch dev real em testes" |
+| `idea` | Algo que apareceu fora de escopo, pra retomar | "Migrar webhook sincrono pra fila assincrona quando tiver tempo" |
+| `preference` | Estilo de trabalho do usuario neste projeto | "Confirmar com user antes de stage de migracao de schema" |
 
 **Sabor geral** (regras transversais):
 
@@ -109,9 +111,9 @@ Ordene por data (frontmatter ou nome do arquivo).
 
 ```
 IMPs e reviews recentes:
-1. IMP-15-05-2026-shopify-tax.md (5 dias)
-2. review-pr-253.md (8 dias)
-3. IMP-13-05-2026-order-invoices.md (10 dias)
+1. IMP-<data>-<feature-a>.md (5 dias)
+2. review-pr-<N>.md (8 dias)
+3. IMP-<data>-<feature-b>.md (10 dias)
 ...
 
 Quais processar? (numeros separados por virgula, `all`, ou `--since=YYYY-MM-DD`)
@@ -156,7 +158,7 @@ Candidato passa nos filtros? Capture:
 Para cada candidato:
 
 1. **Tipo** (conforme tabelas acima): decision/blocker/lesson/idea/preference (SDD) ou feedback/project/reference (geral). `user` raramente sai de aprendizado de IMP/review.
-2. **Slug proposto**: kebab-case curto da frase nuclear (ex: `vitess-sem-fk-validar-aplicacao`)
+2. **Slug proposto**: kebab-case curto da frase nuclear (ex: `schema-sem-fk-validar-aplicacao`)
 
 ### Passo 5 — Dedupe contra MEMORY.md
 
@@ -174,20 +176,20 @@ Para cada candidato classificado:
 Para cada candidato, mostre **uma proposta por vez** (nao bulk):
 
 ```
-Candidato 1/N — origem: IMP-13-05-2026-order-invoices.md
+Candidato 1/N — origem: IMP-<data>-<feature>.md
 
 Frase nuclear:
-"Vitess nao suporta FK; integridade de `orderId` precisa ser validada na camada de aplicacao."
+"Schema nao suporta FK; integridade de referencia precisa ser validada na camada de aplicacao."
 
 Por que:
-"PR #225 inline comment do leomp12 + ARCHITECTURE.md:132-135. Tentar usar FK quebra schema deploy."
+"PR #<N> inline comment de reviewer + ARCHITECTURE.md:<linhas>. Tentar usar FK quebra deploy de schema."
 
 Aplicar quando:
-"Sempre que adicionar tabela com referencia a outra (orderId, storeId, etc)."
+"Sempre que adicionar tabela com referencia a outra (FKs de aplicacao)."
 
 Proposta:
 - Tipo: decision
-- Slug: vitess-sem-fk-validar-aplicacao
+- Slug: schema-sem-fk-validar-aplicacao
 - Acao: CRIAR (nao achei similar no MEMORY.md)
 
 Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
@@ -200,55 +202,52 @@ Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
 **Atualizar** (quando dedupe acha similar):
 
 ```
-Candidato 2/N — origem: review-pr-253.md
+Candidato 2/N — origem: review-pr-<N>.md
 
 Frase nuclear:
-"satisfies cross-check entre Drizzle e ArkType evita drift de schema."
+"Cross-check entre lib X e lib Y evita drift de schema."
 
 Encontrei nota similar:
-  $MEM_DIR/decision_drizzle_arktype_satisfies.md
-  "Hooks of-the-day para evitar drift Drizzle/ArkType"
+  $MEM_DIR/decision_<tema-similar>.md
+  "Pattern para evitar drift entre schemas (lib X / lib Y)"
 
 Diff proposto:
-- Acrescentar referencia: review-pr-253.md
-- Adicionar contexto: "padrao replicado em order_invoices (PR #..)"
+- Acrescentar referencia: review-pr-<N>.md
+- Adicionar contexto: "padrao replicado em outra feature (PR #..)"
 - Atualizar metadata.updated: <hoje>
 
 Acao: ATUALIZAR (s = salvar, p = pular, c = criar nova mesmo assim)
 ```
 
-### Passo 7 — Aplicacao
+### Passo 7 — Aplicacao (sempre via skill `memory-keeper`)
+
+**Toda escrita delega pra skill `memory-keeper`** — nao escreva direto nos arquivos. A skill aplica o padrao atual (frontmatter, convencoes de nome, politica "linha no MEMORY.md so se tema novo", `## GUARDRAILs` no topo do indice, ordem canonica das secoes).
 
 **Para cada candidato aprovado:**
 
-**CRIAR** — escreva nota seguindo a skill `memory-keeper`:
+**CRIAR** — invoque a skill `memory-keeper` passando:
 
-1. Path: `$MEM_DIR/<tipo>_<slug>.md`
-2. Frontmatter:
-   ```yaml
-   ---
-   name: <tipo>-<slug-kebab>
-   description: <frase nuclear curta, ≤120 chars>
-   metadata:
-     type: <decision|blocker|lesson|idea|preference|feedback|project|reference>
-     created: <YYYY-MM-DD>
-     updated: <YYYY-MM-DD>
-     origem: <IMP-... | review-...>
-   ---
-   ```
-3. Corpo conforme template (ver `references/nota-template.md` da skill):
-   - Frase nuclear no topo
-   - `**Why:**` (motivo/contexto)
-   - `**How to apply:**` (quando aplicar)
-   - `**Referencias:**` (path:linha, PR #, etc)
-4. **Atualize o `MEMORY.md`**: adicione linha na tabela da secao `## <Type capitalizado>`, respeitando ordem canonica.
+- `tipo`: decision | blocker | lesson | idea | preference | feedback | project | reference
+- `slug`: kebab-case curto
+- `description`: frase nuclear ≤120 chars
+- `corpo`: frase nuclear no topo + `**Why:**` (motivo/contexto) + `**How to apply:**` (quando aplicar) + `**Referencias:**` (path:linha, PR #, IMP de origem)
+- `origem`: IMP-... ou review-... (vai pro frontmatter `metadata.origem`)
+- `guardrail`: true/false — se a regra e inviolavel e seu rompimento causa dano irreversivel (commit indevido, push, delete, vazamento), marque como guardrail. A skill move pro `## GUARDRAILs` do MEMORY.md em vez da secao do tipo.
 
-**ATUALIZAR** — edite a nota existente:
+A skill decide:
+- Se o tema ja tem linha no MEMORY.md → cria arquivo individual mas **nao adiciona linha duplicada** (sub-sumario absorve).
+- Se e tema novo → cria arquivo + adiciona linha no MEMORY.md.
+- Se e guardrail → vai pra secao `## GUARDRAILs` no topo (formato `| Regra | Detalhe (link) |`).
 
-- Acrescente referencias na secao apropriada
-- Refine `**Why:**` se houver contexto novo
-- Atualize `metadata.updated: <hoje>`
-- **Nao reescreva do zero** — preserve o conteudo existente
+**ATUALIZAR** — passe pra skill `memory-keeper` em modo update:
+
+- `slug-existente`: path da nota encontrada no dedupe (Passo 5)
+- `acrescentar-referencias`: lista de refs novas (origem do IMP/review atual)
+- `refinar-why`: contexto novo (opcional)
+
+A skill preserva o conteudo existente, so adiciona/refina — nunca reescreve do zero.
+
+**Importante**: nunca escreva diretamente em `MEMORY.md` neste passo. A skill cuida do indice. Isso garante que a politica "linha so se tema novo" e a saliencia de `## GUARDRAILs` sejam respeitadas.
 
 ### Passo 8 — Resumo final
 
@@ -265,8 +264,8 @@ Candidatos detectados: K
 - Descartados pelos filtros: D
 
 Arquivos criados/atualizados em $MEM_DIR:
-- decision_vitess_sem_fk.md (novo)
-- decision_drizzle_arktype_satisfies.md (atualizado)
+- decision_<tema-a>.md (novo)
+- decision_<tema-b>.md (atualizado)
 ...
 
 MEMORY.md atualizado.
