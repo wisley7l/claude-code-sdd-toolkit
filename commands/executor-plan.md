@@ -220,6 +220,22 @@ Antes de qualquer codigo de producao:
 - Nomes descritivos, sem dependencia externa
 - Execute — devem FALHAR (red phase)
 
+**Delegacao opcional pra agent `test-author`** — Se existir agent chamado `test-author` (ou similar — procure em `~/.claude/agents/` e `.claude/agents/` por agents cuja `description` mencione "testes" / "TDD" / "test"), **prefira delegar a escrita dos testes pra ele** em modo `red-phase`. Ele le skills/memoria de teste do projeto, escreve testes seguindo o padrao, roda e retorna paths + comando do gate + status. Voce continua o ciclo no passo 3 (Implementar) usando os testes que ele criou.
+
+Como invocar:
+```
+subagent_type: test-author
+description: "Testes red-phase pra T<N>"
+prompt: |
+  Modo: red-phase
+  Tarefa: <descricao do comportamento esperado da tarefa T<N>>
+  Path do codigo: <onde a implementacao vai morar>
+  Plano de origem: <path do SPEC>
+  Done when: <criterios da tarefa>
+```
+
+Se nao houver test-author disponivel, escreva os testes voce mesmo seguindo padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
+
 **3. Implementar**
 
 - Codigo minimo para testes passarem (green phase)
@@ -231,6 +247,7 @@ Antes de qualquer codigo de producao:
 
 - Se codigo ficou feio, melhore agora (refactor phase)
 - Mantenha testes passando
+- Se voce delegou testes pro `test-author` no passo 2 e precisa de teste novo (edge case que apareceu durante refactor), invoque o test-author de novo em modo `edge-cases` — nao edite os arquivos de teste dele direto
 
 **5. Verificar — incluindo Test count**
 
