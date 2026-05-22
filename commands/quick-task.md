@@ -90,6 +90,38 @@ ls thoughts/quick/ 2>/dev/null | grep -E '^[0-9]+' | sort -n | tail -1
 
 Use o proximo numero (3 digitos: 001, 002, ...).
 
+### 5. Detectar agente especializado (opcional, conservador)
+
+**So sugira delegar se TODAS estas condicoes baterem** (threshold mais alto que `/executor-plan` porque quick-task ja e pequeno e o overhead anula o ganho):
+
+- Match forte: a `description` de algum agente em `~/.claude/agents/` ou `.claude/agents/` contem **≥4 termos especificos** do contexto da task (stack + dominio + ferramenta/integracao). Termos genericos como "implementacao", "codigo", "feature" nao contam.
+- Tarefa nao-trivial: `TDD aplicavel: Sim` no TASK.md OU ≥2 passos com logica de negocio (nao typo/config/rename simples).
+- Modo livre ATIVO no projeto (`thoughts/modo-livre/active` existe) — senao o subagent vai pedir prompt do zero.
+
+**Se as 3 condicoes baterem:**
+
+```
+Achei um subagente que bate fortemente com esta task:
+
+  `dev-backend-ts` (model: sonnet)
+  Match: TypeScript + backend + payment gateway + e-commerce (4 termos)
+
+Aviso: ganho marginal em tarefas pequenas. Para typo/config simples,
+executar no main agent costuma ser mais rapido.
+
+Delegar a execucao [s/N]?
+```
+
+**Default: nao delegar.** Em `autonomo-invocado` (chamado por `/sdd-review`), pule essa etapa por completo — o caller ja decidiu o agente.
+
+**Se aprovar:** invoque via Agent tool, repassando contexto-chave (constitution lida, modo do quick-task, modo-livre ATIVO) + path do TASK.md. O subagente continua a partir do Passo 1 do Fluxo de Execucao.
+
+**Se rejeitar ou nao houver match:** prossiga no main agent.
+
+**Cuidados** (mesmos do `/executor-plan` mas reforcados pra quick):
+- Subagent so herda permissoes via arquivo. Decisoes runtime do main nao se propagam.
+- Pra tarefa pequena, overhead de spawn + perda de estado runtime costumam superar o ganho de expertise.
+
 ---
 
 ## Fluxo de Execucao
