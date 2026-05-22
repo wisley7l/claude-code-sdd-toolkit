@@ -25,6 +25,45 @@ O que devo revisar?
 
 # Fluxo de Execução
 
+## Etapa 0 — Pré-condições (abortar cedo)
+
+Antes de gastar tokens com análise, valide o básico. Se qualquer item falhar, **aborte com mensagem clara** em vez de seguir.
+
+### 0.1 — Há alterações vs base?
+
+Determine o branch base do projeto (lendo `CLAUDE.md`/`ARCHITECTURE.md` — pode ser `main`, `dev`, `staging`, `develop`, etc.). Se ambíguo, pergunte uma vez.
+
+```bash
+git diff <base>...HEAD --stat | tail -1
+```
+
+Se vazio (zero arquivos), aborte:
+```
+❌ Nenhuma alteração vs <base> — nada a revisar.
+```
+
+**Exceção**: se a fonte for **PR # explícito** ou **commit hash explícito**, pule este check (fonte já delimitou o escopo).
+
+### 0.2 — Build/lint passando? (gate opcional)
+
+Leia `CLAUDE.md` procurando comandos declarados de typecheck/lint (ex: `bun run typecheck`, `npm run lint`, `go vet`, `ruff check`, etc.). Se houver, rode:
+
+```bash
+<comando do projeto>
+```
+
+Se falhar, aborte:
+```
+❌ Gate do projeto falhando (<comando>). Revisão sobre build quebrado gera ruído.
+Corrija e rode `/sdd-review` de novo.
+```
+
+**Se CLAUDE.md não declarar comando**: pule este check (não invente). Anote no relatório final: "Gate do projeto não declarado em CLAUDE.md — review feita sem verificação prévia de build/lint."
+
+**Em modo `--no-gate`** (flag opcional do usuário): pule este check sempre. Útil quando o usuário sabe que tem erro e quer revisar mesmo assim.
+
+---
+
 ## Etapa 1 — Context Gathering
 
 1. Leia `CLAUDE.md` e `ARCHITECTURE.md` para absorver os constraints e padrões do projeto
@@ -59,9 +98,22 @@ O que devo revisar?
 6. Leia os **arquivos completos** modificados pelo diff — o diff sozinho não dá contexto suficiente para avaliar impacto real
 7. Se existir SPEC relacionada em `thoughts/plans/`, leia-a para contexto adicional
 
-## Etapa 2 — Análise Paralela com 6 Subagentes
+## Etapa 2 — Análise Paralela com 6 Subagentes (+ 1 opcional)
 
 Lance todos em paralelo. **Pule agentes cujo escopo não aparece no diff** — ex: sem queries SQL/ORM no diff = pule Agente 5, sem arquivos de teste = pule Agente 6.
+
+**Output budget (importante)**: cada sub-agente recebe o mesmo diff e pode jorrar conteúdo no contexto principal. Force prompts curtos e retornos estruturados:
+
+```
+Retorne APENAS achados em formato compacto, sem reproduzir trechos longos do diff.
+Para cada achado: arquivo:linha + 1-2 linhas de descrição + sugestão (1 linha) + confidence (0-100).
+Não inclua narrativa ("Analisei X e percebi Y..."). Direto ao ponto.
+Se nenhum achado, retorne literalmente "(zero achados)".
+```
+
+**Modelo sugerido por agente** (use no spawn do sub-agente):
+- Agentes 2 (Bugs), 3 (Segurança), 5 (Queries), 6 (Testes): modelo padrão (opus) — exigem raciocínio
+- Agentes 1 (Conformidade), 4 (Nomenclatura), 7 (Style — opcional): `sonnet` — mais mecânico, padrão-matching
 
 **Agente 1 — Conformidade com Projeto**
 - Verifica conformidade com `CLAUDE.md` (stack, convenções, padrões)
@@ -128,6 +180,36 @@ Analisa arquivos de teste introduzidos ou modificados pelo diff:
 
 > Testes ruins são piores que nenhum teste — dão falsa confiança e travam refactors.
 > O critério é: esse teste quebraria se o comportamento mudasse de forma errada?
+
+**Agente 7 — Style Pass do projeto (opt-in, `sonnet`)**
+
+Single-agent mecânico, foco em code style **específico do projeto** (não bugs, não refactor). Só rode se uma destas condições for verdade:
+
+1. Usuário pediu explicitamente (`--style` na invocação)
+2. `CLAUDE.md` do projeto declara uma seção "Code Style" com regras concretas
+3. Há skills de style no projeto (`.claude/skills/` com nomes como `frontend-spa`, `vue`, `style`, `code-style`, etc.)
+
+**Se nenhuma das condições bater, pule este agente.** Style genérico ("blank lines feias", "comentários redundantes") sem regra do projeto não justifica relatório.
+
+Quando rodar, prompt enxuto:
+
+```
+Revise as alterações APENAS quanto a code style do projeto.
+
+NÃO procure:
+- Bugs (Agente 2), refactor/dedupe (não é escopo desta etapa)
+- Nada que o linter do projeto já auto-fixe
+
+Foco:
+- Regras do CLAUDE.md seção "Code Style" (se existir)
+- Regras de skills relevantes em .claude/skills/<skill>/SKILL.md das áreas tocadas
+- feedback_* da memória persistente aplicáveis aos arquivos alterados
+
+Threshold: confidence ≥ 75. Categoria: sempre MINOR. Não bloqueia merge.
+Retorne em formato compacto (arquivo:linha + regra violada + sugestão).
+```
+
+Achados do Agente 7 viram MINOR no relatório (mesma régua do Agente 4). Anti-nit: descarte qualquer achado que não cite regra documentada do projeto.
 
 ## Etapa 3 — Confidence Scoring
 
@@ -381,6 +463,29 @@ Quer gerar fixes via /quick-task?
 
 **Se (e)**: termine sem ação.
 
+### Regression check após aplicar fixes (opt-in se ≥3 fixes)
+
+Se a cadeia (a/b/c) aplicou **3 ou mais fixes com sucesso**, ofereça regression check antes de concluir:
+
+```
+[N] fixes aplicadas (staged, não commitadas).
+
+Rodar regression check pra garantir que nada quebrou?
+  (a) Sim — rodar gate do projeto (typecheck/lint declarado em CLAUDE.md)
+  (b) Sim — gate + reanalisar arquivos tocados com Agente 2 (Bugs) só
+  (c) Não — confio nos fixes, segue pro resumo final
+
+[a/b/c]
+```
+
+**Se (a)**: rode o comando declarado em CLAUDE.md. Se passar, ✅ no resumo. Se falhar, reporte qual passo introduziu o problema (use o tracking de arquivos por fix do quick-task) e pergunte se reverte ou pede `/quick-task` pra corrigir.
+
+**Se (b)**: roda (a) + dispara **só o Agente 2 (Bugs)** com o diff atualizado (após fixes). Reporta novos achados se houver — eles entram como anexo no relatório, não substituem o original.
+
+**Se (c)**: pula direto pro resumo.
+
+**Se a cadeia aplicou <3 fixes**: pule esta seção (custo > benefício pra pouca mudança).
+
 ### Resultado final (após Action Plan)
 
 ```
@@ -410,6 +515,8 @@ Próximo passo: revise o diff staged no VSCode e commite quando aprovar.
 - **Nunca force problemas**: Se nao ha issues criticas, diga claramente. Zero relatorio inflado para parecer util
 - **Nunca sugira sem base**: Toda sugestão DEVE citar `[Fonte: path:line]` (padrão do projeto), `[Fonte: CLAUDE.md/ARCHITECTURE.md]` (constraint documentado), ou `[Fonte: doc oficial]` (documentação conhecida da linguagem/framework). Sugestão baseada apenas em "boas práticas" genéricas sem evidência = não inclua
 - **Nomenclatura nunca bloqueia**: Issues do Agente 4 sao sempre MINOR. Sem excecao
+- **Anti-nit reforçado**: nits estilísticos (blank lines, comentários redundantes, formatação) NÃO viram CRITICAL/MAJOR. Eles têm endereço: Agente 4 (nomenclatura) ou Agente 7 (Style Pass) — ambos MINOR. CRITICAL e MAJOR exigem evidência concreta de bug/segurança/perda. "Talvez fique melhor" não é evidência.
+- **Style sem regra do projeto = descarte**: Agente 7 só roda se há regra documentada (CLAUDE.md ou skill). Style genérico baseado em "boas práticas" sem citação no projeto = não reporte.
 - **Queries: risco futuro conta**: Query sem LIMIT "funciona hoje" mas pode ser catastrofica em producao — reporte
 - **Action Plan e opt-in**: nunca aplique fixes automaticamente sem confirmacao do usuario. A pergunta da Etapa 6 e obrigatoria
 - **Fixes via quick-task respeitam modo invocado**: subagent que executa o fix usa modo `autonomo-invocado` ou `step-invocado` conforme escolha do usuario — em ambos, NUNCA commita (so `git add`)
