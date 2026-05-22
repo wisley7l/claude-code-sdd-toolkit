@@ -116,6 +116,14 @@ Em paralelo, identificar:
 **(f) Cresceu demais** — `MEMORY.md` > 150 linhas OU > 20KB:
 - Identificar seções maiores (≥ 8 notas) candidatas a sub-sumário.
 
+**(g) Conteúdo inline no MEMORY.md** — anti-padrão: o índice deve ter apenas tabelas e headers.
+- Detectar blocos de bullets expandidos (≥ 3 bullets seguidos fora de tabela), código inline, ou parágrafos descritivos no `MEMORY.md`.
+- Propor extrair pra arquivo individual `<tipo>_<slug>.md` (perguntando tipo se ambíguo) e deixar só linha-resumo no índice.
+
+**(h) GUARDRAIL diluído** — regra inviolável que está em `## Feedback` ou `## Preference` em vez de `## GUARDRAILs`:
+- Critério: a regra está formulada como "NUNCA X" / "JAMAIS Y" / "obrigatório Z" E romper a regra causa dano irreversível (commit indevido, push, deleção de dados, vazamento) — não é só preferência ergonômica.
+- Propor: promover via `/memory-organize rename <slug> --guardrail` (ou aplicar manual sob confirmação).
+
 ### 5. Propor mudanças — bloco por bloco
 
 Pra cada categoria com achados, apresentar bloco separado e perguntar:
@@ -172,7 +180,11 @@ Depois:
 Aplicar [s/n]?
 ```
 
-**Critério pra propor sub-sumário**: seção com ≥ 8 notas E `MEMORY.md` total > 120 linhas. Senão, deixar como está.
+**Critério pra propor sub-sumário** (qualquer um dispara):
+- Seção com **≥ 10 notas** (independente do tamanho do MEMORY.md — antecipa crescimento), OU
+- Seção com ≥ 8 notas E `MEMORY.md` total > 120 linhas (corte de pressão atual).
+
+Abaixo desses thresholds, deixar como está. O `## GUARDRAILs` **nunca** vira sub-sumário — fica sempre inline no topo do MEMORY.md, é a parte mais saliente do índice.
 
 ### 7. Aplicação
 
@@ -184,13 +196,36 @@ Pra cada bloco aprovado:
 - **Duplicatas**: nunca auto-merge. Listar pro usuário decidir manual.
 - **Sub-sumários**: criar arquivo `_summary_<tipo>.md` com a tabela completa daquele tipo, substituir seção no `MEMORY.md` pela linha-resumo, atualizar/criar seção `## Sub-sumários`.
 
-### 8. Validação final
+### 8. Validação final (checklist obrigatório)
 
-Após aplicar:
+Após aplicar, rode o checklist abaixo. **Cada item gera saída verificável**:
 
-- Recontar linhas e bytes do `MEMORY.md` — confirmar redução.
-- Re-rodar detecção de órfãs/links quebrados — confirmar que ficaram em zero (ou só as que o usuário decidiu manter).
-- Reportar resumo curto:
+1. **Tamanho do MEMORY.md**:
+   ```bash
+   wc -l "$MEM_DIR/MEMORY.md"
+   ```
+   Esperado: **< 150 linhas** (limite operacional; o harness trunca após 200).
+
+2. **MEMORY.md é só índice** (sem conteúdo inline):
+   - Conferir que não há blocos de bullets expandidos (≥3 bullets seguidos fora de tabela), nem código inline, nem parágrafos de descrição.
+   - Linha que não seja header, tabela ou linha-resumo de sub-sumário = candidato a violação.
+
+3. **Frontmatter válido em cada arquivo**:
+   ```bash
+   for f in "$MEM_DIR"/*.md; do
+     [[ "$(basename "$f")" == "MEMORY.md" || "$(basename "$f")" =~ ^_summary_ ]] && continue
+     head -7 "$f" | grep -q "metadata:" || echo "MISSING frontmatter: $f"
+   done
+   ```
+   Esperado: zero output (todos com frontmatter).
+
+4. **Contadores em sub-sumários batem**:
+   - Pra cada `_summary_<tipo>.md` na seção `## Sub-sumários`, conferir que o número declarado bate com `ls "$MEM_DIR" | grep -c "^<tipo>_"`.
+
+5. **Sem órfãs e sem links quebrados**:
+   - Re-rodar detecção da etapa 4 (a) e (b) — esperado zero (ou só itens que o usuário decidiu manter).
+
+Reportar resumo curto:
 
 ```
 === Aplicado ===
@@ -275,6 +310,61 @@ Próximo /memory-organize sugerido quando MEMORY.md voltar a >150 linhas.
   - `mv "$WT_MEM"/<arquivo>.md "$ROOT_MEM"/` pra mover conteudo
   - **Perguntas explicitas** antes de qualquer destruicao.
 - **Diretorio pai do worktree** (`~/.claude/projects/<worktree-encoded>/`) nao e tocado — fica intacto (pode ter historico de sessoes). So o `memory/` dentro dele e gerenciado.
+
+---
+
+## Modo rename — renomear ou migrar tipo de uma memória
+
+`/memory-organize rename <slug-antigo> [novo-slug-ou-tipo]` é um sub-modo pra mudar o **tipo** ou o **nome** de uma nota existente. Requer confirmação por passo — nunca aplica sem visualizar o efeito.
+
+**Quando usar**:
+- Mudar tipo: ex. `feedback` → `project` (a regra na verdade descrevia decisão do projeto, não preferência do user).
+- Renomear slug: ex. `bash_perm` → `bash_permission_syntax` (slug pouco descritivo).
+- Promover a GUARDRAIL: regra inviolável que estava em `## Feedback` deve subir pra `## GUARDRAILs`.
+
+### Fluxo
+
+1. **Localizar a nota**:
+   ```bash
+   ls "$MEM_DIR" | grep -i "<slug-antigo>"
+   ```
+   Se acharmais de um match, pedir desambiguação.
+
+2. **Mostrar estado atual** ao usuário (frontmatter + primeiras 5 linhas do corpo):
+   ```
+   Arquivo: feedback_bash_perm.md
+   Frontmatter: name=feedback-bash-perm, type=feedback
+   Linha em MEMORY.md: ## Feedback → [bash-perm](feedback_bash_perm.md)
+   ```
+
+3. **Propor a mudança** baseado nos args:
+   - **Renomear slug**: `mv <antigo>.md <novo>.md` + atualizar `name:` no frontmatter + atualizar link no MEMORY.md / sub-sumário.
+   - **Mudar tipo**: `mv <tipo-antigo>_<slug>.md <tipo-novo>_<slug>.md` + atualizar `metadata.type:` + mover linha pra seção correta no MEMORY.md.
+   - **Promover a GUARDRAIL**: renomear pra `guardrail_<slug>.md` + manter `metadata.type` original (`feedback` ou `preference` conforme natureza) + mover linha pra seção `## GUARDRAILs` (formato `| Regra | Detalhe (link) |`).
+
+4. **Apresentar o plano completo** antes de aplicar:
+   ```
+   Plano:
+   - mv feedback_bash_perm.md → feedback_bash_permission_syntax.md
+   - Atualizar frontmatter: name=feedback-bash-permission-syntax
+   - Atualizar MEMORY.md: linha de [bash-perm] → [bash-permission-syntax]
+   - Atualizar _summary_feedback.md (se existir): mesma linha
+   - Atualizar contador no sub-sumário (se houver)
+
+   Aplicar [s/n]?
+   ```
+
+5. **Aplicar sob confirmação**. Não faz `git add` automaticamente — auto-memory não é versionado por git de qualquer forma.
+
+6. **Rodar a etapa 8 (checklist de validação)** ao final pra garantir consistência.
+
+### Casos especiais
+
+- **Slug aponta pra arquivo que não existe**: reportar e sair. Não criar nota nova nesse modo.
+- **Tipo destino não é válido** (fora dos 9 tipos): rejeitar com lista dos tipos válidos.
+- **Promovendo a GUARDRAIL nota que não cabe**: se a nota é só uma preferência ergonômica (não causa dano irreversível se romper), avisar e pedir confirmação extra. Ver critério em `memory-keeper` seção 8.
+
+---
 
 ## O que este comando NÃO faz
 
