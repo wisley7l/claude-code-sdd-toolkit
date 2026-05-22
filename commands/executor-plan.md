@@ -220,11 +220,22 @@ Antes de qualquer codigo de producao:
 - Nomes descritivos, sem dependencia externa
 - Execute — devem FALHAR (red phase)
 
-**Delegacao opcional pra agent `test-author`** — Se existir agent chamado `test-author` (ou similar — procure em `~/.claude/agents/` e `.claude/agents/` por agents cuja `description` mencione "testes" / "TDD" / "test"), **prefira delegar a escrita dos testes pra ele** em modo `red-phase`. Ele le skills/memoria de teste do projeto, escreve testes seguindo o padrao, roda e retorna paths + comando do gate + status. Voce continua o ciclo no passo 3 (Implementar) usando os testes que ele criou.
+**Delegacao opcional pra agent especializado em testes** — Detecte em runtime se existe agent especializado em escrita de testes:
 
-Como invocar:
+```bash
+# Procura em escopo user + projeto
+ls ~/.claude/agents/*.md 2>/dev/null
+ls .claude/agents/*.md 2>/dev/null
 ```
-subagent_type: test-author
+
+Pra cada agent, leia o frontmatter (`name` + `description`). Considere **match forte** se a `description` mencionar ≥2 termos de teste especificos (ex.: "testes", "TDD", "red-phase", "edge cases", "fixtures", "mocking"). Termos genericos tipo "implementacao" / "codigo" nao contam.
+
+Se houver match forte, **prefira delegar** a escrita dos testes pra ele em modo red-phase. Ele tipicamente le skills/memoria de teste do projeto, escreve seguindo o padrao, roda e retorna paths + comando do gate + status. Voce continua o ciclo no passo 3 (Implementar) usando os testes que ele criou.
+
+Como invocar (substitua `<agent-name>` pelo `name` detectado):
+
+```
+subagent_type: <agent-name>
 description: "Testes red-phase pra T<N>"
 prompt: |
   Modo: red-phase
@@ -234,7 +245,7 @@ prompt: |
   Done when: <criterios da tarefa>
 ```
 
-Se nao houver test-author disponivel, escreva os testes voce mesmo seguindo padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
+Se nao houver agent que bata, escreva os testes voce mesmo seguindo padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
 
 **3. Implementar**
 
@@ -247,7 +258,7 @@ Se nao houver test-author disponivel, escreva os testes voce mesmo seguindo padr
 
 - Se codigo ficou feio, melhore agora (refactor phase)
 - Mantenha testes passando
-- Se voce delegou testes pro `test-author` no passo 2 e precisa de teste novo (edge case que apareceu durante refactor), invoque o test-author de novo em modo `edge-cases` — nao edite os arquivos de teste dele direto
+- Se voce delegou testes pra agent especializado no passo 2 e precisa de teste novo (edge case que apareceu durante refactor), invoque o mesmo agent de novo em modo `edge-cases` — nao edite os arquivos de teste que ele criou direto
 
 **5. Verificar — incluindo Test count**
 
