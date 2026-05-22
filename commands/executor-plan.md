@@ -311,11 +311,13 @@ Se aprovado:
 
 - Edite o SPEC: `- [ ]` → `- [x]`
 
-**Em modo autonomo**: avance direto para a proxima tarefa, sem pausa. Informe brevemente (1-2 linhas):
+**Em modo autonomo**: avance direto para a proxima tarefa, sem pausa. Informe brevemente (1-2 linhas) com **fatos auditaveis** — esse log e a unica evidencia que o validador independente da Etapa 3 (Verificacao Final) tem pra auditar a execucao:
 ```
-T[N] OK — [titulo] — staged [X] arquivos, [Y] tests pass
+T[N] OK — [titulo] — staged [X] arquivos, test count [atual]/[esperado] pass, gate green
 Avancando para T[N+1]...
 ```
+
+**Obrigatorio neste log** (em modo autonomo, mesmo sem ML): test count atual + status do gate. Sem isso o validador nao consegue confirmar conclusao.
 
 **Em `--step`**: informe e pause.
 ```
@@ -464,7 +466,99 @@ Apos todas as tarefas:
 ### 2. Validar Test count global
 Compare contagem total agora vs. contagem na config inicial + tarefas concluidas. Cair = bug.
 
-### 3. Passada final do code-simplifier (com confirmacao)
+### 3. Validacao independente final (Haiku) — automatica se ML + autonomo
+
+**Trigger**: roda automaticamente quando `modo-livre ATIVO` (marker `thoughts/modo-livre/active` existe) E modo `autonomo` (nao `--step`). Em `--step` ou ML inativo, **pule** esta etapa.
+
+**Objetivo**: ter um avaliador independente confirmando que o plano foi cumprido antes de chegar no prompt de commit. O proprio executor pode achar que terminou faltando algo — o validador captura isso.
+
+**Como rodar:**
+
+Dispare `Agent` com:
+- `subagent_type`: `general-purpose`
+- `model`: `haiku` (mecanico, rapido, barato)
+- `description`: "Validar conclusao do plano"
+- `prompt`: ver template abaixo
+
+Template do prompt (substitua placeholders):
+
+```
+Voce e um validador independente. NAO execute codigo. NAO leia arquivos alem dos
+explicitamente listados abaixo. Sua tarefa: confirmar se a execucao do plano abaixo
+terminou com sucesso, com base na evidencia que listo.
+
+Plano: <path absoluto do SPEC>
+Tarefas esperadas: <N>
+
+Checagem 1 — Marcacoes [x] no SPEC:
+- Leia o arquivo do plano (so esse).
+- Conte linhas `- [x]` em secao de tarefas vs total.
+- Esperado: <N>/<N> tarefas marcadas.
+
+Checagem 2 — Test count:
+- Baseline inicial declarado: <X> testes
+- Test count esperado pos-execucao: <Y> testes
+- Test count reportado pelo executor no ultimo passo: extrair da transcript ("Test count: ...").
+- Esperado: atual >= Y. Cair = falha.
+
+Checagem 3 — Gate (typecheck/lint):
+- Comando do gate (declarado em CLAUDE.md): <comando>
+- Ultimo resultado reportado pelo executor: extrair da transcript.
+- Esperado: green/passou.
+
+Checagem 4 — Staging:
+- `git diff --cached --stat` ja foi reportado na transcript pelo executor?
+- Esperado: lista arquivos coerentes com os declarados nas tarefas.
+
+Checagem 5 — Sinais de parada dura:
+- A transcript mostra SPEC_DEVIATION, blocker nao resolvido, ou test count drop?
+- Esperado: nenhum.
+
+Retorne JSON estrito (sem markdown, sem narrativa):
+
+{
+  "complete": true | false,
+  "checks": {
+    "spec_marks": "ok" | "missing N tasks",
+    "test_count": "ok" | "dropped from X to Y",
+    "gate": "ok" | "failed" | "not reported",
+    "staging": "ok" | "missing files" | "not reported",
+    "hard_stops": "none" | "<descricao>"
+  },
+  "reason": "<1-2 frases>"
+}
+```
+
+**Processamento do retorno**:
+
+- `complete: true` → siga para Etapa 4 (Passada final do code-simplifier).
+- `complete: false` → **PARE**. Mostre ao usuario:
+
+```
+⚠️ Validador independente reportou execucao incompleta.
+
+Checks:
+  spec_marks: <status>
+  test_count: <status>
+  gate:       <status>
+  staging:    <status>
+  hard_stops: <status>
+
+Razao: <reason>
+
+O que fazer?
+  (a) Voltar e tentar resolver o que falta (eu identifico e retomo a execucao)
+  (b) Aceitar como esta e seguir pro review humano (assumindo risco)
+  (c) Marcar como parada dura e finalizar com aviso
+
+[a/b/c]
+```
+
+**Importante**: o validador SO ve a transcript. Se a evidencia nao foi narrada explicitamente nos passos anteriores (test count, gate result, staging), ele nao consegue auditar. Por isso o passo "10. Marcar e Avancar" em modo autonomo **deve sempre** incluir contagem e status no log de progresso (ja documentado, mas reforcado).
+
+**Fallback se Haiku indisponivel**: se o spawn do sub-agent falhar (modelo nao disponivel), reporte ao usuario que a validacao independente nao rodou e siga pra Etapa 4 sem bloquear.
+
+### 4. Passada final do code-simplifier (com confirmacao)
 
 **Em modo autonomo**: simplifier roda **uma vez no fim** (substitui as passadas por tarefa).
 **Em `--step`**: passada final sobre o conjunto (alem das passadas por tarefa que ja rodaram).
@@ -482,7 +576,7 @@ Se aprovado:
 - **Em `--step`**: commit separado `refactor: simplify [feature]`
 - **Em autonomo**: `git add` das mudancas do simplifier (entra no staging para o commit final pelo user)
 
-### 4. Propor registro de memoria
+### 5. Propor registro de memoria
 
 Itere sobre o que aconteceu na execucao:
 - Padroes novos que apareceram? → tipo `decision` (ou `lesson` se foi "tentamos X, nao funcionou")
@@ -526,7 +620,7 @@ Se `(m)` MEMORY direto:
 
 Se `(n)`: pule.
 
-### 5. Sugerir /sdd-review e perguntar estilo de commit (apenas modo autonomo)
+### 6. Sugerir /sdd-review e perguntar estilo de commit (apenas modo autonomo)
 
 **Em `--step`**: pule este passo (commits ja foram feitos atomicamente).
 
@@ -574,7 +668,7 @@ Como quer commitar?
 
 **Em qualquer caso**: nao pushe. Push e sempre acao do usuario.
 
-### 6. Informar resultado
+### 7. Informar resultado
 
 ```
 Feature concluida.
