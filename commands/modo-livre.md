@@ -270,16 +270,36 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
       "Bash(*;*)",
       "Bash(git commit)",
       "Bash(git commit *)",
+      "Bash(git -C * commit)",
+      "Bash(git -C * commit *)",
+      "Bash(git --git-dir=* commit *)",
+      "Bash(git --work-tree=* commit *)",
       "Bash(git push)",
       "Bash(git push *)",
+      "Bash(git -C * push)",
+      "Bash(git -C * push *)",
+      "Bash(git --git-dir=* push *)",
+      "Bash(git --work-tree=* push *)",
       "Bash(git reset --hard)",
       "Bash(git reset --hard *)",
+      "Bash(git -C * reset --hard)",
+      "Bash(git -C * reset --hard *)",
+      "Bash(git --git-dir=* reset --hard *)",
       "Bash(git clean -f *)",
       "Bash(git clean -d *)",
       "Bash(git clean -x *)",
       "Bash(git clean -fd *)",
       "Bash(git clean -fdx *)",
+      "Bash(git -C * clean -f *)",
+      "Bash(git -C * clean -d *)",
+      "Bash(git -C * clean -x *)",
+      "Bash(git -C * clean -fd *)",
+      "Bash(git -C * clean -fdx *)",
+      "Bash(git --git-dir=* clean -f *)",
+      "Bash(git --work-tree=* clean -f *)",
       "Bash(git checkout -- *)",
+      "Bash(git -C * checkout -- *)",
+      "Bash(git --git-dir=* checkout -- *)",
       "Bash(gh pr merge)",
       "Bash(gh pr merge *)",
       "Bash(gh pr close *)",
@@ -315,6 +335,11 @@ Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
 **Observações sobre o pattern matching:**
 
 - **Allow amplo + deny cirúrgico** pra `git` e `gh`: `Bash(git *)` libera tudo de git, mas os denies (`git commit`, `git push`, `git reset --hard`, `git clean -f *`) bloqueiam o que não pode. Deny tem precedência sobre allow.
+- **Flags posicionais antes do subcomando burlam pattern matching ingênuo** — `Bash(git commit *)` matcha comandos que **começam** com `git commit`, mas NÃO matcha `git -C <path> commit` nem `git --git-dir=<dir> commit`. Por isso os denies cobrem explicitamente todas as variantes:
+  - `Bash(git -C * commit)` / `Bash(git -C * commit *)`
+  - `Bash(git --git-dir=* commit *)` / `Bash(git --work-tree=* commit *)`
+  - Mesma lógica pra `push`, `reset --hard`, `clean -f*`, `checkout --`.
+- **Aprendizado de incidente real**: um agente conseguiu burlar `Bash(git commit *)` usando `git -C /worktree/path commit -F /tmp/msg.txt`. Os denies atuais fecham esse vetor. Se aparecer outro flag global posicional (ex: `--literal-pathspecs`, `-c key=val`), adicionar variante correspondente.
 - **Docker conservador**: só leitura (`ps`, `images`, `logs`, `inspect`). `docker exec/rm/rmi/stop/kill/run` continuam pedindo prompt.
 - **Publish bloqueado**: `npm/pnpm/yarn/cargo publish` denied pra não publicar pacote por engano.
 - **rm bloqueado em formas com flags**: `rm -rf/-fr/-r/-f` denied. `rm arquivo.txt` solto continua pedindo prompt (não tem regra que o pegue).
@@ -338,7 +363,12 @@ Você NUNCA deve executar os comandos abaixo. Se julgar que um deles é necessá
 - `rm` em QUALQUER forma (mesmo `rm arquivo.txt` solto)
 - Qualquer comando destrutivo/irreversível que você perceber
 
-NÃO tente burlar via `bash -c`, `eval`, scripts, alias, ou redirecionamento. Se o harness barrar algo, NÃO retente com variações — peça pro usuário rodar.
+NÃO tente burlar via:
+- `bash -c`, `eval`, scripts, alias, ou redirecionamento
+- Flags globais de `git` (`-C <path>`, `--git-dir=`, `--work-tree=`) — usar `git -C /worktree commit` pra rodar commit em outro dir É burla, mesmo que o pattern matching de allow/deny não pegue. Trate como se fosse `git commit` direto.
+- Qualquer outro mecanismo de "rodar comando indireto"
+
+Se o harness barrar algo, NÃO retente com variações — peça pro usuário rodar.
 
 ### PODE fazer livremente
 
