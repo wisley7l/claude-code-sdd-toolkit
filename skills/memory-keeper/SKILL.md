@@ -7,6 +7,13 @@ description: Lê e escreve memórias persistentes no auto-memory nativo do Claud
 
 Skill responsável por todo o ciclo de memória persistente do Claude Code: leitura, escrita e atualização do índice `MEMORY.md`. Usa **apenas** o sistema de auto-memory nativo (`~/.claude/projects/<projeto>/memory/`) — não toca vault Obsidian, não cria estrutura paralela.
 
+## 0. Princípios duros (regras invioláveis da skill)
+
+1. **`MEMORY.md` é APENAS índice** — nunca escreva conteúdo de memória direto nele. Conteúdo vai sempre em arquivo individual `<tipo>_<slug>.md`. O índice tem tabelas + a seção `## GUARDRAILs` (2-3 linhas com link). Nada de bullets expandidos, exemplos de código, ou parágrafos no MEMORY.md.
+2. **Linha no MEMORY.md só se tema novo** — toda nota nova cria arquivo individual sempre. Mas só vira linha no MEMORY.md se for tema novo na seção (não a Nª variação de um tema já indexado). Sub-sumário absorve as outras notas do tipo. Reduz crescimento do índice.
+3. **Atualizar > duplicar** — antes de criar, busque nota similar (`ls` + `grep` por keyword). Se achou, atualize a existente.
+4. **Sem subpastas** — auto-memory é flat. Não criar `memory/feedback/foo.md`.
+
 ## 1. Localização
 
 Path do auto-memory por projeto (gerenciado pelo harness):
@@ -146,23 +153,42 @@ Quando autorizado:
    ```
    Se achou, atualizar a existente (frontmatter `updated:` e corpo) em vez de criar nova.
 3. **Criar/atualizar `<MEM_DIR>/<tipo>_<slug>.md`** com frontmatter + corpo conforme template.
-4. **Atualizar `MEMORY.md`**:
-   - Se já existe seção `## <Tipo>`, adicionar linha na tabela.
-   - Senão, criar seção nova respeitando a ordem canônica (seção 9).
+4. **Atualizar `MEMORY.md` — política "tema novo"**:
+   - **Sempre crie o arquivo individual** (`<tipo>_<slug>.md`) — isso é não-negociável.
+   - **Adicione linha no MEMORY.md somente se**:
+     - É um **tema novo** na seção (nenhuma linha existente captura o mesmo conceito), OU
+     - É **GUARDRAIL** (regra inviolável de colaboração — sobe pra seção `## GUARDRAILs` no topo, ver seção 8), OU
+     - É a primeira nota daquele tipo (criar a seção).
+   - **NÃO adicione linha se**: já existe linha na seção que cobre tema próximo (variação/refinamento). A nota fica acessível via sub-sumário do tipo. Ex.: já tem `[bash-permission-syntax]` em `## Feedback` — uma nova nota sobre "patterns de bash com pipe" é variação do mesmo tema; arquivo individual sim, linha não.
+   - Se a seção ficou com poucas linhas mas o sub-sumário do tipo cobre muitas notas, mantenha o pointer pro sub-sumário (ver seção 10).
    - Linha do índice (formato tabela):
      ```
      | [<slug-curto>](<arquivo>) | <hook curto, ≤90 chars> |
      ```
-5. **Não anunciar verbosamente** — a tool call já é visível ao usuário. Frase única tipo "Salvei como `feedback_bash_permission_syntax.md`" basta.
+5. **Não anunciar verbosamente** — a tool call já é visível ao usuário. Frase única tipo "Salvei como `feedback_bash_permission_syntax.md` (arquivo criado, sem adicionar linha no índice — tema já coberto)" basta.
 
 ## 8. Formato do MEMORY.md
 
-Índice em **tabela markdown** agrupado por tipo. Cada tipo é uma seção `## <Tipo>` com tabela `| Slug | Hook |`.
+Índice em **tabela markdown** agrupado por tipo. Cada tipo é uma seção `## <Tipo>` com tabela `| Slug | Hook |`. Uma seção especial `## GUARDRAILs` no topo abriga regras invioláveis de colaboração (universais ao projeto), com formato `| Regra | Detalhe (link) |`.
+
+**O que vai pra `## GUARDRAILs`** (e o que NÃO vai):
+
+- ✅ Regras invioláveis: "nunca commita sem OK", "nunca pusha sem OK", "nunca aplica migration de schema sem OK", "não vaza credenciais em logs"
+- ❌ Preferência ergonômica (vai em `## Feedback` ou `## Preference`)
+- ❌ Decisão técnica do projeto (vai em `## Decision` ou `## Project`)
+
+Critério: se romper a regra causa dano não-reversível ou expõe risco real, é GUARDRAIL. Senão é feedback/preference.
 
 Exemplo:
 
 ```markdown
 # Memory Index
+
+## GUARDRAILs
+| Regra | Detalhe |
+|---|---|
+| Nunca commitar sem aprovação humana | [guardrail-no-auto-commit](guardrail_no_auto_commit.md) |
+| Nunca pushar sem aprovação humana | [guardrail-no-auto-push](guardrail_no_auto_push.md) |
 
 ## User
 | Slug | Hook |
@@ -174,7 +200,6 @@ Exemplo:
 |---|---|
 | [bash-permission-syntax](feedback_bash_permission_syntax.md) | patterns precisam de espaço antes do `*` |
 | [bash-compound-pitfalls](feedback_bash_compound_pitfalls.md) | newlines/subshells quebram pattern matching |
-| [guardrails-negativos](feedback_guardrails_negativos.md) | "NUNCA X" > "pedir autorização antes de X" |
 
 ## Project
 | Slug | Hook |
@@ -182,27 +207,30 @@ Exemplo:
 | [commands-path](project_commands_path.md) | slash commands ficam em `commands/` na raiz |
 
 ## Sub-sumários
-| Tipo | Arquivo |
-|---|---|
-| (vazio até `/memory-organize` criar) | |
+| Tipo | Arquivo | Notas |
+|---|---|---|
+| Feedback | [_summary_feedback](_summary_feedback.md) | 14 |
 ```
 
 A seção `## Sub-sumários` só existe se `/memory-organize` já criou sub-sumários (ver seção 10).
+
+GUARDRAILs continuam tendo arquivo individual com frontmatter normal — `metadata.type` é `feedback` ou `preference` conforme a natureza, mas o arquivo começa com prefixo `guardrail_` em vez do tipo (ex.: `guardrail_no_auto_commit.md`). Isso sinaliza que a linha mora em `## GUARDRAILs`, não na seção do tipo. Convenção opcional pra projetos que querem distinguir; o memory-organize aceita ambos.
 
 ## 9. Ordem canônica das seções
 
 Em `MEMORY.md`, sempre nesta ordem:
 
-1. `## User`
-2. `## Feedback`
-3. `## Project`
-4. `## Reference`
-5. `## Decision`
-6. `## Blocker`
-7. `## Lesson`
-8. `## Idea`
-9. `## Preference`
-10. `## Sub-sumários` (se existir)
+1. `## GUARDRAILs` (se houver — vai SEMPRE no topo pra alta saliência)
+2. `## User`
+3. `## Feedback`
+4. `## Project`
+5. `## Reference`
+6. `## Decision`
+7. `## Blocker`
+8. `## Lesson`
+9. `## Idea`
+10. `## Preference`
+11. `## Sub-sumários` (se existir)
 
 Seções vazias são omitidas. Mantenha a ordem mesmo após adições.
 
