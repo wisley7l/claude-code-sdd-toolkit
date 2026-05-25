@@ -19,7 +19,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Manutencao | `/memory-organize` | herda | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
 | Roadmap | `/roadmap` | herda | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
-> **Modelos por command**: planejamento/review/decisao/aprendizado roda em **Opus** (raciocinio profundo). Execucao roda em **Sonnet** (custo/velocidade). Lookup factual roda em **Haiku** (via `/busca --rapido`). Cada command principal forca o modelo no frontmatter + passo 1 explicito (`/model <modelo>`). Commands SDD secundarios (`/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
+> **Modelos por command**: planejamento/review/decisao/aprendizado roda em **Opus** (raciocinio profundo). Execucao + analise leve (`/executor-plan`, `/modo-livre`, `/worktree-detect`, `/busca`) roda em **Sonnet** (custo/velocidade). Operacoes mecanicas (git ops, sync de arquivos, lookup factual) rodam em **Haiku** (`/git-worktree`, `/git-remove-worktree`, `/git-prune-branches`, `/sync-tests`, `/busca --rapido`). Cada command principal forca o modelo no frontmatter; os mais complexos tambem tem passo 1 explicito (`/model <modelo>` + `/compact` quando troca pra modelo menor). Commands SDD secundarios (`/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
 
 ### Utilitarios
 
@@ -27,11 +27,11 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 |---------|--------|-----------|
 | `/sdd-review` | **Opus** + delega 6 subagents `code-reviewer` | Analisa PR, branch ou diff e gera relatorio privado. **Independente do `/executor-plan`** (Sonnet): roda em Opus + delega analise pra subagents `code-reviewer` (built-in, isolam contexto da implementacao) |
 | `/busca [--rapido\|--profundo] [--save] <query>` | **Sonnet** (main) + Haiku/Sonnet/Opus (subagent por flag) | Pesquisa web via subagent isolado. `--rapido` = Haiku (lookup factual). default = Sonnet (exploracao media). `--profundo` = Opus (comparacao com nuance). `--save` persiste em `thoughts/research/`. **Zero impacto no contexto principal** — subagent nao herda historico |
-| `/git-worktree` | herda | Cria uma worktree isolada para trabalho paralelo |
-| `/git-remove-worktree` | herda | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
-| `/sync-tests` | herda | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
-| `/git-prune-branches` | herda | Remove branches locais cujas remotas ja foram deletadas |
-| `/worktree-detect` | herda | Analisa branches/PRs e detecta oportunidades de split em worktrees |
+| `/git-worktree` | **Haiku** | Cria uma worktree isolada para trabalho paralelo |
+| `/git-remove-worktree` | **Haiku** | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
+| `/sync-tests` | **Haiku** | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
+| `/git-prune-branches` | **Haiku** | Remove branches locais cujas remotas ja foram deletadas |
+| `/worktree-detect` | **Sonnet** | Analisa branches/PRs e detecta oportunidades de split em worktrees (classificacao por dominio + score de complexidade + ordem de merge — exige sintese) |
 | `/modo-livre [on\|off\|update\|status]` | **Sonnet** | Toggle do modo autônomo. Passo 1 forca `/model sonnet` + `/compact`. `on` faz backup do `.claude/settings.local.json` e instala um com allow amplo + deny dos perigosos (commit/push/rm/etc). `off` restaura o backup. `update` reescreve só o settings com a versão atual do JSON canônico (preserva backup). Quando ativo, agente opera sem prompts pra leitura/edição/internet/MCPs/git-read e respeita guardrails negativos absolutos. Requer recarregar a sessão após toggle/update. Por-worktree: cada worktree precisa do seu próprio toggle |
 
 ### Versoes anteriores

@@ -1,5 +1,6 @@
 ---
 description: Analisa branches/PRs abertos e detecta oportunidades de isolamento em worktrees
+model: claude-sonnet-4-6
 allowed-tools: Read, Write, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git merge-base*), Bash(git fetch*), Bash(gh *)
 ---
 

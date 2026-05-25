@@ -1,5 +1,6 @@
 ---
 description: Sincroniza testes TDD (thoughts/tests/) entre worktree e root, mostrando diffs antes de agir.
+model: claude-haiku-4-5-20251001
 argument-hint: [caminho-da-worktree]
 allowed-tools: Bash, Read, Glob, AskUserQuestion
 ---

@@ -1,5 +1,6 @@
 ---
 description: Remove branches locais cujas remotas já foram deletadas (merged/closed).
+model: claude-haiku-4-5-20251001
 allowed-tools: Bash, AskUserQuestion
 ---
 

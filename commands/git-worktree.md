@@ -1,5 +1,6 @@
 ---
 description: Cria uma git worktree a partir da branch default do repositório para trabalho paralelo. Use quando precisar trabalhar em múltiplas branches simultaneamente.
+model: claude-haiku-4-5-20251001
 argument-hint: <nome-da-branch>
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion
 ---
