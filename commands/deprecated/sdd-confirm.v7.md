@@ -1,10 +1,20 @@
 ---
-description: Confirma drafts de decision/blocker/lesson/idea (em thoughts/decisions-draft/) e move pro auto-memory apenas se o PR relacionado estiver mergeado. Pergunta caso a caso. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao.
+description: "[DEPRECATED v7] Confirma drafts de decision/blocker/lesson/idea (em thoughts/decisions-draft/) e move pro auto-memory apenas se o PR relacionado estiver mergeado. SUBSTITUIDO POR /sdd-learning (que agora consulta GitHub PR + threads humanas pos-merge)."
 model: claude-sonnet-4-6
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(ls *), Bash(cat *), Bash(mkdir *), Bash(mv *), Bash(rm *), Bash(date *), Bash(git *), Bash(gh *), Bash(realpath *), Bash(pwd), Bash(find *), Bash(stat *), Bash(basename *), Bash(dirname *)
-# Complementa /sdd-learning. Enquanto sdd-learning extrai aprendizado novo de IMPs/reviews,
-# este command resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar".
+# DEPRECATED a partir desta iteracao. Mantido como fallback pra projetos legados
+# com drafts pendentes em thoughts/decisions-draft/.
+# Substituido por /sdd-learning ampliado, que cobre o caso "decisoes validadas
+# pelo merge" via fonte GitHub PR (body + reviews + threads humanas) — sem o
+# overhead de manter drafts locais.
 ---
+
+> **⚠️ DEPRECATED (v7)** — Este command nao eh mais distribuido por padrao. Use `/sdd-learning` apos PR fechar — ele consulta GitHub PR (body, reviews, threads de discussao) e extrai aprendizado validado pelo merge, sem precisar de drafts locais. Este arquivo eh mantido apenas como fallback pra projetos legados com drafts pendentes em `thoughts/decisions-draft/`.
+>
+> **Como migrar projetos legados**:
+> 1. Rode este command 1 vez pra processar drafts pendentes
+> 2. Apague a pasta `thoughts/decisions-draft/` quando vazia
+> 3. Daqui pra frente, use apenas `/sdd-learning` apos PR fechar
 
 # SDD Confirm — Confirmar drafts de memoria apos merge de PR
 

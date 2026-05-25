@@ -15,12 +15,11 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Plan | `/sdd-plan` | **Opus** | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
 | Codar | `/executor-plan` | **Sonnet** | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Passo 1 forca `/model sonnet` + `/compact` (libera contexto inflado vindo do `/sdd-plan` em Opus). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
 | Quick | `/quick-task` | **Opus** | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
-| Aprender | `/sdd-learning` | herda | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no auto-memory via skill `memory-keeper` (9 tipos: 4 nativos + 5 SDD). Confirma por item. Atualiza > cria. |
-| Confirmar | `/sdd-confirm` | herda | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro auto-memory APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
+| Aprender | `/sdd-learning` | **Opus** | Tipicamente rodado apos PR fechar. Le IMPs, reviews internos **e consulta GitHub PR** (body, reviews, threads de discussao humanas). Auto-detecta ultimo PR fechado da branch ou aceita `--pr <N>`. Extrai aprendizado nao-obvio via 5 filtros duros + decisao emergente de threads, propoe registro no auto-memory via skill `memory-keeper` (9 tipos). Confirma por item. Atualiza > cria. **Substitui o antigo `/sdd-confirm`** (deprecated). |
 | Manutencao | `/memory-organize` | herda | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
 | Roadmap | `/roadmap` | herda | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
 
-> **Modelos por command**: planejamento/review/decisao roda em **Opus** (raciocinio profundo). Execucao roda em **Sonnet** (custo/velocidade). Lookup factual roda em **Haiku** (via `/busca --rapido`). Cada command forca o modelo no frontmatter + passo 1 explicito (`/model <modelo>`). Commands SDD secundarios (`/sdd-learning`, `/sdd-confirm`, `/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
+> **Modelos por command**: planejamento/review/decisao/aprendizado roda em **Opus** (raciocinio profundo). Execucao roda em **Sonnet** (custo/velocidade). Lookup factual roda em **Haiku** (via `/busca --rapido`). Cada command principal forca o modelo no frontmatter + passo 1 explicito (`/model <modelo>`). Commands SDD secundarios (`/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
 
 ### Utilitarios
 
@@ -38,6 +37,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 ### Versoes anteriores
 
 - **Split v7 (gerador-prd + gerador-spec)** — versao anterior do workflow tinha 2 fases separadas (PRD em `thoughts/research/` + SPEC em `thoughts/plans/`). Foram fundidas em `/sdd-plan` (1 doc auto-sized) por causar ~40-50% de duplicacao entre os 2 outputs. Arquivos preservados em `commands/deprecated/gerador-prd.v7.md` e `commands/deprecated/gerador-spec.v7.md`
+- **`/sdd-confirm` (v7)** — gerenciava ciclo "criar draft em `thoughts/decisions-draft/` -> aguardar merge -> mover pro auto-memory". Substituido nesta iteracao pelo `/sdd-learning` ampliado, que extrai aprendizado direto do PR no GitHub apos o merge (body + reviews + threads humanas). Arquivo preservado em `commands/deprecated/sdd-confirm.v7.md` como fallback pra projetos legados com drafts pendentes
 - **v1-v6** — versoes historicas em `commands/deprecated/` com sufixo `.vN.md` (ex: `executor-plan.v6.md`, `gerador-prd.v5.md`). Pra usar uma versao antiga como fallback, copie o `.vN.md` desejado pra `~/.claude/commands/<nome>.md` (sem o sufixo)
 - **Commands promovidos a skill** — `sdd-review.v1.md`, `vault-memory.v7.md` e `worktree-detect.v1.md` em `commands/deprecated/` sao versoes antigas (eram commands) de artefatos que hoje vivem como skill ou continuam como command mas foram reescritos
 
@@ -113,11 +113,12 @@ A qualquer momento (busca otimizada):
   /busca --profundo <query> -> Opus (subagent). Comparacao com nuance, trade-offs
   /busca --save <query>     -> + salva em thoughts/research/
 
-Apos a feature mergeada:
-  /sdd-confirm    -> confirma drafts em thoughts/decisions-draft/ e move pro auto-memory
-                     (so move drafts cuja PR foi MERGEADA; cancela drafts de PR fechado;
-                      preserva drafts de PR ainda aberto)
-  /sdd-learning   -> colhe aprendizado de IMPs+reviews -> auto-memory
+Apos PR fechar (mergeado ou nao):
+  /sdd-learning   -> Opus. Auto-detecta ultimo PR fechado da branch (ou aceita --pr <N>).
+                     Le IMPs + reviews internos + body/reviews/threads humanas do PR.
+                     Aplica 5 filtros duros + decisao emergente de threads de discussao.
+                     Propoe candidatos um por um -> auto-memory via memory-keeper.
+                     Substitui o antigo /sdd-confirm (deprecated).
 
 Manutencao periodica:
   /memory-organize  -> arruma o auto-memory (orfas, links quebrados, sub-sumarios)
@@ -167,7 +168,7 @@ Os commands recuperam contexto entre sessoes via **auto-memory nativo do Claude 
 
 **Convencao**: arquivo flat `<tipo>_<slug>.md`. Frontmatter minimo: `name`, `description`, `metadata.type`. Veja `skills/memory-keeper/SKILL.md` para o protocolo completo e `references/nota-template.md` para os 9 templates de corpo.
 
-**Drafts pre-merge**: durante o desenvolvimento de uma feature, os commands SDD criam notas como **drafts** em `thoughts/decisions-draft/` (gitignored). Apos merge do PR, `/sdd-confirm` move pro auto-memory. Drafts de PRs fechados sem merge sao removidos sob confirmacao.
+**Aprendizado pos-merge**: durante o desenvolvimento, os commands SDD anotam decisoes/blockers/licoes no proprio relatorio (IMP, SUMMARY) ou oferecem salvar direto na memoria via opcao `(m)` quando a decisao ja eh definitiva. Apos o PR fechar, `/sdd-learning` extrai aprendizado lendo IMPs, reviews internos **e o PR no GitHub** (body, reviews formais, threads de discussao humana). A decisao emergente das threads vira candidato — voce aprova caso a caso. (Antes desta iteracao, o fluxo usava drafts em `thoughts/decisions-draft/` + `/sdd-confirm`; ambos foram substituidos pela fonte GitHub no `/sdd-learning`.)
 
 **Manutencao**: rode `/memory-organize` quando `MEMORY.md` crescer (>150 linhas) ou quando suspeitar de orfas/duplicatas. O command propoe sub-sumarios por tipo (`_summary_<tipo>.md`, carregados sob demanda) pra manter o indice principal enxuto.
 
@@ -222,9 +223,8 @@ commands/                   # Slash commands (invocação manual via /)
   quick-task.md             # v7 — Modo rapido [Opus]
   sdd-review.md             # Review independente com subagents code-reviewer [Opus]
   busca.md                  # Pesquisa via subagent isolado [Sonnet main + Haiku/Sonnet/Opus subagent]
+  sdd-learning.md           # Colher aprendizado de IMPs+reviews+PR GitHub -> auto-memory [Opus]
   roadmap.md                # v7 — Gerenciar ROADMAP.md
-  sdd-learning.md           # Colher aprendizado de IMPs+reviews -> auto-memory
-  sdd-confirm.md            # Confirmar drafts (thoughts/decisions-draft/) -> auto-memory pos-merge
   memory-organize.md        # Reorganizar auto-memory (orfas, links quebrados, sub-sumarios)
   modo-livre.md             # Modo autonomo com guardrails negativos [Sonnet + /compact]
   git-worktree.md           # Criar worktree
@@ -269,7 +269,6 @@ A integração entre as duas pontas: os commands SDD (`/sdd-plan`, `/executor-pl
 ```
 thoughts/
   ROADMAP.md                  # Visao multi-feature (opcional)
-  decisions-draft/            # Drafts de memoria aguardando merge do PR (movidos pelo /sdd-confirm)
   plans/
     SPEC-DD-MM-YYYY-slug.md   # Output do /sdd-plan (1 doc auto-sized)
   history/
@@ -283,9 +282,15 @@ thoughts/
       TASK.md                 # Input do /quick-task
       SUMMARY.md              # Output do /quick-task
   tests/                      # Andaime TDD (NAO commitado)
+  decisions-draft/            # [LEGADO] Drafts de memoria. Pasta NAO eh mais criada pelos commands novos —
+                              # /sdd-learning extrai aprendizado direto do PR/IMP/review. Mantida no diagrama
+                              # apenas pra projetos legados com drafts pendentes processaveis via
+                              # commands/deprecated/sdd-confirm.v7.md
 ```
 
 > Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`. A pasta `thoughts/research/` voltou nesta iteracao, mas com proposito diferente: agora eh output opt-in do `/busca` (pesquisa via subagent), nao mais do antigo `gerador-prd` (cujo conteudo foi fundido em `/sdd-plan`).
+>
+> **`thoughts/decisions-draft/` foi descontinuada nesta iteracao.** O fluxo "criar draft -> aguardar merge -> /sdd-confirm" foi substituido por: anotacao no proprio IMP/SUMMARY do command + extracao pelo `/sdd-learning` apos PR fechar (que agora consulta o PR no GitHub). Projetos legados com drafts pendentes podem rodar `commands/deprecated/sdd-confirm.v7.md` uma ultima vez pra processar o backlog.
 
 ## Inspiracoes
 

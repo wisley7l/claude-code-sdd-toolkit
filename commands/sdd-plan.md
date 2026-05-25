@@ -357,25 +357,16 @@ Identifiquei algo util como memoria persistente:
 [Por que importa para futuras sessoes]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
-  (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
+  (m) MEMORY direto — definitiva agora (decisao puramente de planejamento, ja resolvida)
+  (l) Deixar pro /sdd-learning extrair pos-merge — recomendado se a decisao depende de validacao no review
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(d) draft` quando o plano vai virar implementacao + PR. `(m) memory direto` quando e uma decisao puramente de planejamento que ja foi resolvida (ex: escolha de stack pre-aprovada). Detecte PR aberto com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`.
+**Default sugerido**: `(l) pendente pro /sdd-learning` quando o plano vai virar PR (que e o caso comum) — apos o PR fechar, o /sdd-learning extrai a decisao definitiva, considerando comentarios do review humano que podem mudar/refinar o approach. `(m) memory direto` apenas quando a decisao eh puramente de planejamento ja resolvida (ex: escolha de stack pre-aprovada, sem influencia de review). Nao detecte PR — apenas sugira (l) por padrao em planos que vao virar implementacao.
 
-Se `(d)` DRAFT:
-- Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
-  ```
-  ---
-  type: decision  # ou blocker, lesson, idea
-  title: <titulo>
-  date: <YYYY-MM-DD>
-  branch: <git branch --show-current>
-  pr: <numero se houver, omitir se nao>
-  ---
-  ```
-- Adicione no fim do corpo: `**Draft — sera proposto a memoria via /sdd-confirm apos merge do PR.**`
+Se `(l)` pendente pro /sdd-learning:
+- **Nao crie arquivo** agora. Apenas mantenha a observacao no proprio spec (passo 1 da seção "Decisoes Resolvidas" do template, ou em "Observacoes") — anote a decisao + por que como linha do spec. O `/sdd-learning` vai ler o spec/IMP/review/PR apos o merge e extrair candidatos com base nos 5 filtros duros + comentarios do review humano.
+- Isso elimina drafts orfas em `thoughts/decisions-draft/` (pasta nao precisa mais existir nos projetos novos; em projetos legados com drafts pendentes, use o command deprecated `/sdd-confirm` em `commands/deprecated/sdd-confirm.v7.md` se precisar).
 
 Se `(m)` MEMORY direto:
 - Nota em `$MEM_DIR/<tipo>_<slug>.md` (ver skill `memory-keeper` para formato completo).

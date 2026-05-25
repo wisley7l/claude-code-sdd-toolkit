@@ -628,26 +628,16 @@ Identifiquei algo util registrar como memoria:
 [Por que importa]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
   (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
+  (l) Deixar pro /sdd-learning extrair pos-merge — recomendado quando a decisao pode ser refinada por comentarios do review humano
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(d) draft` quando o trabalho atual vai virar PR (que e o caso comum do executor-plan). Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null` — se ja existir PR aberto da branch atual, sugira draft. Senao, ainda sugira draft se voce sabe que a feature vai virar PR.
+**Default sugerido**: `(l) pendente pro /sdd-learning` quando o trabalho vai virar PR (caso comum do executor-plan). Apos o PR fechar, o /sdd-learning extrai a decisao definitiva, considerando comentarios do review humano. `(m) memory direto` quando voce esta certo que a decisao vale independente de review futuro (ex: padrao de codigo ja consolidado no projeto). Nao detecte PR pra escolher default — apenas sugira (l) por padrao no executor-plan.
 
-Se `(d)` DRAFT:
-- Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
-  ```
-  ---
-  type: decision  # ou blocker, lesson, idea
-  title: <titulo>
-  date: <YYYY-MM-DD>
-  branch: <output de git branch --show-current>
-  pr: <numero se houver PR aberto, omitir se nao>
-  ---
-  ```
-- Conteudo: igual ao que iria pra memoria. No fim do corpo, adicione:
-  > **Draft — sera proposto a memoria via `/sdd-confirm` apos merge do PR.**
+Se `(l)` pendente pro /sdd-learning:
+- **Nao crie arquivo** agora. Apenas anote a decisao + por que no relatorio IMP (Verificacao Final passo 7, secao "Memoria persistente" ou "Desvios do Plano") — o /sdd-learning le o IMP depois e usa essa anotacao como pista, combinada com comentarios do PR e review humano.
+- Isso elimina drafts orfas em `thoughts/decisions-draft/` (pasta nao precisa mais existir nos projetos novos; projetos legados com drafts pendentes podem usar o command deprecated em `commands/deprecated/sdd-confirm.v7.md`).
 
 Se `(m)` MEMORY direto:
 - Nota em `$MEM_DIR/<tipo>_<slug>.md` (formato no skill `memory-keeper`).
@@ -759,7 +749,7 @@ SPEC: [caminho]
 ## Memoria persistente
 
 - Entradas adicionadas em $MEM_DIR: [N — listar tipos e slugs]
-- Drafts em thoughts/decisions-draft/ aguardando merge: [K — listar]
+- Decisoes anotadas pra /sdd-learning pos-merge: [K — listar brevemente cada item + por que]
 
 ## Reconciliacao com Docs
 

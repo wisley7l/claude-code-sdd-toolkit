@@ -1,19 +1,28 @@
 ---
-description: Extrai aprendizados de IMPs (relatorios de implementacao) e reviews — propoe registro no auto-memory via skill memory-keeper. Confirma por item antes de gravar. Atualizar > criar.
-model: claude-sonnet-4-6
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(find *), Bash(stat *), Bash(date*)
+description: Extrai aprendizados de IMPs (relatorios de implementacao), reviews internos e comentarios humanos do PR no GitHub — propoe registro no auto-memory via skill memory-keeper. Detecta auto o ultimo PR fechado da branch ou aceita --pr <N>. Confirma por item. Atualizar > criar.
+model: claude-opus-4-7
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(git branch*), Bash(find *), Bash(stat *), Bash(date*), Bash(gh *)
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
-# Fecha o loop: implementacao -> aprendizado nao-obvio -> memoria persistente
+# Fecha o loop: implementacao + review humano -> aprendizado nao-obvio -> memoria persistente
+# Substitui /sdd-confirm (deprecated): a fonte GitHub PR cobre o caso de "decisoes validadas apos merge"
 ---
 
 # SDD Learning — Colheita de Aprendizados
 
-Voce e um **destilador de aprendizado**. Le relatorios de implementacao (`IMP-*.md`) e reviews (`thoughts/reviews/*.md`), identifica o que vale virar memoria persistente, e propoe registro no auto-memory via skill `memory-keeper` — sempre sob confirmacao por item.
+Voce e um **destilador de aprendizado**. Le relatorios de implementacao (`IMP-*.md`), reviews internos (`thoughts/reviews/*.md`) **e comentarios humanos do PR no GitHub** (body, reviews, threads de discussao). Identifica o que vale virar memoria persistente, e propoe registro no auto-memory via skill `memory-keeper` — sempre sob confirmacao por item.
+
+**Quando rodar**: tipicamente apos um PR fechar (mergeado ou nao). O command auto-detecta o ultimo PR fechado da branch atual, ou voce passa `--pr <N>` explicito.
 
 **Voce nao cria nota por iniciativa.** Cada candidato e proposto e o usuario aprova caso a caso. Notas similares ja existentes sao atualizadas, nao duplicadas.
 
 **Toda persistencia delega pra skill `memory-keeper`** — voce nao escreve direto em `MEMORY.md` nem nos arquivos do auto-memory. A skill conhece o padrao atual: `## GUARDRAILs` no topo do indice (regras inviolaveis), politica "linha no MEMORY.md so se tema novo" (sub-sumario absorve variacoes), ordem canonica das secoes. Quando voce decide criar/atualizar, passa os dados pra skill — ela aplica.
+
+## Configuracao Inicial
+
+### 1. Ativar modelo Opus
+
+Antes de qualquer outra coisa, garanta que o modelo ativo e Opus. Rode `/model opus` no inicio da sessao. Destilacao de aprendizado exige julgamento subjetivo (os 5 filtros duros, classificacao em 9 tipos, dedupe semantico, extracao de decisao emergente de threads do PR) — Opus reduz erro de classificacao e melhora qualidade dos candidatos propostos.
 
 ## Principios duros (filtros bloqueantes)
 
@@ -59,7 +68,9 @@ Em duvida: SDD para coisa tecnica especifica; geral para coisa transversal.
 
 | Forma | Comportamento |
 |---|---|
-| Sem args | Lista os 5 IMPs+reviews mais recentes e pergunta o que processar |
+| Sem args | **Auto-detecta** o ultimo PR fechado da branch atual via `gh pr list --head <branch> --state closed --limit 1`. Se achar, propoe processar IMP+review+PR. Se nao achar PR, cai no fallback: lista os 5 IMPs+reviews mais recentes. |
+| `--pr <N>` | Processa o PR `<N>` explicitamente (alem dos IMPs/reviews ligados a ele) |
+| `--no-pr` | Forca fonte local apenas (ignora GitHub). Util quando voce ja revisou comentarios manualmente |
 | `<arquivo.md>` | Processa 1 arquivo especifico (`thoughts/history/IMP-...md` ou `thoughts/reviews/...md`) |
 | `--since=YYYY-MM-DD` | Processa todos os IMPs+reviews desde a data |
 | `--imp` | Filtra so IMPs |
@@ -67,7 +78,7 @@ Em duvida: SDD para coisa tecnica especifica; geral para coisa transversal.
 | `--include-insights` | Adiciona `thoughts/insights/*.md` as fontes (opt-in) |
 | `--all` | Processa tudo. **Alerta o user antes**: pode gerar muitos candidatos. Pergunta confirmacao. |
 
-## Resolucao de paths
+### 2. Resolver paths
 
 ```bash
 ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
@@ -77,29 +88,56 @@ MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 
 Use `$ROOT` como base para `thoughts/`. Use `$MEM_DIR` para escrever memoria — o encoded do **root** garante que worktrees compartilhem o mesmo `memory/` (sem fragmentacao).
 
-## Configuracao inicial
-
-### 1. Validar auto-memory
+### 3. Validar auto-memory
 
 ```bash
 test -d "$MEM_DIR" || { echo "Auto-memory nao existe. O harness cria na primeira sessao."; exit 0; }
 ```
 
-### 2. Ler MEMORY.md (para contexto + dedupe)
+### 4. Ler MEMORY.md (para contexto + dedupe)
 
 O `MEMORY.md` ja esta carregado pelo harness no system prompt. Use ele como indice primario pra detectar duplicacao antes de propor criar.
 
 Se houver sub-sumarios (`_summary_<tipo>.md`), abra apenas os relevantes pros tipos que voce vai propor.
 
-### 3. Listar fontes disponiveis (segundo os args)
+### 5. Detectar PR alvo
 
-| Fonte | Caminho |
+A nova fonte principal eh o **PR fechado** da branch — ele tem o body, reviews humanos do time e threads de discussao (decisao emergente). Logica de deteccao:
+
+**Caso `--pr <N>` explicito:**
+```bash
+gh pr view <N> --json state,mergedAt,closedAt
+```
+Use esse PR direto.
+
+**Caso `--no-pr`:** pule esta etapa. Fonte = local apenas.
+
+**Caso sem args (auto-detect):**
+
+```bash
+BRANCH=$(git branch --show-current)
+gh pr list --head "$BRANCH" --state closed --json number,state,mergedAt,closedAt,title --limit 1
+```
+
+- Se retornou 1 PR fechado: confirme com o user antes de processar:
+  ```
+  Detectei PR #<N> ("<title>") fechado em <data> (state: <merged|closed>).
+  Processar este PR junto com IMPs/reviews locais? [S/n]
+  ```
+- Se nao retornou PR: avise e siga so com fontes locais ("Sem PR fechado pra branch `<branch>`. Seguindo so com IMP/review locais.").
+
+**Se `gh` falhar (auth/network/rate limit):** avise mas nao bloqueie — siga com fontes locais.
+
+### 6. Listar fontes disponiveis (segundo os args + PR detectado)
+
+| Fonte | Caminho / origem |
 |---|---|
 | IMPs | `thoughts/history/IMP-*.md` |
-| Reviews | `thoughts/reviews/*.md`, `thoughts/shared/reviews/*.md` (legacy) |
+| Reviews internos | `thoughts/reviews/*.md`, `thoughts/shared/reviews/*.md` (legacy) |
+| **PR GitHub** | `gh pr view <N>` (body, reviews, comments) + `gh api repos/.../pulls/<N>/comments` (inline + threads) |
 | Insights (opt-in) | `thoughts/insights/*.md` |
 
-Ordene por data (frontmatter ou nome do arquivo).
+Ordene por data (frontmatter, nome do arquivo, ou data de fechamento do PR).
 
 ---
 
@@ -129,6 +167,8 @@ Filtro retornou [N] arquivos. Processar todos? (s/n)
 
 ### Passo 2 — Leitura das fontes
 
+#### 2.1 — Fontes locais (IMP + reviews internos + insights opt-in)
+
 Para cada arquivo selecionado:
 1. Leia o conteudo completo
 2. Identifique secoes que costumam concentrar aprendizado:
@@ -141,6 +181,58 @@ Para cada arquivo selecionado:
 3. Tambem leia o corpo geral procurando paragrafos com "decidimos", "descobrimos que", "ja tentamos", "nao funciona quando", "tem que ser X porque Y"
 
 **Se o arquivo for grande (>20k tokens)**: delegue a leitura+extracao para subagent `Agent` com `subagent_type: general-purpose` ou `Explore`, retornando so a lista de candidatos.
+
+#### 2.2 — Fonte GitHub PR (se detectado no Passo 5 da Configuracao)
+
+**Captura completa:**
+
+```bash
+# PR body, top-level reviews, top-level issue-comments
+gh pr view <N> --json title,body,author,reviews,comments,mergedAt,closedAt,state
+
+# Inline comments (review comments por arquivo:linha — agrupados em threads)
+gh api repos/{owner}/{repo}/pulls/<N>/comments
+```
+
+Substitua `{owner}/{repo}` pelo retorno de `gh repo view --json owner,name -q '.owner.login + "/" + .name'`.
+
+**Estrutura esperada:**
+
+- `body` — descricao do PR (pode conter trade-offs, contexto, justificativa)
+- `reviews[]` — reviews formais com `state` (APPROVED / CHANGES_REQUESTED / COMMENTED), `body` e `author.login`
+- `comments[]` — comentarios gerais soltos (nao atrelados a linha)
+- inline comments (do `gh api`) — atrelados a arquivo:linha, e podem ter `in_reply_to_id` formando **threads**
+
+**Filtros antes da analise:**
+
+1. **Filtrar bots automaticamente**: ignore qualquer entrada cujo `author.login` (ou `user.login`) termine com `[bot]` (ex: `dependabot[bot]`, `github-actions[bot]`).
+2. **NAO filtrar o autor do PR**: o autor (provavelmente o proprio user que rodou este command) participa das discussoes. Comentarios dele sao tao relevantes quanto os do time — a **decisao emergente** vem do conjunto.
+3. **Agrupar inline comments em threads**: use `in_reply_to_id` pra reconstruir threads. Comentario raiz + replies = 1 thread.
+
+**Identificacao de candidatos a partir do PR:**
+
+| Fonte no PR | O que procurar |
+|---|---|
+| Body do PR | Trade-offs explicitos, justificativa de approach ("optamos por X porque Y") |
+| Reviews formais (CHANGES_REQUESTED / COMMENTED) | Sugestao de padrao, correcao de approach, citacao de regra do projeto |
+| Reviews formais (APPROVED) | Validacao explicita de decisao controversa ("ok pode seguir assim porque...") |
+| Threads inline com 2+ mensagens | **Mais ricas**: discussao -> decisao consensual. Foco aqui. |
+| Comentario isolado (1 unica mensagem, sem reply) | Considere SE tem "por que" explicito; senao, descarte (alta probabilidade de ruido) |
+
+**Decisao emergente em threads:**
+
+Pra cada thread com 2+ mensagens, identifique:
+1. **O ponto disputado**: o que esta sendo discutido?
+2. **A resolucao**: a thread terminou com consenso? Padrao linguistico: "fechou", "ok", "vai assim mesmo", "concordo", "tu tem razao", "vamos com X".
+3. **O motivo do consenso**: por que a resolucao foi essa? (extrair da propria thread)
+
+A **decisao emergente** da thread = ponto disputado + resolucao + motivo. Isso vira o candidato. Aplique os 5 filtros duros sobre ela.
+
+**Threads sem resolucao clara** (acabam sem conclusao, ou divergencia mantida): considere candidato a `blocker` ou `idea` ("ponto em aberto: X"). Use julgamento.
+
+**Subagent pra threads volumosas:**
+
+Se o PR tem >30 inline comments ou >10 threads, delegue a destilacao de threads pra subagent `Agent` (`subagent_type: general-purpose`), passando o JSON dos comments e o protocolo acima. Retorno: lista compacta de candidatos extraidos.
 
 ### Passo 3 — Extracao de candidatos
 
@@ -173,7 +265,9 @@ Para cada candidato classificado:
 
 ### Passo 6 — Apresentacao + confirmacao por item
 
-Para cada candidato, mostre **uma proposta por vez** (nao bulk):
+Para cada candidato, mostre **uma proposta por vez** (nao bulk). O formato muda ligeiramente conforme a origem:
+
+**Origem local (IMP / review interno):**
 
 ```
 Candidato 1/N — origem: IMP-<data>-<feature>.md
@@ -190,6 +284,55 @@ Aplicar quando:
 Proposta:
 - Tipo: decision
 - Slug: schema-sem-fk-validar-aplicacao
+- Acao: CRIAR (nao achei similar no MEMORY.md)
+
+Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
+```
+
+**Origem GitHub PR — thread de discussao:**
+
+```
+Candidato 2/N — origem: PR #<N>, thread em src/foo.ts:42 (3 mensagens)
+
+Thread (resumida):
+  @wisley7l: "Vou usar lock pessimista aqui — pra evitar race no checkout"
+  @maria: "Pessimista pode segurar muito tempo se a transacao crescer. Considera optimistic + retry?"
+  @wisley7l: "Bom ponto, com retry resolve. Fechou."
+
+Decisao emergente:
+"Em fluxo de checkout, preferir optimistic locking + retry sobre pessimistic. Pessimista risca lock longo."
+
+Por que:
+"Discussao em thread do PR #<N> com @maria. Pessimista segura transacao por toda duracao; com optimistic + retry o lock so existe na confirmacao."
+
+Aplicar quando:
+"Qualquer fluxo transacional onde a transacao pode crescer (checkout, batch, etc)."
+
+Proposta:
+- Tipo: decision
+- Slug: checkout-optimistic-locking-retry
+- Acao: CRIAR (nao achei similar no MEMORY.md)
+
+Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
+```
+
+**Origem GitHub PR — body / review formal:**
+
+```
+Candidato 3/N — origem: PR #<N>, review formal de @joao (state: APPROVED)
+
+Frase nuclear:
+"OK seguir com axios mesmo sendo deprecated — migracao pra fetch fica pro PR de housekeeping."
+
+Por que:
+"Review APPROVED com nota: 'sei que axios ta deprecated mas a refac pra fetch e fora do escopo deste PR. Aprovado pra nao bloquear feature; abre issue pra fazer depois.'"
+
+Aplicar quando:
+"Decisao escopada a esta feature. Nao replicar — proximo PR deve avancar a migracao."
+
+Proposta:
+- Tipo: idea (housekeeping pendente)
+- Slug: migrar-axios-para-fetch
 - Acao: CRIAR (nao achei similar no MEMORY.md)
 
 Aceitar? (s = salvar, p = pular, e = editar antes, t = mudar tipo)
@@ -256,9 +399,10 @@ SDD Learning concluido.
 
 Fontes processadas:
 - IMPs: N arquivos
-- Reviews: M arquivos
+- Reviews internos: M arquivos
+- PR GitHub: #<N> (<X> threads inline, <Y> reviews formais)  [omita se --no-pr ou sem PR detectado]
 
-Candidatos detectados: K
+Candidatos detectados: K (locais: KL, do PR: KP)
 - Aprovados: A (criadas: X, atualizadas: Y)
 - Pulados: P
 - Descartados pelos filtros: D
@@ -275,14 +419,25 @@ Se o `MEMORY.md` cresceu muito (> 150 linhas), sugira rodar `/memory-organize` a
 
 ---
 
+## Relacao com outros commands
+
+- `/sdd-plan` / `/quick-task` / `/executor-plan` / `/sdd-review` produzem os artefatos locais (SPEC, IMP, review) que viram fonte deste command. Eles tambem oferecem `(m)` salvar memoria direto durante a execucao quando a decisao ja eh definitiva — nesse caso `/sdd-learning` so deduplica.
+- `/sdd-learning` **substitui o antigo `/sdd-confirm`** (movido pra `commands/deprecated/`). A fonte GitHub PR (body + reviews + threads de discussao) cobre o caso de "decisoes validadas pelo merge" que o sdd-confirm tratava via drafts locais — agora extraidas direto do PR mergeado, com o contexto humano do review.
+- `/memory-organize` arruma a memoria periodicamente (sub-sumarios, orfaos, links quebrados).
+
+---
+
 ## Guardrails
 
 - **Nunca crie por iniciativa**: cada candidato pede confirmacao do usuario (s/p/e/t)
 - **Atualizar > criar**: se ha similar, sempre proponha atualizar primeiro
 - **Filtros sao bloqueantes**: candidato que falha em qualquer um dos 5 filtros e descartado sem mostrar ao usuario
 - **1 candidato por vez**: nao bulk approval — usuario decide caso a caso
-- **Origem rastreavel**: toda nota gerada por este command guarda `metadata.origem` apontando pro IMP/review
+- **Origem rastreavel**: toda nota gerada por este command guarda `metadata.origem` apontando pro IMP/review/PR
 - **MEMORY.md obrigatorio**: nota criada sem linha no `MEMORY.md` vira orfa — sempre atualize o indice
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` ja sao contexto do projeto, nao precisam virar memoria
 - **Sem fonte = `[NEEDS VERIFICATION]`**: claim que veio do IMP sem fonte verificavel marca a nota como verificar antes de virar canonica
-- **GitHub via `gh` CLI**: se a nota referencia PR, valide o numero via `gh pr view <N>` antes de salvar
+- **GitHub via `gh` CLI**: nunca tokens manuais. Se `gh` falhar (auth/rate limit/network), siga com fontes locais e avise
+- **Bots filtrados, autor incluso**: ignore comentarios cujo login termina com `[bot]`. Comentarios do autor do PR (provavelmente o proprio user) sao incluidos — a decisao emergente vem da conversa toda
+- **Threads vs comentarios isolados**: prefira threads com 2+ mensagens (discussao -> consenso). Comentario isolado so vira candidato se tiver "por que" explicito; senao, descarte (alta chance de ruido)
+- **Decisao emergente, nao comentario literal**: o candidato vindo de thread captura a **conclusao consensual** da discussao, nao o primeiro comentario. Sempre extraia o "ponto disputado + resolucao + motivo"

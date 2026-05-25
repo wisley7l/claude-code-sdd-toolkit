@@ -300,25 +300,16 @@ Identifiquei algo util como memoria:
 [Por que importa]
 
 Salvar?
-  (d) DRAFT local em thoughts/decisions-draft/ — vai pra memoria depois com /sdd-confirm apos merge do PR
   (m) MEMORY direto — definitiva agora (decisao independente de revisao de PR)
+  (l) Deixar pro /sdd-learning extrair pos-merge — recomendado se a quick-task vira PR e pode ter feedback do review
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(d) draft` se ha PR aberto na branch atual (a quick-task tipicamente faz `git add` mas commit/PR fica com user). Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null`. Se nao ha PR, `(m) memory direto` faz sentido quando voce esta certo que a decisao vale independente de review futuro.
+**Default sugerido**: `(l) pendente pro /sdd-learning` se ha PR aberto na branch atual ou voce sabe que a quick-task vai virar PR. Detecte com `gh pr list --head $(git branch --show-current) --state open --json number 2>/dev/null` — se ha PR, sugira (l). Se nao ha PR e nao vai virar PR (ex: ajuste local que nao vai pra remoto), `(m) memory direto` funciona quando voce esta certo da decisao.
 
-Se `(d)` DRAFT:
-- Crie `thoughts/decisions-draft/<YYYY-MM-DD>-<slug>.md` com frontmatter:
-  ```
-  ---
-  type: decision  # ou blocker, lesson
-  title: <titulo>
-  date: <YYYY-MM-DD>
-  branch: <git branch --show-current>
-  pr: <numero se houver, omitir se nao>
-  ---
-  ```
-- Adicione no fim do corpo: `**Draft — sera proposto a memoria via /sdd-confirm apos merge do PR.**`
+Se `(l)` pendente pro /sdd-learning:
+- **Nao crie arquivo** agora. Apenas anote a decisao + por que no `SUMMARY.md` da quick-task (secao "Observacoes" ou crie uma secao "Memoria pendente"). O /sdd-learning le o SUMMARY/PR/review depois e usa essa anotacao como pista, combinada com comentarios do review humano.
+- Isso elimina drafts orfas em `thoughts/decisions-draft/` (pasta nao precisa mais existir nos projetos novos; projetos legados com drafts pendentes podem usar o command deprecated em `commands/deprecated/sdd-confirm.v7.md`).
 
 Se `(m)` MEMORY direto:
 - Resolva o path do auto-memory (via root do worktree pra centralizar memorias):
