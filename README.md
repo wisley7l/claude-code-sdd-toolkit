@@ -16,10 +16,15 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | Codar | `/executor-plan` | **Sonnet** | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Passo 1 forca `/model sonnet` + `/compact` (libera contexto inflado vindo do `/sdd-plan` em Opus). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
 | Quick | `/quick-task` | **Opus** | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
 | Aprender | `/sdd-learning` | **Opus** | Tipicamente rodado apos PR fechar. Le IMPs, reviews internos **e consulta GitHub PR** (body, reviews, threads de discussao humanas). Auto-detecta ultimo PR fechado da branch ou aceita `--pr <N>`. Extrai aprendizado nao-obvio via 5 filtros duros + decisao emergente de threads, propoe registro no auto-memory via skill `memory-keeper` (9 tipos). Confirma por item. Atualiza > cria. **Substitui o antigo `/sdd-confirm`** (deprecated). |
-| Manutencao | `/memory-organize` | herda | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
-| Roadmap | `/roadmap` | herda | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
+| Manutencao | `/memory-organize` | **Sonnet** | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. Sonnet pelos pontos de julgamento semantico (duplicatas, guardrail diluido, conteudo inline anti-pattern) |
+| Roadmap | `/roadmap` | **Haiku** | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes. Fluxo mecanico — Haiku suficiente |
 
-> **Modelos por command**: planejamento/review/decisao/aprendizado roda em **Opus** (raciocinio profundo). Execucao + analise leve (`/executor-plan`, `/modo-livre`, `/worktree-detect`, `/busca`) roda em **Sonnet** (custo/velocidade). Operacoes mecanicas (git ops, sync de arquivos, lookup factual) rodam em **Haiku** (`/git-worktree`, `/git-remove-worktree`, `/git-prune-branches`, `/sync-tests`, `/busca --rapido`). Cada command principal forca o modelo no frontmatter; os mais complexos tambem tem passo 1 explicito (`/model <modelo>` + `/compact` quando troca pra modelo menor). Commands SDD secundarios (`/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
+> **Modelos por command** (todos forcam o modelo no frontmatter):
+> - **Opus** — raciocinio profundo: `/sdd-plan`, `/sdd-review`, `/sdd-learning`, `/quick-task`
+> - **Sonnet** — execucao + analise leve: `/executor-plan`, `/modo-livre`, `/worktree-detect`, `/busca` (main), `/memory-organize`
+> - **Haiku** — operacoes mecanicas: `/git-worktree`, `/git-remove-worktree`, `/git-prune-branches`, `/sync-tests`, `/roadmap`, `/busca --rapido`
+>
+> Commands em Opus tem passo 1 explicito (`/model opus`). Commands em Sonnet tem passo 1 (`/model sonnet` + `/compact` em `/executor-plan` e `/modo-livre`, que tipicamente recebem contexto inflado de Opus). Commands em Haiku confiam apenas no frontmatter — nao precisam de passo de troca explicito porque sao tao curtos que se o usuario invocar em outro modelo, o desperdicio eh marginal.
 
 ### Utilitarios
 
