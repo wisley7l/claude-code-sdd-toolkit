@@ -36,6 +36,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 | `/git-remove-worktree` | **Haiku** | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
 | `/sync-tests` | **Haiku** | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
 | `/git-prune-branches` | **Haiku** | Remove branches locais cujas remotas ja foram deletadas |
+| `/pr-report [--mes\|--de --ate\|--semana\|anual]` | **Haiku** | Relatorio de PRs do user no repo atual. **Semanal** so inline (3 visoes: abri/mergeei/revisei). **Mensal** com quantitativo (taxa de merge) + qualitativo (lead time, engajamento) + opt-in salvar em `thoughts/reports/`. **Anual** consolida mensais ja salvos via bloco YAML machine-readable. Desconsidera PRs `closed` sem merge |
 | `/worktree-detect` | **Sonnet** | Analisa branches/PRs e detecta oportunidades de split em worktrees (classificacao por dominio + score de complexidade + ordem de merge — exige sintese) |
 | `/modo-livre [on\|off\|update\|status]` | **Sonnet** | Toggle do modo autônomo. Passo 1 forca `/model sonnet` + `/compact`. `on` faz backup do `.claude/settings.local.json` e instala um com allow amplo + deny dos perigosos (commit/push/rm/etc). `off` restaura o backup. `update` reescreve só o settings com a versão atual do JSON canônico (preserva backup). Quando ativo, agente opera sem prompts pra leitura/edição/internet/MCPs/git-read e respeita guardrails negativos absolutos. Requer recarregar a sessão após toggle/update. Por-worktree: cada worktree precisa do seu próprio toggle |
 
@@ -236,6 +237,7 @@ commands/                   # Slash commands (invocação manual via /)
   git-remove-worktree.md    # Remover worktree
   sync-tests.md             # Sincronizar testes TDD
   git-prune-branches.md     # Limpar branches
+  pr-report.md              # Relatorio semanal/mensal/anual de PRs (do user, no repo atual) [Haiku]
   worktree-detect.md        # Analisar worktrees
   deprecated/               # Versoes antigas — fallback (sufixo .vN.md)
     executor-plan.v1.md ... v6.md
@@ -282,6 +284,9 @@ thoughts/
     (output do /sdd-review)
   research/
     YYYY-MM-DD-slug.md        # Output do /busca quando invocado com --save (ou opt-in pos-busca profunda)
+  reports/
+    prs-YYYY-MM.md            # Output mensal do /pr-report (opt-in)
+    prs-YYYY-anual.md         # Output anual do /pr-report (consolida mensais via bloco YAML)
   quick/
     NNN-slug/
       TASK.md                 # Input do /quick-task
