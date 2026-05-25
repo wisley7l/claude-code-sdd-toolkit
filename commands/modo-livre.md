@@ -1,9 +1,15 @@
 ---
 description: MODO LIVRE — toggle do modo autônomo. `on` instala settings com allow amplo + deny dos perigosos. `off` restaura backup. `update` reescreve settings com JSON canônico atual (sem mexer no backup). NUNCA commita/pusha/rm sem autorização explícita.
+model: claude-sonnet-4-6
 argument-hint: [on|off|update|status]
 ---
 
 # /modo-livre
+
+Antes de qualquer outra coisa:
+
+1. Rode `/model sonnet` — este command é um toggle simples (parse de args + escrita de settings + filesystem ops), Sonnet dá conta sem o custo de Opus. O frontmatter já força Sonnet, mas alinhar explicitamente evita inconsistência caso o usuário esteja em outro modelo no chat.
+2. Em seguida, rode `/compact` — se a sessão veio depois de `/sdd-plan` ou `/sdd-review` (que rodam em Opus e inflam contexto), compactar agora libera tokens. Sessão nova sem comandos prévios: pule, não há o que compactar.
 
 Você está implementando o toggle do MODO LIVRE para o projeto **na pasta atual**.
 

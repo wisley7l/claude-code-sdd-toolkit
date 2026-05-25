@@ -10,27 +10,30 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 
 ### Workflow Principal v7 (auto-sizing, single-doc spec)
 
-| Fase | Command | Descricao |
-|------|---------|-----------|
-| Plan | `/sdd-plan` | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
-| Codar | `/executor-plan` | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
-| Quick | `/quick-task` | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
-| Aprender | `/sdd-learning` | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no auto-memory via skill `memory-keeper` (9 tipos: 4 nativos + 5 SDD). Confirma por item. Atualiza > cria. |
-| Confirmar | `/sdd-confirm` | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro auto-memory APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
-| Manutencao | `/memory-organize` | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
-| Roadmap | `/roadmap` | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
+| Fase | Command | Modelo | Descricao |
+|------|---------|--------|-----------|
+| Plan | `/sdd-plan` | **Opus** | Pesquisa + entendimento + tarefas em **1 doc auto-sized** (Medium/Large/Complex). Mapeia design docs, reconcilia conflitos, classifica escopo, quebra tarefas com Phases + `[P]`/`Depends on:`/`Gate:`. 3 checks pre-aprovacao (Granularity, Diagram-Definition Cross-Check, Test Co-location). Detecta Quick e delega pra `/quick-task` |
+| Codar | `/executor-plan` | **Sonnet** | Pair programming com TDD em **modo autonomo** (sem pausa entre tarefas). Passo 1 forca `/model sonnet` + `/compact` (libera contexto inflado vindo do `/sdd-plan` em Opus). Sub-agents paralelos para `[P]`. Test count protection (bloqueia silent deletion). Staging (`git add`) por tarefa — **commits sob aprovacao humana no fim**. `--step` ativa pausa antiga + commits atomicos imediatos |
+| Quick | `/quick-task` | **Opus** | Modo rapido para mudanca pequena (≤3 arquivos, 1 frase). Pula SPEC formal. Safety valve sobe para fluxo formal se escopo crescer. Suporta modos invocados (`autonomo-invocado`/`step-invocado`) quando chamado por `/sdd-review` |
+| Aprender | `/sdd-learning` | herda | Le IMPs e reviews, extrai aprendizado nao-obvio, propoe registro no auto-memory via skill `memory-keeper` (9 tipos: 4 nativos + 5 SDD). Confirma por item. Atualiza > cria. |
+| Confirmar | `/sdd-confirm` | herda | Confirma drafts de memoria (em `thoughts/decisions-draft/`) e move pro auto-memory APENAS apos merge do PR. Drafts cancelados (PR fechado sem merge) sao removidos com confirmacao. Resolve o ciclo "registrar agora → validar com PR → confirmar/cancelar". |
+| Manutencao | `/memory-organize` | herda | Reorganiza o auto-memory do projeto: detecta orfas/links quebrados/duplicatas, propoe sub-sumarios quando `MEMORY.md` cresce (>150 linhas). Aplica sob confirmacao por bloco. |
+| Roadmap | `/roadmap` | herda | Gerencia `thoughts/ROADMAP.md`. Adiciona entradas, importa de issues GH, sincroniza status com SPEC/IMP existentes |
+
+> **Modelos por command**: planejamento/review/decisao roda em **Opus** (raciocinio profundo). Execucao roda em **Sonnet** (custo/velocidade). Lookup factual roda em **Haiku** (via `/busca --rapido`). Cada command forca o modelo no frontmatter + passo 1 explicito (`/model <modelo>`). Commands SDD secundarios (`/sdd-learning`, `/sdd-confirm`, `/memory-organize`, `/roadmap`) herdam o modelo da sessao — costumam ser invocados logo apos um command que ja definiu o modelo certo.
 
 ### Utilitarios
 
-| Command | Descricao |
-|---------|-----------|
-| `/sdd-review` | Analisa PR, branch ou diff e gera relatorio privado de review |
-| `/git-worktree` | Cria uma worktree isolada para trabalho paralelo |
-| `/git-remove-worktree` | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
-| `/sync-tests` | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
-| `/git-prune-branches` | Remove branches locais cujas remotas ja foram deletadas |
-| `/worktree-detect` | Analisa branches/PRs e detecta oportunidades de split em worktrees |
-| `/modo-livre [on\|off\|update\|status]` | Toggle do modo autônomo. `on` faz backup do `.claude/settings.local.json` e instala um com allow amplo + deny dos perigosos (commit/push/rm/etc). `off` restaura o backup. `update` reescreve só o settings com a versão atual do JSON canônico (preserva backup) — útil quando o command é atualizado. Quando ativo, agente opera sem prompts pra leitura/edição/internet/MCPs/git-read e respeita guardrails negativos absolutos. Requer recarregar a sessão após toggle/update. Por-worktree: cada worktree precisa do seu próprio toggle |
+| Command | Modelo | Descricao |
+|---------|--------|-----------|
+| `/sdd-review` | **Opus** + delega 6 subagents `code-reviewer` | Analisa PR, branch ou diff e gera relatorio privado. **Independente do `/executor-plan`** (Sonnet): roda em Opus + delega analise pra subagents `code-reviewer` (built-in, isolam contexto da implementacao) |
+| `/busca [--rapido\|--profundo] [--save] <query>` | **Sonnet** (main) + Haiku/Sonnet/Opus (subagent por flag) | Pesquisa web via subagent isolado. `--rapido` = Haiku (lookup factual). default = Sonnet (exploracao media). `--profundo` = Opus (comparacao com nuance). `--save` persiste em `thoughts/research/`. **Zero impacto no contexto principal** — subagent nao herda historico |
+| `/git-worktree` | herda | Cria uma worktree isolada para trabalho paralelo |
+| `/git-remove-worktree` | herda | Remove uma worktree de forma segura (chama `/sync-tests` antes) |
+| `/sync-tests` | herda | Sincroniza testes TDD entre worktree e root, mostrando diffs antes de agir |
+| `/git-prune-branches` | herda | Remove branches locais cujas remotas ja foram deletadas |
+| `/worktree-detect` | herda | Analisa branches/PRs e detecta oportunidades de split em worktrees |
+| `/modo-livre [on\|off\|update\|status]` | **Sonnet** | Toggle do modo autônomo. Passo 1 forca `/model sonnet` + `/compact`. `on` faz backup do `.claude/settings.local.json` e instala um com allow amplo + deny dos perigosos (commit/push/rm/etc). `off` restaura o backup. `update` reescreve só o settings com a versão atual do JSON canônico (preserva backup). Quando ativo, agente opera sem prompts pra leitura/edição/internet/MCPs/git-read e respeita guardrails negativos absolutos. Requer recarregar a sessão após toggle/update. Por-worktree: cada worktree precisa do seu próprio toggle |
 
 ### Versoes anteriores
 
@@ -45,6 +48,7 @@ Esses commands transformam o Claude Code em um par de programacao que segue um p
 - **TDD como contrato** — Testes unitarios sao escritos antes do codigo. Se quebram, paramos e discutimos
 - **Memoria persistente** — auto-memory nativo do Claude Code (`~/.claude/projects/<projeto>/memory/`) guarda decisoes/blockers/licoes/etc entre sessoes, gerenciado pela skill `memory-keeper`. Escrita sempre sob confirmacao
 - **Auto-sizing** — Complexidade determina profundidade: Quick (`/quick-task`), Medium/Large/Complex (1 SPEC em `/sdd-plan`)
+- **Modelo certo pra cada fase** — Opus pra planejar/revisar (raciocinio profundo), Sonnet pra executar (custo/velocidade), Haiku pra lookup factual. Cada command forca o modelo no frontmatter + passo 1 explicito (`/model <modelo>` + `/compact` quando troca pra modelo menor). Review independente de execucao: `/sdd-review` (Opus) usa subagent `code-reviewer` pra nao herdar contexto do `/executor-plan` (Sonnet)
 - **Test count protection** — Toda tarefa declara `Test count: N tests pass`. Cair = bloqueio (previne silent deletion)
 - **Paralelismo seguro** — Tarefas `[P]` rodam em sub-agents simultaneos, com checagem de conflito de arquivos
 - **Adaptavel ao projeto** — Segue convencoes, skills e estrutura de cada projeto
@@ -86,23 +90,28 @@ cp commands/*.md /seu-projeto/.claude/commands/
 
 ```
 Quick — mudanca pequena (≤3 arquivos, 1 frase):
-  /quick-task     -> executa direto com TDD onde aplicavel
+  /quick-task     -> Opus. Executa direto com TDD onde aplicavel
                      (safety valve: se crescer, sugere fluxo formal)
 
 Medium/Large/Complex — feature normal:
-  /sdd-plan       -> pesquisa + entendimento + tarefas em 1 doc auto-sized
+  /sdd-plan       -> Opus. Pesquisa + entendimento + tarefas em 1 doc auto-sized
                      (Mapeia design docs, classifica escopo, quebra tarefas com [P],
                       3 checks pre-aprovacao: Granularity, Diagram, Test Co-location)
-    limpar sessao
-  /executor-plan  -> MODO AUTONOMO (default): codar com TDD em cadeia (sem pausa),
-                     sub-agents paralelos para [P], staging por tarefa (sem commit).
-                     /executor-plan --step volta ao comportamento antigo (pausa
-                     entre tarefas + commits atomicos imediatos)
-    limpar sessao
-  /sdd-review     -> revisa o diff staged, classifica issues (CRITICAL/MAJOR/MINOR)
-                     e oferece gerar fixes via /quick-task (autonomo em cadeia OU
-                     pausando entre cada). Fixes ficam staged junto.
+  /executor-plan  -> Sonnet. Passo 1 ja roda /model sonnet + /compact (libera contexto
+                     inflado do /sdd-plan). MODO AUTONOMO (default): codar com TDD em
+                     cadeia, sub-agents paralelos para [P], staging por tarefa
+                     (sem commit). --step volta ao comportamento antigo
+  /sdd-review     -> Opus + subagents code-reviewer. Independente do executor:
+                     analise feita por "cerebro" diferente (modelo + contexto isolado).
+                     Classifica issues (CRITICAL/MAJOR/MINOR), oferece gerar fixes
+                     via /quick-task. Fixes ficam staged junto.
     voce revisa o diff completo no VSCode -> commit + push manualmente
+
+A qualquer momento (busca otimizada):
+  /busca <query>            -> Sonnet (subagent). Exploracao media, conceito tecnico
+  /busca --rapido <query>   -> Haiku (subagent). Lookup factual (versao, comando, sintaxe)
+  /busca --profundo <query> -> Opus (subagent). Comparacao com nuance, trade-offs
+  /busca --save <query>     -> + salva em thoughts/research/
 
 Apos a feature mergeada:
   /sdd-confirm    -> confirma drafts em thoughts/decisions-draft/ e move pro auto-memory
@@ -118,6 +127,8 @@ Multi-feature (visao de cima):
   /roadmap add "<descricao>"     -> adiciona ao Backlog
   /roadmap add #123              -> importa de issue GH
 ```
+
+> **Por que `/compact` automatico no `/executor-plan` e `/modo-livre`?** O `/sdd-plan` roda em Opus e infla o contexto com pesquisa + 3 checks + reconciliacao de docs. Ao trocar pra Sonnet no `/executor-plan` (passo 1), rodamos `/compact` em seguida — o resumo eh gerado em Sonnet (mais barato que Opus) e libera espaco pra implementacao. Sessao nova sem command previo: pula o `/compact`, nao ha o que compactar.
 
 > **Por que modo autonomo no executor**: o usuario relatou dificuldade de revisar mudancas no VSCode depois que cada tarefa virava commit (diff fica preso no historico do git). Com staging acumulado, o VSCode Source Control panel mostra todo o diff continuo, facilitando revisao humana antes do commit final.
 
@@ -206,15 +217,16 @@ Recarregue a sessao apos configurar: `Ctrl+C` e `claude` de novo.
 ```
 CLAUDE.md                   # Constituicao do repo (regras pro agente que edita o toolkit)
 commands/                   # Slash commands (invocação manual via /)
-  sdd-plan.md               # v7+ — Pesquisar + Entender + Tarefas (1 doc auto-sized)
-  executor-plan.md          # v7 — Codar com TDD + paralelismo
-  quick-task.md             # v7 — Modo rapido
+  sdd-plan.md               # v7+ — Pesquisar + Entender + Tarefas (1 doc auto-sized) [Opus]
+  executor-plan.md          # v7 — Codar com TDD + paralelismo [Sonnet + /compact]
+  quick-task.md             # v7 — Modo rapido [Opus]
+  sdd-review.md             # Review independente com subagents code-reviewer [Opus]
+  busca.md                  # Pesquisa via subagent isolado [Sonnet main + Haiku/Sonnet/Opus subagent]
   roadmap.md                # v7 — Gerenciar ROADMAP.md
-  sdd-review.md             # Review
   sdd-learning.md           # Colher aprendizado de IMPs+reviews -> auto-memory
   sdd-confirm.md            # Confirmar drafts (thoughts/decisions-draft/) -> auto-memory pos-merge
   memory-organize.md        # Reorganizar auto-memory (orfas, links quebrados, sub-sumarios)
-  modo-livre.md             # Modo autonomo com guardrails negativos
+  modo-livre.md             # Modo autonomo com guardrails negativos [Sonnet + /compact]
   git-worktree.md           # Criar worktree
   git-remove-worktree.md    # Remover worktree
   sync-tests.md             # Sincronizar testes TDD
@@ -264,6 +276,8 @@ thoughts/
     IMP-DD-MM-YYYY-slug.md    # Output do /executor-plan
   reviews/
     (output do /sdd-review)
+  research/
+    YYYY-MM-DD-slug.md        # Output do /busca quando invocado com --save (ou opt-in pos-busca profunda)
   quick/
     NNN-slug/
       TASK.md                 # Input do /quick-task
@@ -271,7 +285,7 @@ thoughts/
   tests/                      # Andaime TDD (NAO commitado)
 ```
 
-> Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`. A pasta `thoughts/research/` (usada pelo `gerador-prd`) foi removida — `/sdd-plan` salva direto em `thoughts/plans/`.
+> Antes da v7, os artefatos ficavam em `thoughts/shared/`. A v7 simplifica removendo `shared/` — testes TDD continuam isolados em `thoughts/tests/`. A pasta `thoughts/research/` voltou nesta iteracao, mas com proposito diferente: agora eh output opt-in do `/busca` (pesquisa via subagent), nao mais do antigo `gerador-prd` (cujo conteudo foi fundido em `/sdd-plan`).
 
 ## Inspiracoes
 

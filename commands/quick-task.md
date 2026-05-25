@@ -1,5 +1,6 @@
 ---
 description: Modo rapido — mudanca pequena sem SPEC formal (bug fix, config, tweak). Suporta invocacao por /sdd-review (modos `autonomo-invocado` e `step-invocado` que NUNCA commitam, so fazem `git add`).
+model: claude-opus-4-7
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
@@ -49,14 +50,18 @@ Use esse caminho como base para `thoughts/`.
 
 ## Configuracao Inicial
 
-### 1. Receber a Demanda
+### 1. Ativar modelo Opus
+
+Antes de qualquer outra coisa, garanta que o modelo ativo e Opus. Rode `/model opus` no inicio da sessao. Mesmo em quick mode, decisoes sobre safety valve, TDD aplicavel e reconciliacao com constitution exigem julgamento — alinhar pra Opus desde o inicio evita escolhas erradas que viram retrabalho. Em modo `autonomo-invocado` ou `step-invocado`, respeite o modelo que o caller ja definiu (nao force troca).
+
+### 2. Receber a Demanda
 Se nao descreveu:
 ```
 O que voce quer fazer? (1 frase)
 Lembre: quick mode e para mudanca pequena. Se for feature, use /sdd-plan.
 ```
 
-### 2. Validar se cabe em quick mode
+### 3. Validar se cabe em quick mode
 
 Antes de criar TASK.md, avalie:
 
@@ -75,13 +80,13 @@ Se duvidoso:
 Esta mudanca parece [pequena/media]. Confirmar quick mode ou prefere fluxo formal (/sdd-plan)?
 ```
 
-### 3. Ler context minimo
+### 4. Ler context minimo
 - `CLAUDE.md`
 - `ARCHITECTURE.md`
 - Memoria persistente — so blockers conhecidos. Pelo `MEMORY.md` ja carregado, identifique linhas da secao `## Blocker` e abra so as relevantes. Ver skill `memory-keeper`.
 - Skills aplicaveis em `.claude/skills/`
 
-### 4. Decidir o numero da task
+### 5. Decidir o numero da task
 
 Liste `thoughts/quick/`:
 ```bash
@@ -90,7 +95,7 @@ ls thoughts/quick/ 2>/dev/null | grep -E '^[0-9]+' | sort -n | tail -1
 
 Use o proximo numero (3 digitos: 001, 002, ...).
 
-### 5. Detectar agente especializado (opcional, conservador)
+### 6. Detectar agente especializado (opcional, conservador)
 
 **So sugira delegar se TODAS estas condicoes baterem** (threshold mais alto que `/executor-plan` porque quick-task ja e pequeno e o overhead anula o ganho):
 

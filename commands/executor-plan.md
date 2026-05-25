@@ -51,10 +51,17 @@ Use esse caminho como base para `thoughts/` (research, plans, history, STATE, RO
 
 Ao ser invocado:
 
-### 1. Ler Constitution
+### 1. Ativar modelo Sonnet + compactar contexto
+
+Antes de qualquer outra coisa:
+
+1. Rode `/model sonnet` — garante alinhamento com o frontmatter deste command e evita inconsistencia entre o agent que planejou (Opus, no `/sdd-plan`) e o que executa.
+2. Em seguida, rode `/compact` — o `/sdd-plan` tipicamente roda em Opus e infla o contexto com pesquisa + 3 checks + reconciliacao de docs. Compactar AGORA, depois de trocar pra Sonnet, faz o resumo com o modelo mais barato e libera espaco pra implementacao. Se a sessao e nova (sem `/sdd-plan` recente), pule o `/compact` — nao ha o que compactar.
+
+### 2. Ler Constitution
 `CLAUDE.md` e `ARCHITECTURE.md`.
 
-### 2. Ler memoria persistente
+### 3. Ler memoria persistente
 
 **Objetivo**: carregar contexto rico ANTES de codar — decisoes previas, blockers conhecidos, licoes, preferencias do usuario, padroes do projeto. Isso aumenta seguranca da implementacao e evita repetir erros ja documentados.
 
@@ -84,7 +91,7 @@ Use o que voce leu para:
 
 Detalhes no skill `memory-keeper`.
 
-### 3. Localizar o Plano
+### 4. Localizar o Plano
 Se nao fornecido:
 ```
 Qual SPEC devo executar?
@@ -93,7 +100,7 @@ Planos ficam em thoughts/plans/
 
 Se houver DESIGN.md separado, leia tambem.
 
-### 4. Absorver o Plano
+### 5. Absorver o Plano
 Leia o arquivo completo. Entenda:
 - O que esta sendo construido e por que
 - Phases (Foundation/Core/Integration)
@@ -103,10 +110,10 @@ Leia o arquivo completo. Entenda:
 - Estrategia de testes
 - Skills a ativar
 
-### 5. Ativar Skills
+### 6. Ativar Skills
 Leia cada skill listada no plano em `.claude/skills/` antes de comecar.
 
-### 6. Detectar agente especializado (opcional)
+### 7. Detectar agente especializado (opcional)
 
 Antes de executar no main agent, **verifique se existe um subagente de dev especializado** cuja `description` bate com o contexto da tarefa (stack, dominio, ferramentas). Se houver match forte, ofereca delegar — **default e NAO delegar** (executa no main agent atual).
 
@@ -150,15 +157,15 @@ Delegar a execucao do plano pra ele [s/N]?
 Invoque o subagente via Agent tool, passando:
 - `subagent_type`: o `name` do agente (ex: `dev-backend-ts`)
 - `description`: 3-5 palavras (ex: "Executar plano IMP-042 TDD")
-- `prompt`: instrucao completa pra ele rodar `/executor-plan` no plano em questao, com o path absoluto. Repasse contexto-chave (constitution lida, modo autonomo/step, modo-livre ATIVO/INATIVO, memoria carregada). O subagente continua o fluxo a partir do passo 7.
+- `prompt`: instrucao completa pra ele rodar `/executor-plan` no plano em questao, com o path absoluto. Repasse contexto-chave (constitution lida, modo autonomo/step, modo-livre ATIVO/INATIVO, memoria carregada). O subagente continua o fluxo a partir do passo 8.
 
 **Se rejeitar (N) ou nao houver match:** prossiga normalmente no main agent.
 
-### 7. Detectar modo
+### 8. Detectar modo
 
 Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. Caso contrario, modo autonomo (default).
 
-### 8. Confirmar Inicio
+### 9. Confirmar Inicio
 
 Antes de mostrar o resumo, verifique se modo-livre esta ativo neste projeto:
 - Cheque `thoughts/modo-livre/active` (marker do `/modo-livre`)

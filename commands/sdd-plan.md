@@ -1,5 +1,6 @@
 ---
 description: Pesquisar e planejar feature em 1 doc auto-sized (substitui gerador-prd + gerador-spec). Para Medium/Large/Complex. Quick delega para /quick-task.
+model: claude-opus-4-7
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
@@ -71,7 +72,11 @@ Use esse caminho como base para `thoughts/` (plans, history, STATE.md, ROADMAP.m
 
 Ao ser invocado:
 
-### 1. Receber a demanda
+### 1. Ativar modelo Opus
+
+Antes de qualquer outra coisa, garanta que o modelo ativo e Opus. Rode `/model opus` no inicio da sessao. Planejamento exige raciocinio profundo (auto-sizing, knowledge verification chain, reconciliacao de docs, 3 checks de qualidade) — alinhar pra Opus desde o inicio evita planos rasos e mantem coerencia com o frontmatter deste command.
+
+### 2. Receber a demanda
 Se o usuario nao descreveu:
 ```
 O que voce quer planejar? Pode ser:
@@ -83,10 +88,10 @@ O que voce quer planejar? Pode ser:
 Se for mudanca pequena (≤3 arquivos, 1 frase), prefiro encaminhar para /quick-task.
 ```
 
-### 2. Ler constitution
+### 3. Ler constitution
 `CLAUDE.md` e `ARCHITECTURE.md`.
 
-### 3. Ler memoria persistente
+### 4. Ler memoria persistente
 
 O `MEMORY.md` do auto-memory ja esta carregado pelo harness no system prompt. Use ele como indice:
 
@@ -104,7 +109,7 @@ MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 
 Detalhes no skill `memory-keeper`.
 
-### 4. Ler skills do projeto
+### 5. Ler skills do projeto
 `.claude/skills/` — absorva padroes que vao virar `Skills:` nas tarefas.
 
 ---
