@@ -137,7 +137,7 @@ Pra **distribuicao temporal**:
 
 ### 5. Apresentar relatorio inline
 
-Siga o template do reference `pr-report-mensal.md` (pt-BR, markdown) — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Siga o template do reference `pr-report-mensal.md` (pt-BR, markdown) — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas nesta etapa**.
 
 **Fallback** (reference ausente): monte com header (LABEL, repo, periodo, usuario) + Quantitativo (tabelas de PRs criados por mim e revisados por mim, com taxa de merge incluindo descartados no denominador), Qualitativo (lead time media/mediana/min-max, engajamento, distribuicao temporal por semana) e Lista detalhada (tabelas de mergeados, ainda abertos e revisados por mim, com link `[#NNN](url)`).
 
@@ -253,7 +253,7 @@ Gerar ate o mes atual mesmo assim? [yes/no]
 
 ### 5. Apresentar relatorio anual inline
 
-Siga o template do reference `pr-report-anual.md` (pt-BR) — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Siga o template do reference `pr-report-anual.md` (pt-BR) — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas nesta etapa**.
 
 **Fallback** (reference ausente): monte com header (YEAR, repo, periodo coberto, lacunas) + Quantitativo anual (tabela de totais com taxa de merge anual), Qualitativo anual (lead time agregado, engajamento), Evolucao mensal (tabela Jan-Dez + linha Total), Por trimestre (Q1-Q4) e Highlights (top 5 mais discutidos, top 5 maior lead time, top autores que voce mais revisou).
 
@@ -368,7 +368,7 @@ Filtre estado: mantenha `OPEN` e `MERGED`, descarte `CLOSED` sem merge.
 
 ### 4. Apresentar inline
 
-Siga o template do reference `pr-report-semanal.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Siga o template do reference `pr-report-semanal.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas nesta etapa**.
 
 **Fallback** (reference ausente): monte com header (LABEL, repo, usuario) + Resumo (tabela abri/mergeei/revisei) e as 3 tabelas separadas: PRs que abri (estado atual + idade), PRs que mergeei (aberto em + lead time, com nota de que inclui PRs criados antes da semana) e PRs que revisei (autor + estado, com nota da aproximacao por `updated`).
 

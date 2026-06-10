@@ -64,11 +64,11 @@ When needed:      /busca · /complexidade · /roadmap · /memory-organize
 ```bash
 # Global commands (all projects)
 cp commands/*.md ~/.claude/commands/
-cp -r commands/references ~/.claude/commands/
+mkdir -p ~/.claude/sdd-references && cp commands/references/* ~/.claude/sdd-references/
 
 # Or project-scoped
 cp commands/*.md /your-project/.claude/commands/
-cp -r commands/references /your-project/.claude/commands/
+mkdir -p /your-project/.claude/sdd-references && cp commands/references/* /your-project/.claude/sdd-references/
 ```
 
 The `references/` folder is required: large commands load templates from it on demand (progressive disclosure). Without it the commands still work via an inline fallback, but with summarized templates.

@@ -86,7 +86,7 @@ ROOT_MEM="$HOME/.claude/projects/$(echo "$REPO_ROOT" | sed 's|/|-|g')/memory"
 
 Objetivo: desfazer a centralizacao da memoria no root (symlink criado por `/git-worktree`) antes de remover a worktree.
 
-Protocolo completo (casos symlink válido/quebrado/diretório real/não existe) no reference `memoria-symlink.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): garanta que `~/.claude/projects/<worktree-encoded>/memory` seja symlink pro `memory/` do root; na remoção, desfaça o symlink (unlink) sem apagar o destino.
+Protocolo completo (casos symlink válido/quebrado/diretório real/não existe) no reference `memoria-symlink.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): garanta que `~/.claude/projects/<worktree-encoded>/memory` seja symlink pro `memory/` do root; na remoção, desfaça o symlink (unlink) sem apagar o destino.
 
 ### Passo 8 — Remover Worktree
 

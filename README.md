@@ -42,7 +42,7 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **Modelo por command**: a thread principal roda leve (Sonnet base, ou Haiku nos utilitários de git) e só sobe pra Opus **dentro de subagentes**, na etapa que realmente exige raciocínio — assim o modelo caro processa só o contexto focado, sem queimar token nas etapas mecânicas (git, leitura de arquivo, escrita de doc). Trocar de modelo na thread principal (`/model`) invalida o cache de prompt, então os commands evitam isso. Exceção: `/sdd-plan` roda em Opus na main (planejamento é raciocínio interativo denso e espalhado, não isolável num subagente) e delega só as leituras volumosas a subagentes — pra escopo Medium, o `/sdd-plan-eco` derruba esse custo. Nos frontmatters os modelos são IDs completos (formato documentado pra slash commands); nos spawns de subagent são **aliases** (`opus`/`sonnet`/`haiku`), garantidos pela doc do Agent SDK — acompanham o melhor modelo de cada tier sem manutenção.
 
-**Progressive disclosure**: os commands grandes mantêm no corpo só o protocolo; templates e blocos de uso pontual vivem em `commands/references/` e são carregados via `Read` apenas no passo que os usa. Isso corta o custo fixo por invocação (~30-40% nos commands pesados) e evita arrastar template de relatório por dezenas de turnos de execução.
+**Progressive disclosure**: os commands grandes mantêm no corpo só o protocolo; templates e blocos de uso pontual vivem em `commands/references/` (instalados em `~/.claude/sdd-references/` — fora de `commands/`, pra não serem registrados como commands namespaced) e são carregados via `Read` apenas no passo que os usa. Isso corta o custo fixo por invocação (~30-40% nos commands pesados) e evita arrastar template de relatório por dezenas de turnos de execução.
 
 ### Fluxo recomendado
 
@@ -64,11 +64,11 @@ Quando precisar:  /busca · /complexidade · /roadmap · /memory-organize
 ```bash
 # Commands globais (todos os projetos)
 cp commands/*.md ~/.claude/commands/
-cp -r commands/references ~/.claude/commands/
+mkdir -p ~/.claude/sdd-references && cp commands/references/* ~/.claude/sdd-references/
 
 # Ou por projeto
 cp commands/*.md /seu-projeto/.claude/commands/
-cp -r commands/references /seu-projeto/.claude/commands/
+mkdir -p /seu-projeto/.claude/sdd-references && cp commands/references/* /seu-projeto/.claude/sdd-references/
 ```
 
 A pasta `references/` é necessária: os commands grandes carregam templates dela sob demanda (progressive disclosure). Sem ela os commands ainda funcionam via fallback inline, mas com templates resumidos.

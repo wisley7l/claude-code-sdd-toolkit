@@ -165,7 +165,7 @@ Subcomandos:
 
 ## JSON canônico
 
-O JSON canônico vive no reference `modo-livre-settings.json` — procure em `.claude/commands/references/` do projeto, senão em `~/.claude/commands/references/`. Leia o arquivo e aplique-o integralmente. **Se o reference não existir, PARE e avise o usuário** — nunca invente/reconstrua o JSON de permissões de memória (é segurança).
+O JSON canônico vive no reference `modo-livre-settings.json` — procure em `.claude/sdd-references/` do projeto, senão em `~/.claude/sdd-references/`. Leia o arquivo e aplique-o integralmente. **Se o reference não existir, PARE e avise o usuário** — nunca invente/reconstrua o JSON de permissões de memória (é segurança).
 
 > **Atenção à sintaxe (se for ler/auditar o reference):** patterns Bash usam **espaço antes do `*`** (`Bash(curl *)`, não `Bash(curl*)`). Conforme docs oficiais: `Bash(npm run *)` "matches commands starting with `npm run`". Pra cobrir comando sem args E com args, inclua as duas formas: `Bash(git status)` E `Bash(git status *)`.
 

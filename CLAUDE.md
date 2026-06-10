@@ -35,7 +35,7 @@ LICENSE
 
 4. **Idioma:** documentação e instruções de command em **pt-BR**. Termos técnicos e identificadores ficam em inglês.
 
-5. **Progressive disclosure:** o corpo de um command grande mantém só o protocolo (princípios, fluxo, guardrails). Templates de output e blocos usados num único passo vão pra `commands/references/<command>-<tema>.md`, carregados via `Read` no passo que os usa. Todo ponteiro pra reference inclui: busca em `.claude/commands/references/` do projeto → `~/.claude/commands/references/` → fallback inline resumido (2-4 linhas com as seções). Exceção: conteúdo de segurança (JSON de permissões do `/modo-livre`) não tem fallback improvisado — reference ausente = parar e avisar.
+5. **Progressive disclosure:** o corpo de um command grande mantém só o protocolo (princípios, fluxo, guardrails). Templates de output e blocos usados num único passo vão pra `commands/references/<command>-<tema>.md`, carregados via `Read` no passo que os usa. Todo ponteiro pra reference inclui: busca em `.claude/sdd-references/` do projeto → `~/.claude/sdd-references/` → fallback inline resumido (2-4 linhas com as seções). **Instalação fica FORA de `.claude/commands/`** (em `sdd-references/`): o scanner do Claude Code registra todo `.md` dentro de `commands/` como command namespaced, o que poluiria a lista de skills de toda sessão. Exceção: conteúdo de segurança (JSON de permissões do `/modo-livre`) não tem fallback improvisado — reference ausente = parar e avisar.
 
 6. **Modelos:** frontmatter de command usa ID completo (`claude-sonnet-4-6` etc. — formato documentado); spawns de subagent usam **aliases** (`opus`/`sonnet`/`haiku` — garantidos pela doc do Agent SDK).
 

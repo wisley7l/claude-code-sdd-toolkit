@@ -404,7 +404,7 @@ Pronto para /executor-plan quando quiser.
 
 Caminho: `thoughts/plans/SPEC-DD-MM-YYYY-NNN-[slug].md`
 
-Escreva o doc seguindo o template do reference `sdd-plan-spec-template.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas na hora de escrever** (Passo 11+) — ele nao e necessario antes disso.
+Escreva o doc seguindo o template do reference `sdd-plan-spec-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas na hora de escrever** (Passo 11+) — ele nao e necessario antes disso.
 
 **Fallback** (reference ausente): monte com frontmatter (date, scope, issue, skills) + secoes: Resumo Executivo (escrito por ultimo), 1. Entendimento, 2. Decisoes Resolvidas, 3. Analise Local (componentes, dependencias, design docs/reconciliacao), 4. Referencias Externas (omitir se Medium sem pesquisa), 5. Diagrama (mermaid; obrigatorio Large/Complex), 6. Estrategia de Testes, 7. Tarefas (phases + estrutura What/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit), 8. Parallel Execution Map, 9. Simplificacao, 10. Validacao Pre-Aprovacao (3 checks), 11. Duvidas Pendentes, 12. Verificacao de Links.
 

@@ -512,7 +512,7 @@ Dispare `Agent` com:
 - `subagent_type`: `general-purpose`
 - `model`: `haiku` (mecanico, rapido, barato)
 - `description`: "Validar conclusao do plano"
-- `prompt`: monte a partir do reference `executor-plan-validador.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): monte um prompt que proibe executar codigo, lista as 5 checagens (marcacoes `[x]` no SPEC vs total, test count atual >= esperado, gate green, staging reportado, sinais de parada dura) e exige retorno JSON estrito `{complete, checks: {spec_marks, test_count, gate, staging, hard_stops}, reason}`.
+- `prompt`: monte a partir do reference `executor-plan-validador.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte um prompt que proibe executar codigo, lista as 5 checagens (marcacoes `[x]` no SPEC vs total, test count atual >= esperado, gate green, staging reportado, sinais de parada dura) e exige retorno JSON estrito `{complete, checks: {spec_marks, test_count, gate, staging, hard_stops}, reason}`.
 
 **Processamento do retorno**:
 
@@ -647,7 +647,7 @@ Proximo: /sdd-review pra checar antes do push.
 
 ## Relatorio
 
-Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md` seguindo o template do reference `executor-plan-imp.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): monte com as secoes — O que foi feito (por phase), Diagrama (mermaid), Testes (baseline/esperado/final + PRESERVADO), Complexidade (threshold, ferramenta, correcoes, dividas), Paralelismo Utilizado, Desvios do Plano (inclui SPEC_DEVIATION), Memoria persistente (entradas + anotacoes pro /sdd-learning), Reconciliacao com Docs, Observacoes.
+Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md` seguindo o template do reference `executor-plan-imp.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte com as secoes — O que foi feito (por phase), Diagrama (mermaid), Testes (baseline/esperado/final + PRESERVADO), Complexidade (threshold, ferramenta, correcoes, dividas), Paralelismo Utilizado, Desvios do Plano (inclui SPEC_DEVIATION), Memoria persistente (entradas + anotacoes pro /sdd-learning), Reconciliacao com Docs, Observacoes.
 
 ### Verificacao de Links do Relatorio
 

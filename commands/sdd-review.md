@@ -280,7 +280,7 @@ Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante q
 
 Crie `<root>/thoughts/reviews/REV-DD-MM-YYYY-[slug].md` (na v7 do toolkit; em projetos legados ainda em `thoughts/shared/reviews/` mantenha o padrão existente):
 
-Escreva o relatorio seguindo o template do reference `sdd-review-relatorio.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa** (nao antes).
+Escreva o relatorio seguindo o template do reference `sdd-review-relatorio.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas nesta etapa** (nao antes).
 
 **Fallback** (reference ausente): monte com frontmatter (date, reviewer, source, pr_detected, status) + secoes: Resumo Executivo (tabela de metricas + aprovacao), Reviews Anteriores Considerados (so se houver PR com reviews humanos), Mapa de Impacto (mermaid), O que foi bem, Issues Encontradas (uma subsecao `- [ ]` por issue com Arquivo/Confidence/Descricao/Impacto/Sugestao, severidade 🔴 CRITICAL / 🟡 MAJOR / 🔵 MINOR; variantes pra Nomenclatura, Query, Complexidade e Teste), Conformidade com Projeto (tabela de criterios), Referencias.
 
@@ -324,7 +324,7 @@ Quer gerar fixes via /quick-task?
 [a/b/c/d/e]
 ```
 
-**Se (a), (b), (c) ou (d)**: siga o protocolo de execucao do reference `sdd-review-action-plan.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Resumo do protocolo (fallback se o reference nao existir): pra cada must-fix selecionada, crie `<root>/thoughts/quick/NNN-fix-<slug>/TASK.md` derivado da issue e invoque o quick-task via `Agent` (`subagent_type: general-purpose`, prompt com TASK.md + conteudo de `quick-task.md` + modo `autonomo-invocado`/`step-invocado` + instrucao de nunca commitar); acumule resultados e pare a cadeia se uma fix bloquear. Em (d), so crie os TASK.md e liste os paths. Apos ≥3 fixes aplicadas, ofereca regression check (gate do projeto, opcionalmente + reanalise com o Agente 2).
+**Se (a), (b), (c) ou (d)**: siga o protocolo de execucao do reference `sdd-review-action-plan.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Resumo do protocolo (fallback se o reference nao existir): pra cada must-fix selecionada, crie `<root>/thoughts/quick/NNN-fix-<slug>/TASK.md` derivado da issue e invoque o quick-task via `Agent` (`subagent_type: general-purpose`, prompt com TASK.md + conteudo de `quick-task.md` + modo `autonomo-invocado`/`step-invocado` + instrucao de nunca commitar); acumule resultados e pare a cadeia se uma fix bloquear. Em (d), so crie os TASK.md e liste os paths. Apos ≥3 fixes aplicadas, ofereca regression check (gate do projeto, opcionalmente + reanalise com o Agente 2).
 
 **Se (e)**: termine sem ação.
 

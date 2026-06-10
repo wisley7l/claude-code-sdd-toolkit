@@ -86,7 +86,7 @@ mkdir -p "$ROOT_MEM" "$(dirname "$WORKTREE_MEM")"
 
 Objetivo: centralizar a memoria no root via symlink, pra que o `MEMORY.md` carregado na sessao do worktree seja o do root.
 
-Protocolo completo (casos symlink válido/quebrado/diretório real/não existe) no reference `memoria-symlink.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): garanta que `~/.claude/projects/<worktree-encoded>/memory` seja symlink pro `memory/` do root; na remoção, desfaça o symlink (unlink) sem apagar o destino.
+Protocolo completo (casos symlink válido/quebrado/diretório real/não existe) no reference `memoria-symlink.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): garanta que `~/.claude/projects/<worktree-encoded>/memory` seja symlink pro `memory/` do root; na remoção, desfaça o symlink (unlink) sem apagar o destino.
 
 ### Passo 8 — Verificar .gitignore
 
