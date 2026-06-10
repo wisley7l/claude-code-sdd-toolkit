@@ -171,8 +171,6 @@ Quando autorizado:
 
 Índice em **tabela markdown** agrupado por tipo. Cada tipo é uma seção `## <Tipo>` com tabela `| Slug | Hook |`. Uma seção especial `## GUARDRAILs` no topo abriga regras invioláveis de colaboração (universais ao projeto), com formato `| Regra | Detalhe (link) |`.
 
-**Hooks autossuficientes**: o hook da linha no MEMORY.md deve conter a **regra aplicável**, não só o tema. Certo: `schema sem FK; validar referência na camada de aplicação`. Errado: `decisão sobre schema`. O MEMORY.md é carregado de graça pelo harness em toda sessão; abrir a nota individual custa um Read — na maioria dos usos o agente deve conseguir agir só com o hook. A nota completa é o backup do contexto (o "por quê", referências). Ao criar ou atualizar uma linha, reescreva o hook até ele ser acionável sozinho.
-
 **O que vai pra `## GUARDRAILs`** (e o que NÃO vai):
 
 - ✅ Regras invioláveis: "nunca commita sem OK", "nunca pusha sem OK", "nunca aplica migration de schema sem OK", "não vaza credenciais em logs"

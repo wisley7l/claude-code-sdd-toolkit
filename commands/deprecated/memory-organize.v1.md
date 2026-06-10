@@ -124,10 +124,6 @@ Em paralelo, identificar:
 - Critério: a regra está formulada como "NUNCA X" / "JAMAIS Y" / "obrigatório Z" E romper a regra causa dano irreversível (commit indevido, push, deleção de dados, vazamento) — não é só preferência ergonômica.
 - Propor: promover via `/memory-organize rename <slug> --guardrail` (ou aplicar manual sob confirmação).
 
-**(i) Hook não-acionável** — linha do `MEMORY.md` cujo hook só nomeia o tema sem trazer a regra aplicável:
-- Ex.: hook `decisão sobre schema` em vez de `schema sem FK; validar referência na camada de aplicação`.
-- Propor reescrita do hook (a partir do corpo da nota), sem mexer na nota.
-
 ### 5. Propor mudanças — bloco por bloco
 
 Pra cada categoria com achados, apresentar bloco separado e perguntar:

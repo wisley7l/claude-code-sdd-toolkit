@@ -1,5 +1,5 @@
 ---
-description: Relatorio de PRs do usuario no repo atual — semanal/mensal/anual. Mensal e anual salvam; semanal so inline. Ignora fechados sem merge.
+description: Relatorio de PRs do usuario no repo atual — semanal/mensal/anual. Modos mensal e anual salvam; semanal so inline. Desconsidera fechados sem merge.
 model: claude-haiku-4-5-20251001
 argument-hint: [--mes YYYY-MM | --de YYYY-MM-DD --ate YYYY-MM-DD | --semana atual|ultima|YYYY-Www | --mes YYYY-MM --semana N | anual YYYY]
 allowed-tools: Bash(gh *), Bash(git *), Bash(date *), Bash(mkdir *), Bash(ls *), Bash(jq *), Read, Glob, Write, AskUserQuestion
@@ -137,9 +137,87 @@ Pra **distribuicao temporal**:
 
 ### 5. Apresentar relatorio inline
 
-Siga o template do reference `pr-report-mensal.md` (pt-BR, markdown) — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Use este template (pt-BR, markdown):
 
-**Fallback** (reference ausente): monte com header (LABEL, repo, periodo, usuario) + Quantitativo (tabelas de PRs criados por mim e revisados por mim, com taxa de merge incluindo descartados no denominador), Qualitativo (lead time media/mediana/min-max, engajamento, distribuicao temporal por semana) e Lista detalhada (tabelas de mergeados, ainda abertos e revisados por mim, com link `[#NNN](url)`).
+```markdown
+# Relatorio de PRs — {LABEL}
+
+**Repo**: `{REPO}`
+**Periodo**: {FROM} a {TO}
+**Usuario**: @{USER}
+
+---
+
+## Quantitativo
+
+### PRs criados por mim
+
+| Metrica | Valor |
+|---|---|
+| Total criados no periodo | {N} |
+| Mergeados | {M} |
+| Ainda abertos | {O} |
+| Closed sem merge (desconsiderados) | {C} |
+| **Taxa de merge** | **{M/(M+O+C) * 100}%** |
+
+### PRs revisados por mim
+
+| Metrica | Valor |
+|---|---|
+| Total | {R} |
+| Mergeados (do que revisei) | {RM} |
+| Ainda abertos | {RO} |
+
+> Limitacao: filtro por `created` no periodo, nao pela data do review.
+
+---
+
+## Qualitativo
+
+### Lead time (so PRs mergeados, criados por mim)
+
+| Metrica | Valor |
+|---|---|
+| Media | {X} dias |
+| Mediana | {Y} dias |
+| Min / Max | {Zmin} / {Zmax} dias |
+
+### Engajamento (so PRs mergeados, criados por mim)
+
+| Metrica | Valor |
+|---|---|
+| Media de comentarios + reviews por PR | {E} |
+| PR mais discutido | #{NUM} — {titulo} ({total} interacoes) |
+
+### Distribuicao temporal (PRs criados)
+
+| Semana | Criados | Mergeados |
+|---|---|---|
+| Sem {N1} ({date}) | {X} | {Y} |
+| ... | ... | ... |
+
+---
+
+## Lista detalhada
+
+### Mergeados ({M})
+
+| # | Titulo | Lead time | Interacoes |
+|---|---|---|---|
+| [#NNN](url) | titulo | X dias | N |
+
+### Ainda abertos ({O})
+
+| # | Titulo | Idade | Interacoes |
+|---|---|---|---|
+| [#NNN](url) | titulo | X dias | N |
+
+### Revisados por mim ({R})
+
+| # | Autor | Titulo | Estado |
+|---|---|---|---|
+| [#NNN](url) | @user | titulo | merged/open |
+```
 
 ### 6. Perguntar se salvar
 
@@ -168,9 +246,46 @@ Grave em `$ROOT/thoughts/reports/prs-{SUFIXO}.md` com:
 - Header com data de geracao (`generated: YYYY-MM-DD HH:MM`)
 - Todo o conteudo do relatorio inline
 - Secao final `## Destaques` vazia (campo manual pro user preencher contexto qualitativo subjetivo)
-- **Bloco de dados machine-readable** ao final (consumido pelo modo `anual`) — formato exato no mesmo reference `pr-report-mensal.md` (secao "Bloco de dados machine-readable")
+- **Bloco de dados machine-readable** ao final (consumido pelo modo `anual`):
 
-**Fallback** (reference ausente): secao `## Dados (machine-readable)` com YAML em \`\`\`yaml contendo `type: pr-report-monthly`, `generated`, `repo`, `user`, `period` (from/to/label), `created` (total/merged/open/closed_no_merge/merge_rate), `reviewed` (total/merged/open), `lead_time_days` (avg/median/min/max), `engagement` (avg_interactions/most_discussed_pr) e as listas `prs_merged`, `prs_open`, `prs_reviewed` (objetos inline com number/title/url + metricas).
+````markdown
+## Dados (machine-readable)
+
+```yaml
+type: pr-report-monthly
+generated: YYYY-MM-DD HH:MM
+repo: owner/repo
+user: username
+period:
+  from: YYYY-MM-DD
+  to: YYYY-MM-DD
+  label: "MM/YYYY" # ou range
+created:
+  total: N
+  merged: M
+  open: O
+  closed_no_merge: C
+  merge_rate: 0.XX
+reviewed:
+  total: R
+  merged: RM
+  open: RO
+lead_time_days:
+  avg: X.X
+  median: Y.Y
+  min: Zmin
+  max: Zmax
+engagement:
+  avg_interactions: E.E
+  most_discussed_pr: NNN
+prs_merged:
+  - { number: NNN, title: "...", url: "...", lead_time_days: X, interactions: N }
+prs_open:
+  - { number: NNN, title: "...", url: "...", age_days: X, interactions: N }
+prs_reviewed:
+  - { number: NNN, author: "@user", title: "...", url: "...", state: "merged|open" }
+```
+````
 
 **Sobrescreve sem perguntar de novo** (usuario ja autorizou ao escolher "Salvar").
 
@@ -253,9 +368,82 @@ Gerar ate o mes atual mesmo assim? [yes/no]
 
 ### 5. Apresentar relatorio anual inline
 
-Siga o template do reference `pr-report-anual.md` (pt-BR) — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Template (pt-BR):
 
-**Fallback** (reference ausente): monte com header (YEAR, repo, periodo coberto, lacunas) + Quantitativo anual (tabela de totais com taxa de merge anual), Qualitativo anual (lead time agregado, engajamento), Evolucao mensal (tabela Jan-Dez + linha Total), Por trimestre (Q1-Q4) e Highlights (top 5 mais discutidos, top 5 maior lead time, top autores que voce mais revisou).
+```markdown
+# Relatorio Anual de PRs — {YEAR}
+
+**Repo**: `{REPO}` (extraido do 1o mensal)
+**Periodo coberto**: {meses encontrados}
+**Lacunas**: {meses faltando, se houver}
+
+---
+
+## Quantitativo anual
+
+| Metrica | Total |
+|---|---|
+| PRs criados | {N} |
+| Mergeados | {M} |
+| Ainda abertos | {O} |
+| Closed sem merge (desconsiderados) | {C} |
+| **Taxa de merge anual** | **{XX}%** |
+| PRs revisados | {R} |
+
+## Qualitativo anual
+
+### Lead time agregado (todos os mergeados do ano)
+| Metrica | Valor |
+|---|---|
+| Media | {X} dias |
+| Mediana | {Y} dias |
+| Min / Max | {Zmin} / {Zmax} dias |
+
+### Engajamento
+| Metrica | Valor |
+|---|---|
+| Media de interacoes/PR | {E} |
+| PR mais discutido do ano | #{NUM} — {titulo} ({total} interacoes) |
+
+---
+
+## Evolucao mensal
+
+| Mes | Criados | Mergeados | Revisados | Lead time medio |
+|---|---|---|---|---|
+| Jan | ... | ... | ... | ... |
+| Fev | ... | ... | ... | ... |
+| ... | | | | |
+| **Total** | {N} | {M} | {R} | {avg} |
+
+## Por trimestre
+
+| Trimestre | Criados | Mergeados | Taxa de merge |
+|---|---|---|---|
+| Q1 | ... | ... | ... |
+| Q2 | ... | ... | ... |
+| Q3 | ... | ... | ... |
+| Q4 | ... | ... | ... |
+
+---
+
+## Highlights
+
+### Top 5 mais discutidos
+| # | Titulo | Interacoes |
+|---|---|---|
+| [#NNN](url) | titulo | N |
+
+### Top 5 maior lead time (mergeados)
+| # | Titulo | Lead time |
+|---|---|---|
+| [#NNN](url) | titulo | X dias |
+
+### Top autores que voce mais revisou
+| Autor | PRs revisados |
+|---|---|
+| @user | N |
+```
 
 ### 6. Perguntar se salva
 
@@ -368,9 +556,47 @@ Filtre estado: mantenha `OPEN` e `MERGED`, descarte `CLOSED` sem merge.
 
 ### 4. Apresentar inline
 
-Siga o template do reference `pr-report-semanal.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa**.
+Template:
 
-**Fallback** (reference ausente): monte com header (LABEL, repo, usuario) + Resumo (tabela abri/mergeei/revisei) e as 3 tabelas separadas: PRs que abri (estado atual + idade), PRs que mergeei (aberto em + lead time, com nota de que inclui PRs criados antes da semana) e PRs que revisei (autor + estado, com nota da aproximacao por `updated`).
+```markdown
+# Semana — {LABEL}
+
+**Repo**: `{REPO}` · **Usuario**: @{USER}
+
+---
+
+## Resumo
+
+| Atividade | Quantidade |
+|---|---|
+| PRs que abri | {A} |
+| PRs que mergeei | {M} |
+| PRs que revisei | {R} |
+
+---
+
+## PRs que abri ({A})
+
+| # | Titulo | Estado atual | Idade |
+|---|---|---|---|
+| [#NNN](url) | titulo | merged/open | X dias |
+
+## PRs que mergeei ({M})
+
+> Inclui PRs criados antes desta semana — lead time mostra a diferenca.
+
+| # | Titulo | Aberto em | Lead time |
+|---|---|---|---|
+| [#NNN](url) | titulo | YYYY-MM-DD | X dias |
+
+## PRs que revisei ({R})
+
+> Aproximacao por `updated` na semana — pode incluir reviews antigos com atividade nova.
+
+| # | Autor | Titulo | Estado atual |
+|---|---|---|---|
+| [#NNN](url) | @user | titulo | merged/open |
+```
 
 ### 5. Nao salvar
 

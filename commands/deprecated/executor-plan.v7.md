@@ -1,5 +1,5 @@
 ---
-description: Executa o plano (SPEC) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. --step ativa pausas + commits atomicos.
+description: Pair programming autonomo — executa tarefas com TDD em modo continuo (sem pausa entre tarefas). Faz staging (git add) por tarefa, nunca commit. No fim, sugere /sdd-review e pergunta estilo de commit pro user. Modo --step ativa pausas + commits atomicos do comportamento antigo.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(lizard *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
@@ -115,20 +115,51 @@ Leia cada skill listada no plano em `.claude/skills/` antes de comecar.
 
 ### 7. Detectar agente especializado (opcional)
 
-Liste `~/.claude/agents/*.md` e `.claude/agents/*.md` e leia **so o frontmatter** (`name`, `description`) de cada um. **Match forte** = ≥3 termos especificos do plano (stack, dominio, ferramentas/integracoes) presentes na description — termos genericos ("implementacao", "codigo") nao contam.
+Antes de executar no main agent, **verifique se existe um subagente de dev especializado** cuja `description` bate com o contexto da tarefa (stack, dominio, ferramentas). Se houver match forte, ofereca delegar — **default e NAO delegar** (executa no main agent atual).
 
-Se houver match forte, ofereca delegar — **default e NAO delegar** (executa no main agent):
+**Como detectar:**
+
+```bash
+# Lista agentes disponiveis (user + projeto)
+ls ~/.claude/agents/*.md 2>/dev/null
+ls .claude/agents/*.md 2>/dev/null
+```
+
+Pra cada agente, leia o frontmatter (`name`, `description`) — sem ler o corpo. Compare a `description` com o contexto extraido do plano:
+
+- **Stack/linguagem** (TypeScript, Go, Python, Rust...): bate com palavras-chave da description?
+- **Dominio** (e-commerce, payments, Shopify, infra, ML...): a description menciona?
+- **Ferramentas/integracoes** (Stripe, MercadoPago, Cloudflare Workers, AWS...): cita explicitamente?
+
+Score simples: conte quantos termos do plano aparecem na description. Se ≥3 termos especificos baterem (nao palavras genericas tipo "implementacao" / "codigo"), considere match forte.
+
+**Se achou match forte:**
 
 ```
 Achei um subagente que parece bater com esta tarefa:
-  `<name>` — Match: <termos que bateram>
+
+  `dev-backend-ts` (model: sonnet)
+  Match: TypeScript, backend, payment gateway, e-commerce
+
 Delegar a execucao do plano pra ele [s/N]?
+
+[N = executar aqui no main agent (recomendado se modo livre nao esta 100% configurado)]
 ```
 
-Avisos antes de delegar (mencione se aplicavel): subagent so herda permissoes via arquivo (`settings.json` / `settings.local.json`) — decisoes runtime do main nao se propagam; com modo livre INATIVO a UX piora (prompts do zero).
+**Cuidados antes de delegar:**
 
-**Se aprovar (s)**: invoque via `Agent` (`subagent_type: <name>`) com instrucao pra rodar `/executor-plan` no plano (path absoluto), repassando constitution lida, modo autonomo/step, estado do modo-livre e memoria relevante. O subagente continua a partir do passo 8.
-**Se rejeitar (N) ou sem match**: prossiga no main agent.
+1. **Subagent so herda permissoes via arquivo** (`.claude/settings.local.json` + `~/.claude/settings.json`). Decisoes runtime ("aceitar este Bash pra sessao") do main **nao se propagam**.
+2. Se modo livre estiver INATIVO, delegar provavelmente vai **piorar UX** (subagent tem que pedir permissao do zero).
+3. Se modo livre estiver ATIVO mas faltar pattern no allow (ex: utilitario unix nao listado), o subagent vai pedir prompt mesmo que o main ja tenha aceitado antes.
+
+**Se o usuario aprovar (s):**
+
+Invoque o subagente via Agent tool, passando:
+- `subagent_type`: o `name` do agente (ex: `dev-backend-ts`)
+- `description`: 3-5 palavras (ex: "Executar plano IMP-042 TDD")
+- `prompt`: instrucao completa pra ele rodar `/executor-plan` no plano em questao, com o path absoluto. Repasse contexto-chave (constitution lida, modo autonomo/step, modo-livre ATIVO/INATIVO, memoria carregada). O subagente continua o fluxo a partir do passo 8.
+
+**Se rejeitar (N) ou nao houver match:** prossiga normalmente no main agent.
 
 ### 8. Detectar modo
 
@@ -196,7 +227,32 @@ Antes de qualquer codigo de producao:
 - Nomes descritivos, sem dependencia externa
 - Execute — devem FALHAR (red phase)
 
-**Delegacao opcional pra agent especializado em testes** — entre os agents ja listados no passo 7 da Configuracao Inicial, considere **match forte** se a `description` mencionar ≥2 termos especificos de teste ("TDD", "red-phase", "edge cases", "fixtures", "mocking"...). Se houver, **prefira delegar** a escrita em modo red-phase via `Agent` (`subagent_type: <name>`), passando: modo red-phase, comportamento esperado da tarefa T\<N\>, path onde a implementacao vai morar, path do SPEC e os criterios de `Done when:`. Ele devolve paths dos testes + comando do gate + status — voce continua no passo 3 (Implementar) usando esses testes. Sem match: escreva voce mesmo seguindo o padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
+**Delegacao opcional pra agent especializado em testes** — Detecte em runtime se existe agent especializado em escrita de testes:
+
+```bash
+# Procura em escopo user + projeto
+ls ~/.claude/agents/*.md 2>/dev/null
+ls .claude/agents/*.md 2>/dev/null
+```
+
+Pra cada agent, leia o frontmatter (`name` + `description`). Considere **match forte** se a `description` mencionar ≥2 termos de teste especificos (ex.: "testes", "TDD", "red-phase", "edge cases", "fixtures", "mocking"). Termos genericos tipo "implementacao" / "codigo" nao contam.
+
+Se houver match forte, **prefira delegar** a escrita dos testes pra ele em modo red-phase. Ele tipicamente le skills/memoria de teste do projeto, escreve seguindo o padrao, roda e retorna paths + comando do gate + status. Voce continua o ciclo no passo 3 (Implementar) usando os testes que ele criou.
+
+Como invocar (substitua `<agent-name>` pelo `name` detectado):
+
+```
+subagent_type: <agent-name>
+description: "Testes red-phase pra T<N>"
+prompt: |
+  Modo: red-phase
+  Tarefa: <descricao do comportamento esperado da tarefa T<N>>
+  Path do codigo: <onde a implementacao vai morar>
+  Plano de origem: <path do SPEC>
+  Done when: <criterios da tarefa>
+```
+
+Se nao houver agent que bata, escreva os testes voce mesmo seguindo padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
 
 **3. Implementar**
 
@@ -512,15 +568,81 @@ Dispare `Agent` com:
 - `subagent_type`: `general-purpose`
 - `model`: `haiku` (mecanico, rapido, barato)
 - `description`: "Validar conclusao do plano"
-- `prompt`: monte a partir do reference `executor-plan-validador.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): monte um prompt que proibe executar codigo, lista as 5 checagens (marcacoes `[x]` no SPEC vs total, test count atual >= esperado, gate green, staging reportado, sinais de parada dura) e exige retorno JSON estrito `{complete, checks: {spec_marks, test_count, gate, staging, hard_stops}, reason}`.
+- `prompt`: ver template abaixo
+
+Template do prompt (substitua placeholders):
+
+```
+Voce e um validador independente. NAO execute codigo. NAO leia arquivos alem dos
+explicitamente listados abaixo. Sua tarefa: confirmar se a execucao do plano abaixo
+terminou com sucesso, com base na evidencia que listo.
+
+Plano: <path absoluto do SPEC>
+Tarefas esperadas: <N>
+
+Checagem 1 — Marcacoes [x] no SPEC:
+- Leia o arquivo do plano (so esse).
+- Conte linhas `- [x]` em secao de tarefas vs total.
+- Esperado: <N>/<N> tarefas marcadas.
+
+Checagem 2 — Test count:
+- Baseline inicial declarado: <X> testes
+- Test count esperado pos-execucao: <Y> testes
+- Test count reportado pelo executor no ultimo passo: extrair da transcript ("Test count: ...").
+- Esperado: atual >= Y. Cair = falha.
+
+Checagem 3 — Gate (typecheck/lint):
+- Comando do gate (declarado em CLAUDE.md): <comando>
+- Ultimo resultado reportado pelo executor: extrair da transcript.
+- Esperado: green/passou.
+
+Checagem 4 — Staging:
+- `git diff --cached --stat` ja foi reportado na transcript pelo executor?
+- Esperado: lista arquivos coerentes com os declarados nas tarefas.
+
+Checagem 5 — Sinais de parada dura:
+- A transcript mostra SPEC_DEVIATION, blocker nao resolvido, ou test count drop?
+- Esperado: nenhum.
+
+Retorne JSON estrito (sem markdown, sem narrativa):
+
+{
+  "complete": true | false,
+  "checks": {
+    "spec_marks": "ok" | "missing N tasks",
+    "test_count": "ok" | "dropped from X to Y",
+    "gate": "ok" | "failed" | "not reported",
+    "staging": "ok" | "missing files" | "not reported",
+    "hard_stops": "none" | "<descricao>"
+  },
+  "reason": "<1-2 frases>"
+}
+```
 
 **Processamento do retorno**:
 
 - `complete: true` → siga para Etapa 5 (Passada final do code-simplifier).
-- `complete: false` → **PARE**. Mostre ao usuario o status de cada check + a razao (formato completo da mensagem no mesmo reference) e pergunte:
-  - (a) Voltar e tentar resolver o que falta (eu identifico e retomo a execucao)
-  - (b) Aceitar como esta e seguir pro review humano (assumindo risco)
-  - (c) Marcar como parada dura e finalizar com aviso
+- `complete: false` → **PARE**. Mostre ao usuario:
+
+```
+⚠️ Validador independente reportou execucao incompleta.
+
+Checks:
+  spec_marks: <status>
+  test_count: <status>
+  gate:       <status>
+  staging:    <status>
+  hard_stops: <status>
+
+Razao: <reason>
+
+O que fazer?
+  (a) Voltar e tentar resolver o que falta (eu identifico e retomo a execucao)
+  (b) Aceitar como esta e seguir pro review humano (assumindo risco)
+  (c) Marcar como parada dura e finalizar com aviso
+
+[a/b/c]
+```
 
 **Importante**: o validador SO ve a transcript. Se a evidencia nao foi narrada explicitamente nos passos anteriores (test count, gate result, staging), ele nao consegue auditar. Por isso o passo "10. Marcar e Avancar" em modo autonomo **deve sempre** incluir contagem e status no log de progresso (ja documentado, mas reforcado).
 
@@ -647,11 +769,77 @@ Proximo: /sdd-review pra checar antes do push.
 
 ## Relatorio
 
-Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md` seguindo o template do reference `executor-plan-imp.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. **Fallback** (reference ausente): monte com as secoes — O que foi feito (por phase), Diagrama (mermaid), Testes (baseline/esperado/final + PRESERVADO), Complexidade (threshold, ferramenta, correcoes, dividas), Paralelismo Utilizado, Desvios do Plano (inclui SPEC_DEVIATION), Memoria persistente (entradas + anotacoes pro /sdd-learning), Reconciliacao com Docs, Observacoes.
+Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md`:
+
+```markdown
+# Implementacao: [Nome]
+
+Data: DD-MM-YYYY
+SPEC: [caminho]
+[DESIGN: caminho, se aplicavel]
+
+## O que foi feito
+
+[Resumo das tarefas executadas, agrupadas por phase]
+
+## Diagrama
+
+[Mermaid — o que foi adicionado/modificado e como conecta]
+
+## Testes
+
+- Unitarios: [N testes em thoughts/tests/]
+- Integracao: [N testes, se aplicavel]
+- Test count: [baseline X / esperado Y / final Z — PRESERVADO]
+- Todos passando: sim/nao
+
+## Complexidade
+
+- Threshold: [10 default / N declarado no CLAUDE.md] — ferramenta: [linter do projeto / lizard / fta / nao rodou]
+- Funcoes corrigidas pelo gate: [lista arquivo:funcao CC antes → depois, ou "nenhuma violacao"]
+- Dividas aceitas pelo usuario: [lista + justificativa, ou "nenhuma"]
+
+## Paralelismo Utilizado
+
+- Tarefas executadas em paralelo: [N tarefas em phase Core]
+- Tempo aproximado economizado vs. sequencial: [estimativa]
+
+## Desvios do Plano
+
+[Mudancas que surgiram durante e por que. Inclui SPEC_DEVIATION reportados por sub-agents]
+
+## Memoria persistente
+
+- Entradas adicionadas em $MEM_DIR: [N — listar tipos e slugs]
+- Decisoes anotadas pra /sdd-learning pos-merge: [K — listar brevemente cada item + por que]
+
+## Reconciliacao com Docs
+
+- Docs do projeto atualizados: [lista, ou "nenhum precisou"]
+
+## Observacoes
+
+[Coisas que notei mas nao implementei — input para proxima iteracao]
+```
 
 ### Verificacao de Links do Relatorio
 
-Apos escrever, lance subagente para verificar links (instrucoes detalhadas no mesmo reference): extraia URLs, `WebFetch` em cada (valide nao-404), adicione tabela `## Verificacao de Links` ao final, e pra cada quebrado pesquise alternativa, atualize ou remova com nota em "Observacoes". Reescreva com as correcoes.
+Apos escrever, lance subagente para verificar links (URLs em referencias, docs):
+
+1. Extraia URLs
+2. `WebFetch` em cada, valide nao-404
+3. Adicione tabela final:
+
+```markdown
+## Verificacao de Links
+
+| URL | Status |
+|---|---|
+| [url] | OK / QUEBRADO — [motivo] |
+```
+
+4. Para cada quebrado: pesquise alternativa, atualize ou remova com nota em "Observacoes"
+5. Reescreva com correcoes
 
 ---
 

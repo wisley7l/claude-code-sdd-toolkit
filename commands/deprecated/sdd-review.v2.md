@@ -1,5 +1,5 @@
 ---
-description: Review autonomo de PR/branch/diff via subagents — relatorio em thoughts/reviews/, considera reviews humanos existentes, oferece fixes via /quick-task.
+description: Code Review autônomo SDD — analisa PR, branch ou diff e gera relatório em thoughts/reviews/. Detecta PR aberto pela branch e considera reviews/comentários humanos existentes (evita duplicar issues). Ao final, lista issues CRITICAL/MAJOR (must-fix) e oferece gerar fixes via /quick-task (autônomo em cadeia OU pausando entre cada).
 model: claude-sonnet-4-6
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(mkdir *), Bash(gh *), Bash(npx *), Bash(bunx *), Bash(lizard *)
 ---
@@ -280,9 +280,164 @@ Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante q
 
 Crie `<root>/thoughts/reviews/REV-DD-MM-YYYY-[slug].md` (na v7 do toolkit; em projetos legados ainda em `thoughts/shared/reviews/` mantenha o padrão existente):
 
-Escreva o relatorio seguindo o template do reference `sdd-review-relatorio.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Carregue o reference **apenas nesta etapa** (nao antes).
+````markdown
+---
+date: DD-MM-YYYY (UTC-3)
+reviewer: Claude Code
+source: "[PR #123 / branch feat/xxx / commit abc1234]"
+pr_detected: "[#123 ou null se não houver PR aberto]"
+status: reviewed
+---
 
-**Fallback** (reference ausente): monte com frontmatter (date, reviewer, source, pr_detected, status) + secoes: Resumo Executivo (tabela de metricas + aprovacao), Reviews Anteriores Considerados (so se houver PR com reviews humanos), Mapa de Impacto (mermaid), O que foi bem, Issues Encontradas (uma subsecao `- [ ]` por issue com Arquivo/Confidence/Descricao/Impacto/Sugestao, severidade 🔴 CRITICAL / 🟡 MAJOR / 🔵 MINOR; variantes pra Nomenclatura, Query, Complexidade e Teste), Conformidade com Projeto (tabela de criterios), Referencias.
+# Review: [Título do PR ou descrição da mudança]
+
+## Resumo Executivo
+
+| Métrica | Valor |
+|---|---|
+| Arquivos revisados | N |
+| Linhas alteradas | +X / -Y |
+| Issues críticas | N |
+| Issues maiores | N |
+| Issues menores | N |
+| Funções acima do threshold de complexidade | N (threshold: 10, ferramenta: [lizard/linter/fta/não rodou]) |
+| Reviews humanos prévios | N (ver seção abaixo) |
+| Aprovação | ✅ Aprovado / ⚠️ Aprovado com ressalvas / ❌ Bloqueado |
+
+## Reviews Anteriores Considerados
+
+> Preencha apenas se houver PR aberto com reviews/comentários humanos. Caso contrário: "Nenhum PR aberto detectado para esta branch — análise puramente local."
+
+| Reviewer | Estado | Data | Resumo |
+|---|---|---|---|
+| @fulano | CHANGES_REQUESTED | DD-MM-YYYY | [1 linha resumindo os pontos principais] |
+| @ciclana | APPROVED | DD-MM-YYYY | [1 linha — ex: aprovou após ajuste de error handling] |
+
+**Issues já apontadas pelos humanos** (não duplicadas neste relatório):
+
+- [arquivo:linha] — @fulano apontou [resumo] → confirmo / não confirmo / parcialmente confirmo
+- [arquivo:linha] — @ciclana sugeriu [resumo] → status do feedback prévio
+
+**Decisões controversas já aprovadas por humano**: [se houver, listar — ex: "uso de `any` em X:Y foi aprovado por @fulano com justificativa Z"]
+
+## Mapa de Impacto
+
+> Arquivos modificados e suas dependências — ajuda a visualizar o escopo da mudança.
+
+```mermaid
+graph LR
+  subgraph Modificados
+    A[arquivo1.ts]
+    B[arquivo2.ts]
+  end
+  subgraph Dependências
+    A --> C[serviço X]
+    B --> C
+  end
+```
+
+## O que foi bem
+
+- [aspecto positivo — código limpo, padrão correto, boa cobertura, etc.]
+
+---
+
+## Issues Encontradas
+
+### - [ ] 🔴 CRITICAL — [Título Issue]
+
+**Arquivo**: `caminho/arquivo.ts:linha`
+**Confidence**: 95/100
+**Descrição**: [O que está errado e por quê é um problema]
+**Impacto**: [Consequência se não corrigido]
+**Sugestão**: [Como corrigir]
+
+```typescript
+// Código atual (problemático)
+
+// Código sugerido
+```
+
+---
+
+### - [ ] 🟡 MAJOR — [Título Issue]
+
+**Arquivo**: `caminho/arquivo.ts:linha`
+**Confidence**: 85/100
+**Descrição**: [...]
+**Impacto**: [...]
+**Sugestão**: [...]
+
+---
+
+### - [ ] 🔵 MINOR — Nomenclatura: [Título Issue]
+
+**Arquivo**: `caminho/arquivo.ts:linha`
+**Confidence**: 80/100
+**Descrição**: [Nome confuso ou typo encontrado]
+**Sugestão**: renomear `nomeAtual` → `nomeSugerido` — [justificativa]
+
+---
+
+### - [ ] 🔵 MINOR — Query: [Título Issue]
+
+**Arquivo**: `caminho/arquivo.ts:linha`
+**Confidence**: 82/100
+**Descrição**: [Problema de performance identificado — ex: SELECT sem LIMIT em tabela de crescimento ilimitado]
+**Risco em escala**: [O que acontece com N registros]
+**Sugestão**: [Query alternativa ou abordagem]
+
+```typescript
+// Query atual
+
+// Query otimizada sugerida
+```
+
+---
+
+### - [ ] 🟡 MAJOR / 🔵 MINOR — Complexidade: [nome da função]
+
+**Arquivo**: `caminho/arquivo.ts:linha`
+**CC**: [N] (threshold: [10], métrica: [ciclomática/cognitiva], ferramenta: [lizard/linter do projeto/fta])
+**Descrição**: função [introduzida/modificada] pelo diff com complexidade acima do limite
+**Impacto**: difícil de testar (cada caminho é um caso de teste) e de manter
+**Sugestão**: [extrair helpers / early returns / substituir cadeia if-else por lookup table / decompor condições — o que se aplica ao caso]
+
+---
+
+### - [ ] 🟡 MAJOR / 🔵 MINOR — Teste: [Título Issue]
+
+**Arquivo**: `caminho/arquivo.test.ts:linha`
+**Confidence**: 85/100
+**Descrição**: [Problema identificado — ex: 5 `it()` separados testando propriedades do mesmo retorno]
+**Impacto**: [Suite inflada, setup duplicado, falsa sensação de cobertura]
+**Sugestão**: [Agrupar assertions / reescrever teste]
+
+```typescript
+// Teste atual (problemático)
+
+// Teste sugerido
+```
+
+---
+
+## Conformidade com Projeto
+
+| Critério | Status | Observação |
+|---|---|---|
+| CLAUDE.md conventions | ✅ / ⚠️ / ❌ | |
+| ARCHITECTURE.md patterns | ✅ / ⚠️ / ❌ | |
+| Schema validation | ✅ / ⚠️ / ❌ | |
+| Runtime correto (conforme CLAUDE.md) | ✅ / ⚠️ / ❌ | |
+| Error handling | ✅ / ⚠️ / ❌ | |
+| Test quality | ✅ / ⚠️ / N/A | |
+
+## Referências
+
+- Fonte: [PR #N / branch / commit]
+- SPEC relacionada: [caminho em thoughts/plans/, se existir]
+- CLAUDE.md constraint relevante: [se algum foi violado]
+````
 
 ---
 
@@ -324,9 +479,58 @@ Quer gerar fixes via /quick-task?
 [a/b/c/d/e]
 ```
 
-**Se (a), (b), (c) ou (d)**: siga o protocolo de execucao do reference `sdd-review-action-plan.md` — procure em `.claude/commands/references/` do projeto, senao em `~/.claude/commands/references/`. Resumo do protocolo (fallback se o reference nao existir): pra cada must-fix selecionada, crie `<root>/thoughts/quick/NNN-fix-<slug>/TASK.md` derivado da issue e invoque o quick-task via `Agent` (`subagent_type: general-purpose`, prompt com TASK.md + conteudo de `quick-task.md` + modo `autonomo-invocado`/`step-invocado` + instrucao de nunca commitar); acumule resultados e pare a cadeia se uma fix bloquear. Em (d), so crie os TASK.md e liste os paths. Apos ≥3 fixes aplicadas, ofereca regression check (gate do projeto, opcionalmente + reanalise com o Agente 2).
+**Se (a) ou (b)**: para cada must-fix selecionada (todas em a/b; subset em c):
+
+1. Crie `<root>/thoughts/quick/NNN-fix-<slug>/TASK.md` com conteúdo derivado da issue:
+   - Descrição: o "Descrição" + "Impacto" da issue
+   - Por que: vem do contexto da issue
+   - Passos: rascunho da sugestão de correção
+   - Arquivos esperados: arquivo da issue
+   - TDD aplicável: sim se for código de lib/domínio; não se for typo/config
+   - Gate: comando do projeto (typecheck/lint/test conforme CLAUDE.md)
+   - Skills: skills do projeto relevantes ao arquivo modificado
+
+2. **Invoque o quick-task via Agent subagent**:
+   - `subagent_type: general-purpose`
+   - Prompt contém: o TASK.md, o conteúdo de `quick-task.md` (carregado via Read), o modo (`autonomo-invocado` ou `step-invocado`), instrução "não commite — só `git add` ao final" (em ambos os modos invocados)
+   - Subagent segue o protocolo do quick-task com as adaptações do modo invocado
+   - Subagent retorna: status (Complete/Blocked/Partial), files changed, gate result, test count, observações
+
+3. **Acumule resultados**. Se uma fix bloquear (escopo cresceu, decisão arquitetural surgiu), pare a cadeia e mostre ao usuário:
+   ```
+   Fix [N/M] bloqueada: [motivo]
+   Sugestão do quick-task: escalar para /sdd-plan
+   Continuo com as próximas ([X] restantes) ou paro? [continuar/parar]
+   ```
+
+**Se (c)**: liste as must-fix com checkboxes, peça seleção, depois mesmo fluxo de (a) ou (b) — pergunte qual modo após a seleção.
+
+**Se (d)**: só crie os `TASK.md` em `thoughts/quick/NNN-fix-<slug>/`. Liste paths ao final. Termine sem invocar quick-task.
 
 **Se (e)**: termine sem ação.
+
+### Regression check após aplicar fixes (opt-in se ≥3 fixes)
+
+Se a cadeia (a/b/c) aplicou **3 ou mais fixes com sucesso**, ofereça regression check antes de concluir:
+
+```
+[N] fixes aplicadas (staged, não commitadas).
+
+Rodar regression check pra garantir que nada quebrou?
+  (a) Sim — rodar gate do projeto (typecheck/lint declarado em CLAUDE.md)
+  (b) Sim — gate + reanalisar arquivos tocados com Agente 2 (Bugs) só
+  (c) Não — confio nos fixes, segue pro resumo final
+
+[a/b/c]
+```
+
+**Se (a)**: rode o comando declarado em CLAUDE.md. Se passar, ✅ no resumo. Se falhar, reporte qual passo introduziu o problema (use o tracking de arquivos por fix do quick-task) e pergunte se reverte ou pede `/quick-task` pra corrigir.
+
+**Se (b)**: roda (a) + dispara **só o Agente 2 (Bugs)** com o diff atualizado (após fixes). Reporta novos achados se houver — eles entram como anexo no relatório, não substituem o original.
+
+**Se (c)**: pula direto pro resumo.
+
+**Se a cadeia aplicou <3 fixes**: pule esta seção (custo > benefício pra pouca mudança).
 
 ### Resultado final (após Action Plan)
 

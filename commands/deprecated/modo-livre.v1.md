@@ -1,5 +1,5 @@
 ---
-description: MODO LIVRE — toggle do modo autônomo. `on` instala settings (allow/deny), `off` restaura backup, `update` reescreve com o JSON canônico. NUNCA commita/pusha/rm sem autorização.
+description: MODO LIVRE — toggle do modo autônomo. `on` instala settings com allow amplo + deny dos perigosos. `off` restaura backup. `update` reescreve settings com JSON canônico atual (sem mexer no backup). NUNCA commita/pusha/rm sem autorização explícita.
 model: claude-sonnet-4-6
 argument-hint: [on|off|update|status]
 ---
@@ -48,7 +48,7 @@ cp .claude/settings.local.json thoughts/modo-livre/settings.local.json.bak
 ```
 Se NÃO existe → não faça backup (não havia config anterior).
 
-**3.** Escreva `.claude/settings.local.json` com o conteúdo do reference `modo-livre-settings.json` (ver seção [JSON canônico](#json-canônico)).
+**3.** Escreva `.claude/settings.local.json` com o conteúdo da seção [JSON canônico](#json-canônico) abaixo.
 
 **4.** Crie o marker com timestamp ISO 8601:
 ```bash
@@ -120,7 +120,7 @@ e pare.
    O backup ORIGINAL (pré-modo-livre) em thoughts/modo-livre/settings.local.json.bak fica intacto.
 ```
 
-**3.** Sobrescreva `.claude/settings.local.json` com o conteúdo do reference `modo-livre-settings.json` (ver seção [JSON canônico](#json-canônico)).
+**3.** Sobrescreva `.claude/settings.local.json` com o conteúdo da seção [JSON canônico](#json-canônico).
 
 **4.** Atualize o timestamp do marker (opcional, ajuda no debug):
 ```bash
@@ -165,9 +165,178 @@ Subcomandos:
 
 ## JSON canônico
 
-O JSON canônico vive no reference `modo-livre-settings.json` — procure em `.claude/commands/references/` do projeto, senão em `~/.claude/commands/references/`. Leia o arquivo e aplique-o integralmente. **Se o reference não existir, PARE e avise o usuário** — nunca invente/reconstrua o JSON de permissões de memória (é segurança).
+Este é o conteúdo exato pra escrever em `.claude/settings.local.json` no `on`:
 
-> **Atenção à sintaxe (se for ler/auditar o reference):** patterns Bash usam **espaço antes do `*`** (`Bash(curl *)`, não `Bash(curl*)`). Conforme docs oficiais: `Bash(npm run *)` "matches commands starting with `npm run`". Pra cobrir comando sem args E com args, inclua as duas formas: `Bash(git status)` E `Bash(git status *)`.
+> **Atenção à sintaxe:** patterns Bash usam **espaço antes do `*`** (`Bash(curl *)`, não `Bash(curl*)`). Conforme docs oficiais: `Bash(npm run *)` "matches commands starting with `npm run`". Pra cobrir comando sem args E com args, inclua as duas formas: `Bash(git status)` E `Bash(git status *)`.
+
+```json
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Edit",
+      "Write",
+      "Read",
+      "WebFetch",
+      "WebSearch",
+      "Agent",
+      "Skill",
+      "Bash(git *)",
+      "Bash(gh *)",
+      "Bash(ls)",
+      "Bash(ls *)",
+      "Bash(pwd)",
+      "Bash(cd *)",
+      "Bash(cat *)",
+      "Bash(rg *)",
+      "Bash(grep *)",
+      "Bash(find *)",
+      "Bash(fd *)",
+      "Bash(tree)",
+      "Bash(tree *)",
+      "Bash(echo *)",
+      "Bash(printf *)",
+      "Bash(which *)",
+      "Bash(whereis *)",
+      "Bash(file *)",
+      "Bash(stat *)",
+      "Bash(wc *)",
+      "Bash(head *)",
+      "Bash(tail *)",
+      "Bash(sort *)",
+      "Bash(uniq *)",
+      "Bash(cut *)",
+      "Bash(tr *)",
+      "Bash(awk *)",
+      "Bash(sed *)",
+      "Bash(xargs *)",
+      "Bash(tee *)",
+      "Bash(basename *)",
+      "Bash(dirname *)",
+      "Bash(readlink *)",
+      "Bash(realpath *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(pnpm *)",
+      "Bash(yarn *)",
+      "Bash(npx *)",
+      "Bash(bun *)",
+      "Bash(bunx *)",
+      "Bash(deno *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(pip *)",
+      "Bash(pip3 *)",
+      "Bash(pipx *)",
+      "Bash(uv *)",
+      "Bash(pytest *)",
+      "Bash(go *)",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(make *)",
+      "Bash(just *)",
+      "Bash(php *)",
+      "Bash(composer *)",
+      "Bash(artisan *)",
+      "Bash(rails *)",
+      "Bash(bundle *)",
+      "Bash(gem *)",
+      "Bash(dotnet *)",
+      "Bash(infisical run --env=dev *)",
+      "Bash(terraform *)",
+      "Bash(kubectl *)",
+      "Bash(helm *)",
+      "Bash(docker ps)",
+      "Bash(docker ps *)",
+      "Bash(docker images)",
+      "Bash(docker images *)",
+      "Bash(docker logs *)",
+      "Bash(docker inspect *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(jq *)",
+      "Bash(yq *)",
+      "Bash(mkdir *)",
+      "Bash(touch *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(ln *)",
+      "Bash(diff *)",
+      "Bash(date)",
+      "Bash(date *)",
+      "Bash(env)",
+      "Bash(env *)",
+      "Bash(true)",
+      "Bash(false)",
+      "mcp__*"
+    ],
+    "deny": [
+      "Bash(*&&*)",
+      "Bash(*||*)",
+      "Bash(*;*)",
+      "Bash(git commit)",
+      "Bash(git commit *)",
+      "Bash(git -C * commit)",
+      "Bash(git -C * commit *)",
+      "Bash(git --git-dir=* commit *)",
+      "Bash(git --work-tree=* commit *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(git -C * push)",
+      "Bash(git -C * push *)",
+      "Bash(git --git-dir=* push *)",
+      "Bash(git --work-tree=* push *)",
+      "Bash(git reset --hard)",
+      "Bash(git reset --hard *)",
+      "Bash(git -C * reset --hard)",
+      "Bash(git -C * reset --hard *)",
+      "Bash(git --git-dir=* reset --hard *)",
+      "Bash(git clean -f *)",
+      "Bash(git clean -d *)",
+      "Bash(git clean -x *)",
+      "Bash(git clean -fd *)",
+      "Bash(git clean -fdx *)",
+      "Bash(git -C * clean -f *)",
+      "Bash(git -C * clean -d *)",
+      "Bash(git -C * clean -x *)",
+      "Bash(git -C * clean -fd *)",
+      "Bash(git -C * clean -fdx *)",
+      "Bash(git --git-dir=* clean -f *)",
+      "Bash(git --work-tree=* clean -f *)",
+      "Bash(git checkout -- *)",
+      "Bash(git -C * checkout -- *)",
+      "Bash(git --git-dir=* checkout -- *)",
+      "Bash(gh pr merge)",
+      "Bash(gh pr merge *)",
+      "Bash(gh pr close *)",
+      "Bash(gh release create *)",
+      "Bash(gh release delete *)",
+      "Bash(gh repo delete *)",
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(rm -r *)",
+      "Bash(rm -f *)",
+      "Bash(npm publish)",
+      "Bash(npm publish *)",
+      "Bash(pnpm publish)",
+      "Bash(pnpm publish *)",
+      "Bash(yarn publish)",
+      "Bash(yarn publish *)",
+      "Bash(cargo publish)",
+      "Bash(cargo publish *)",
+      "Bash(terraform destroy *)",
+      "Bash(terraform apply -auto-approve *)",
+      "Bash(kubectl delete *)",
+      "Bash(helm uninstall *)",
+      "Bash(helm delete *)",
+      "Bash(php artisan migrate:fresh *)",
+      "Bash(artisan migrate:fresh *)",
+      "Bash(rails db:drop *)",
+      "Bash(rails db:reset *)"
+    ]
+  }
+}
+```
 
 **Observações sobre o pattern matching:**
 

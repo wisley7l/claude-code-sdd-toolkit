@@ -4,12 +4,13 @@
 
 Coleção de slash commands e skills para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) que implementa um workflow de **Pair Programming com TDD** (SDD = Spec-Driven Development). Não é uma aplicação — é um **toolkit** que distribui artefatos (`.md`) para serem instalados em `~/.claude/commands/` e `~/.claude/skills/`.
 
-Versão atual: **v7** (auto-sizing, single-doc spec). Detalhes completos em [`README.md`](./README.md).
+Versão atual: **v8** (progressive disclosure + knowledge cache na memória). Detalhes completos em [`README.md`](./README.md).
 
 ## Estrutura
 
 ```
 commands/             # Slash commands distribuídos (.md). FONTE CANÔNICA.
+  references/         # Templates/blocos carregados sob demanda pelos commands (progressive disclosure)
   deprecated/         # Versões antigas de commands (.vN.md) — fallback
 skills/               # Skills distribuídas
   deprecated/         # Versões antigas de skills — fallback (mesma lógica)
@@ -34,9 +35,14 @@ LICENSE
 
 4. **Idioma:** documentação e instruções de command em **pt-BR**. Termos técnicos e identificadores ficam em inglês.
 
+5. **Progressive disclosure:** o corpo de um command grande mantém só o protocolo (princípios, fluxo, guardrails). Templates de output e blocos usados num único passo vão pra `commands/references/<command>-<tema>.md`, carregados via `Read` no passo que os usa. Todo ponteiro pra reference inclui: busca em `.claude/commands/references/` do projeto → `~/.claude/commands/references/` → fallback inline resumido (2-4 linhas com as seções). Exceção: conteúdo de segurança (JSON de permissões do `/modo-livre`) não tem fallback improvisado — reference ausente = parar e avisar.
+
+6. **Modelos:** frontmatter de command usa ID completo (`claude-sonnet-4-6` etc. — formato documentado); spawns de subagent usam **aliases** (`opus`/`sonnet`/`haiku` — garantidos pela doc do Agent SDK).
+
 ## Workflow principal (resumo)
 
-- `/sdd-plan` → pesquisa + planejamento em 1 doc auto-sized (Medium/Large/Complex)
+- `/sdd-plan` → pesquisa + planejamento em 1 doc auto-sized (Medium/Large/Complex). `/sdd-plan-eco` é a variante econômica pra Medium (main em Sonnet, quebra de tarefas + checks num subagente Opus)
+- `/pr-draft` → abre PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC), devolve o root pra branch default e cria worktree via `/git-worktree`. Bloqueado pra criar PR → instrui o usuário comando-por-comando. **Nunca commita código nem sai de draft sozinho**
 - `/executor-plan` → executa TDD autônomo, faz `git add` por tarefa, **nunca commita sozinho**
 - `/quick-task` → atalho pra mudança pequena (≤3 arquivos), sem SPEC formal
 - `/sdd-review` → review de PR/branch/diff, oferece gerar fixes via `/quick-task`
