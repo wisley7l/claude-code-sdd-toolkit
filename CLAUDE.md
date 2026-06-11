@@ -50,6 +50,10 @@ LICENSE
 - `/sdd-learning` → extrai aprendizados não-óbvios de IMPs/reviews e propõe registro em memória
 - `/sdd-confirm` → move drafts de `thoughts/decisions-draft/` pra memória após merge do PR
 - `/memory-organize` → reorganiza auto-memory: detecta órfãs/links quebrados, propõe sub-sumários quando MEMORY.md cresce
+- `/verifica` → verificação comportamental: roda o app, exercita os fluxos tocados, registra evidência no IMP. Nunca produção; side effects só com confirmação
+- `/investiga` → root cause de bug não-óbvio: hipóteses com mecanismo causal → evidência em subagents paralelos → causa com fonte → handoff. Alimenta blockers/lessons
+- `/sdd-init` → audita/prepara projeto-alvo (constitution, thoughts/, Context7, references) sob confirmação por bloco
+- `/git-rebase-seguro` → atualiza branch com a base: baseline de testes, conflitos sob confirmação, test count protection, rollback garantido. Nunca pusha
 
 ### Memória persistente
 

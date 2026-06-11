@@ -16,6 +16,8 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/executor-plan`** — executa as tarefas com TDD em modo autônomo, sub-agents paralelos pras tarefas marcadas `[P]`, staging por tarefa. Commits sob aprovação humana; `--step` volta ao modo pausado.
 
+**`/verifica`** — verificação comportamental pós-implementação: sobe a aplicação, exercita os fluxos que a mudança tocou e registra **evidência real** no IMP (testes verdes ≠ feature funcionando). Nunca aponta pra produção; pagamentos sempre em test mode; side effects externos só com confirmação.
+
 **`/quick-task`** — mudança pequena (≤3 arquivos) sem SPEC formal. Sobe pro fluxo formal se o escopo crescer.
 
 **`/pair-review`** — companheiro interativo do review manual. Roda em **sessão nova** (`/clear`): re-hidrata do staged + SPEC/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Com PR sob review do time, o modo `(r)` valida cada fix **contra o comentário humano que o originou** (detecta não-endereçados, escopa o diff à rodada de fixes, gera rascunhos de resposta pras threads). Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha, nunca posta no PR.
@@ -29,6 +31,12 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 ### Utilitários
 
 **`/sdd-review`** — review de PR, branch ou diff via subagents isolados; oferece gerar fixes via `/quick-task`.
+
+**`/investiga`** — root cause de bug não-óbvio via protocolo de hipóteses: sintoma estruturado → hipóteses com mecanismo causal → evidência em subagents paralelos → eliminação → causa **com fonte** + handoff (`/quick-task` ou `/sdd-plan`). É a maior fábrica de `blocker`/`lesson` pra memória.
+
+**`/sdd-init`** — prepara um projeto novo pro toolkit: audita os pré-requisitos (CLAUDE.md, ARCHITECTURE.md, `thoughts/`, Context7, references) e cria o que falta sob confirmação por bloco — drafts de constitution marcados `[NEEDS REVIEW]`.
+
+**`/git-rebase-seguro`** — atualiza branch longa com a base sem comer código: baseline de testes antes, conflito sempre mostrado (dois lados + proposta), test count protection depois, SHA de rollback garantido. Recomenda merge (não rebase) quando o PR já tem review do time. Nunca pusha.
 
 **`/busca`** — pesquisa web via subagent isolado, sem impacto no contexto principal. Flags `--rapido`, `--profundo` e `--save`.
 
@@ -54,8 +62,10 @@ Feature normal:   /sdd-plan → /pr-draft → (cd <worktree> && claude) → /exe
                                                               você revisa o diff e commita/pusha
 Review manual:    /clear → /pair-review   (companheiro interativo sobre o staged, sem ruído da execução)
 Mudança pequena:  /quick-task
+Bug misterioso:   /investiga → root cause com fonte → /quick-task ou /sdd-plan
 Após PR fechar:   /sdd-learning
-Quando precisar:  /busca · /complexidade · /roadmap · /memory-organize
+Projeto novo:     /sdd-init (uma vez)
+Quando precisar:  /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```
 
 `/pr-draft` é opcional, mas recomendado: isola a implementação numa worktree e sinaliza o kickoff ao time. Os artefatos em `thoughts/` servem de handoff entre sessões — limpe a sessão (`/clear`) entre commands grandes pra maximizar a janela de contexto. O custo de re-hidratação é baixo (SPEC + `MEMORY.md` ≈ 2-3k tokens), então limpar é quase sempre ganho: o estado durável vive em arquivo, não na conversa.
@@ -143,9 +153,10 @@ Resultado: `[Claude Sonnet 4.5] gopay ████░░░░░░ 42% ctx •
 ```
 commands/                   # Slash commands — FONTE CANÔNICA (copiada pra ~/.claude/commands/)
   sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
-  quick-task.md · sdd-review.md · sdd-learning.md · memory-organize.md · roadmap.md
-  busca.md · pr-report.md · complexidade.md · worktree-detect.md · modo-livre.md
-  git-worktree.md · git-remove-worktree.md · sync-tests.md · git-prune-branches.md
+  quick-task.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
+  sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md
+  complexidade.md · worktree-detect.md · modo-livre.md · git-worktree.md
+  git-remove-worktree.md · git-rebase-seguro.md · sync-tests.md · git-prune-branches.md
   references/               # Templates carregados sob demanda (progressive disclosure)
   deprecated/               # Versões antigas — fallback (sufixo .vN.md). Não deletar
 skills/

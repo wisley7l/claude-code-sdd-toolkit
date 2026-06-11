@@ -16,6 +16,8 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/executor-plan`** — runs the tasks with TDD in autonomous mode, parallel sub-agents for tasks marked `[P]`, staging per task. Commits are human-approved; `--step` restores the paused mode.
 
+**`/verifica`** — behavioral verification post-implementation: boots the application, exercises the flows the change touched, and records **real evidence** in the IMP (green tests ≠ working feature). Never points at production; payments always in test mode; external side effects only with confirmation.
+
 **`/quick-task`** — small change (≤3 files) with no formal SPEC. Escalates to the formal flow if scope grows.
 
 **`/pair-review`** — interactive companion for the human's manual review after `/executor-plan`. Runs in a **fresh session** (`/clear`): re-hydrates from the staged diff + SPEC/IMP (~3-4k tokens, none of the execution noise), answers factual questions directly and delegates judgment questions to Opus subagents scoped to the files in question, applies small fixes with gate + test count protection. With a PR under team review, the `(r)` mode validates each fix **against the human comment that originated it** (detects unaddressed comments, scopes the diff to the post-review fix round, generates reply drafts for the threads for the user to paste). Optional per-task walkthrough and hotspots. Never commits without explicit choice, never posts to the PR.
@@ -29,6 +31,12 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 ### Utilities
 
 **`/sdd-review`** — reviews a PR, branch, or diff via isolated subagents; offers to generate fixes via `/quick-task`.
+
+**`/investiga`** — root cause of non-obvious bugs via a hypothesis protocol: structured symptom → hypotheses with a causal mechanism → evidence via parallel subagents → elimination → cause **with source** + handoff (`/quick-task` or `/sdd-plan`). The biggest factory of `blocker`/`lesson` memories.
+
+**`/sdd-init`** — prepares a new project for the toolkit: audits the prerequisites (CLAUDE.md, ARCHITECTURE.md, `thoughts/`, Context7, references) and creates what's missing under per-block confirmation — constitution drafts marked `[NEEDS REVIEW]`.
+
+**`/git-rebase-seguro`** — safely updates a long-lived branch with the base without eating code: test baseline before, conflicts always shown (both sides + proposal), test count protection after, guaranteed rollback SHA. Recommends merge (not rebase) when the PR already has team review. Never pushes.
 
 **`/busca`** — web research via an isolated subagent, with no impact on the main context. Flags `--rapido`, `--profundo`, and `--save`.
 
@@ -54,8 +62,10 @@ Normal feature:   /sdd-plan → /pr-draft → (cd <worktree> && claude) → /exe
                                                               you review the diff and commit/push
 Manual review:    /clear → /pair-review   (interactive companion over the staged diff, no execution noise)
 Small change:     /quick-task
+Mysterious bug:   /investiga → root cause with source → /quick-task or /sdd-plan
 After PR closes:  /sdd-learning
-When needed:      /busca · /complexidade · /roadmap · /memory-organize
+New project:      /sdd-init (once)
+When needed:      /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```
 
 `/pr-draft` is optional but recommended: it isolates the implementation in a worktree and signals the kickoff to the team. Artifacts in `thoughts/` serve as handoff between sessions — clear the session (`/clear`) between large commands to maximize the context window. The re-hydration cost is low (SPEC + `MEMORY.md` ≈ 2-3k tokens), so clearing is almost always a win: the durable state lives in files, not in the conversation.
@@ -143,9 +153,10 @@ Result: `[Claude Sonnet 4.5] gopay ████░░░░░░ 42% ctx • 5h
 ```
 commands/                   # Slash commands — CANONICAL SOURCE (copied to ~/.claude/commands/)
   sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
-  quick-task.md · sdd-review.md · sdd-learning.md · memory-organize.md · roadmap.md
-  busca.md · pr-report.md · complexidade.md · worktree-detect.md · modo-livre.md
-  git-worktree.md · git-remove-worktree.md · sync-tests.md · git-prune-branches.md
+  quick-task.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
+  sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md
+  complexidade.md · worktree-detect.md · modo-livre.md · git-worktree.md
+  git-remove-worktree.md · git-rebase-seguro.md · sync-tests.md · git-prune-branches.md
   references/               # Templates loaded on demand (progressive disclosure)
   deprecated/               # Older versions — fallback (.vN.md suffix). Do not delete
 skills/
