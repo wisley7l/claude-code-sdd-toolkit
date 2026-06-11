@@ -18,7 +18,7 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/quick-task`** — small change (≤3 files) with no formal SPEC. Escalates to the formal flow if scope grows.
 
-**`/pair-review`** — interactive companion for the human's manual review after `/executor-plan`. Runs in a **fresh session** (`/clear`): re-hydrates from the staged diff + SPEC/IMP (~3-4k tokens, none of the execution noise), answers factual questions directly and delegates judgment questions to Opus subagents scoped to the files in question, applies small fixes with gate + test count protection. Optional per-task walkthrough and hotspots. Never commits without explicit choice.
+**`/pair-review`** — interactive companion for the human's manual review after `/executor-plan`. Runs in a **fresh session** (`/clear`): re-hydrates from the staged diff + SPEC/IMP (~3-4k tokens, none of the execution noise), answers factual questions directly and delegates judgment questions to Opus subagents scoped to the files in question, applies small fixes with gate + test count protection. With a PR under team review, the `(r)` mode validates each fix **against the human comment that originated it** (detects unaddressed comments, scopes the diff to the post-review fix round, generates reply drafts for the threads for the user to paste). Optional per-task walkthrough and hotspots. Never commits without explicit choice, never posts to the PR.
 
 **`/sdd-learning`** — after the PR closes, extracts non-obvious learnings from IMPs, reviews, and the GitHub PR and proposes recording them in memory, case by case.
 

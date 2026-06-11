@@ -18,7 +18,7 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/quick-task`** — mudança pequena (≤3 arquivos) sem SPEC formal. Sobe pro fluxo formal se o escopo crescer.
 
-**`/pair-review`** — companheiro interativo do review manual pós-executor. Roda em **sessão nova** (`/clear`): re-hidrata do staged + SPEC/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha.
+**`/pair-review`** — companheiro interativo do review manual. Roda em **sessão nova** (`/clear`): re-hidrata do staged + SPEC/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Com PR sob review do time, o modo `(r)` valida cada fix **contra o comentário humano que o originou** (detecta não-endereçados, escopa o diff à rodada de fixes, gera rascunhos de resposta pras threads). Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha, nunca posta no PR.
 
 **`/sdd-learning`** — após o PR fechar, extrai aprendizado não-óbvio de IMPs, reviews e do PR no GitHub e propõe registro na memória, caso a caso.
 

@@ -1,5 +1,5 @@
 ---
-description: Companheiro interativo do review manual pós-executor — re-hidrata do staged + SPEC/IMP em sessão limpa, responde perguntas via subagentes Opus focados, aplica ajustes. Nunca commita sem escolha.
+description: Companheiro interativo de review manual — re-hidrata do staged + SPEC/IMP, valida fixes contra comentários humanos do PR, responde via subagentes Opus focados, aplica ajustes. Nunca commita sem escolha.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(git reset*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(lizard *)
 ---
@@ -7,6 +7,8 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bas
 # Pair Review — companheiro do review manual
 
 Você acompanha o **review manual humano** do que o `/executor-plan` (ou uma cadeia de `/quick-task`) deixou staged. O usuário revisa o diff no editor; você responde perguntas, explica decisões, investiga pontos suspeitos e aplica ajustes pequenos — com **olho fresco**, sem o ruído da sessão de execução.
+
+**Segundo caso de uso — rodada de fixes pós-review do time**: o PR recebeu review humano, o modelo aplicou as correções sugeridas, e agora o usuário quer validar/lapidar cada fix **contra o comentário que o originou** antes de devolver pro time. Quando há PR com review humano, esse contexto vira fonte primária (modo `(r)` abaixo).
 
 **Pré-condição de design: sessão limpa.** Este command existe pra rodar após `/clear` (ou em sessão nova na worktree). Todo o estado necessário vive em artefatos (`thoughts/` + staged) — re-hidratar custa ~3-4k tokens, contra dezenas de milhares de ruído de execução que ficariam na sessão antiga. Se você detectar que a sessão atual já está carregada (a conversa contém a execução do plano), sugira `/clear` + reinvocação antes de seguir.
 
@@ -32,25 +34,39 @@ git diff --cached --stat
 
 Carregue, nesta ordem:
 
-1. **Diff staged**: `git diff --cached`. Se vazio (ex: execução em `--step` já commitou), caia pra `git diff <base>...HEAD` (base do projeto via CLAUDE.md) e avise que o review é sobre commits da branch, não staged.
+1. **Diff em escopo** — resolva na ordem, use o primeiro não-vazio e **avise qual está usando**:
+   1. `git diff HEAD` — tudo que ainda não foi commitado, **staged ou não** (cobre fixes feitos ad-hoc no chat, que ficam soltos no working tree). Se houver mudanças não-staged, anote: elas entram no `git add` quando validadas.
+   2. Commits pós-review — se houver PR com review humano (item 6), diffe apenas os commits **posteriores ao `submitted_at` do último review** (`git log --oneline --since="<submitted_at>"` pra achar o range). O escopo é a rodada de fixes, não a branch inteira.
+   3. `git diff <base>...HEAD` — branch inteira vs base (sem review humano e nada pendente).
+
+   **Tudo vazio com review humano presente** (fixes ainda não feitos — o usuário veio direto do review do time): siga mesmo assim. O review vira a **pauta**: todos os comentários aparecem como `não endereçado` e o modo `(r)` vira execução dos fixes, um por um, sob direção do usuário (mesmo protocolo de ajuste: gate + test count + `git add`).
 2. **Staged log**: `thoughts/.executor-staged.log` (mapeamento T → arquivos). Se não existir, monte o mapeamento aproximado pelo SPEC (campo `Where:` das tarefas).
 3. **SPEC**: o mais recente em `thoughts/plans/` (ou o que o usuário indicar). Leia o Resumo Executivo + a lista de tarefas; seções detalhadas só sob demanda.
 4. **IMP**: o mais recente em `thoughts/history/` — desvios do plano e observações são o contexto mais útil aqui.
 5. **Review batch** (se existir): `thoughts/reviews/REV-*.md` da mesma branch — issues já conhecidas não precisam ser redescobertas.
-6. `CLAUDE.md` e `ARCHITECTURE.md` (constitution). O `MEMORY.md` já vem carregado pelo harness — cite `decision`/`lesson` aplicáveis quando responder.
+6. **PR aberto + review humano** (se houver): `gh pr list --head $(git branch --show-current) --state open --limit 1`. Se achar PR, carregue os comentários do time:
+   - `gh pr view <N> --json reviews,comments,body` (reviews formais + comentários gerais)
+   - `gh api repos/{owner}/{repo}/pulls/<N>/comments` (inline comments; agrupe threads via `in_reply_to_id`)
+   - Ignore autores `[bot]`. Inclua o autor do PR (a conversa toda importa).
+   - Monte o **mapa de respostas**: pra cada comentário/thread humano, qual mudança em escopo o atende → status `atendido` / `parcial` / `não endereçado`. Comentário sem mudança correspondente é o achado mais valioso — é o fix que ficou pra trás.
+   - Se `gh` falhar (auth/rede), avise e siga sem o contexto de PR.
+7. `CLAUDE.md` e `ARCHITECTURE.md` (constitution). O `MEMORY.md` já vem carregado pelo harness — cite `decision`/`lesson` aplicáveis quando responder.
 
 ### 2. Abertura
 
 ```
 Pair review pronto.
 
-Staged: [N] arquivos (+X/-Y) em [M] tarefas
+Escopo: [staged | commits desde o review de DD-MM | branch vs base]
+  [N] arquivos (+X/-Y) em [M] tarefas
   T1 → file1.ts, file2.ts
   T2 → file3.ts
 SPEC: [path] · IMP: [path] · Review batch: [path ou "nenhum"]
+Review humano: [PR #N — X comentários de @users, Y atendidos, Z parciais, W não endereçados | "sem PR/review"]
 Desvios do plano reportados no IMP: [K — resumo de 1 linha cada, ou "nenhum"]
 
 Por onde começar?
+  (r) Respostas ao review — valido cada fix contra o comentário do time que o originou  [mostre só se houver review humano; sugira como default nesse caso]
   (w) Walkthrough guiado — te apresento tarefa por tarefa
   (h) Hotspots — um subagente Opus marca os 5 pontos que mais merecem teu olho
   (p) Pergunta direta — só me pergunta
@@ -73,6 +89,24 @@ Classifique cada mensagem do usuário e responda no nível certo:
 - Prompt com: a pergunta do usuário, os arquivos envolvidos (paths — o subagente lê), o trecho do SPEC da tarefa de origem, e a regra de output: "Resposta compacta: veredito + evidência (arquivo:linha) + risco se houver + alternativa só se concretamente melhor (com fonte: padrão do projeto ou doc oficial). Sem narrativa."
 
 Consolide a resposta do subagente com o contexto que só você tem (decisões do SPEC, desvios do IMP, memória) — não repasse cru.
+
+### Respostas ao review (r) — só quando há PR com review humano
+
+Pra cada comentário/thread do time (em ordem: não endereçados → parciais → atendidos):
+
+```
+Comentário [i/N] — @fulano em src/foo.ts:42 (thread com 2 mensagens)
+  Pediu: [resumo de 1-2 linhas do ponto]
+  Resposta no código: [arquivo:linha — o que o fix fez] · status: [atendido/parcial/NÃO ENDEREÇADO]
+  Minha leitura: [1-2 linhas — o fix resolve o ponto? sobrou algo?]
+
+[valida / ajusta / pula]?
+```
+
+- **Status duvidoso** ("será que isso atende o que ele pediu?") → subagente Opus escopado: recebe o comentário + o diff do fix + os arquivos envolvidos, devolve veredito compacto (atende / não atende + por quê).
+- **Ajuste pedido pelo usuário** → protocolo de ajuste normal (gate + test count + `git add`), anotando `review-fix:` no staged log.
+- **Não endereçado** → ofereça gerar o fix na hora (mesmo protocolo de ajuste; se crescer, safety valve).
+- Ao fim da rodada, ofereça **rascunhos de resposta** pra cada thread (texto pronto: o que foi feito + arquivo:linha + hash se commitado) — **pra você colar no PR**. Você nunca posta no PR.
 
 ### Walkthrough guiado (w)
 
@@ -105,7 +139,8 @@ Quando o usuário sinalizar que terminou ("aprovei", "pode fechar", "bora commit
      (3) Agora não — deixo staged como está
    ```
    Execute a escolha. **Não pushe** — push é sempre do usuário.
-3. **Memória**: se o review revelou algo não-óbvio (decisão validada, lição), lembre que o `/sdd-learning` extrai pós-merge — só proponha registro direto (via skill `memory-keeper`) se for definitivo e independente de review futuro.
+3. **Rascunhos de resposta** (se houve modo `(r)`): entregue o texto de resposta de cada thread num bloco único, pronto pra colar no PR — comentário, o que foi feito, `arquivo:linha`, hash do commit se já existir.
+4. **Memória**: se o review revelou algo não-óbvio (decisão validada, lição), lembre que o `/sdd-learning` extrai pós-merge — só proponha registro direto (via skill `memory-keeper`) se for definitivo e independente de review futuro.
 
 ## Guardrails
 
@@ -116,4 +151,6 @@ Quando o usuário sinalizar que terminou ("aprovei", "pode fechar", "bora commit
 - **Test count protection em todo ajuste**: contagem caiu = parada dura
 - **Safety valve**: ajuste >3 arquivos / decisão arquitetural / lib nova = escala pra `/quick-task` ou `/sdd-plan`
 - **Nunca commite sem escolha explícita (1/2/3). Nunca pushe. Nunca saia de draft de PR**
+- **Nunca poste no PR**: respostas às threads são rascunhos pro usuário colar. Leitura via `gh` é livre; escrita no PR é humana
+- **Comentário humano é contexto, não ordem**: você pode discordar de um fix sugerido pelo time se tiver evidência concreta — apresente as duas leituras e deixe o usuário decidir
 - **GitHub via `gh` CLI** — nunca tokens manuais
