@@ -98,7 +98,7 @@ Pega o primeiro `*.md` na raiz (nao em subpastas) — esse e o hub. Cada projeto
 
 **Se nao existir** (projeto novo no vault): voce vai criar — ver secao 7.
 
-**Convencao de nome**: capitalize-first cada segmento separado por hyphen do slug do projeto. Ex: `gopay` → `Gopay.md`, `claude-code-sdd-toolkit` → `Claude-Code-Sdd-Toolkit.md`. Se ja existir um hub com nome diferente (apelido), use o existente (nao renomeie).
+**Convencao de nome**: capitalize-first cada segmento separado por hyphen do slug do projeto. Ex: `minha-loja` → `Minha-Loja.md`, `claude-code-sdd-toolkit` → `Claude-Code-Sdd-Toolkit.md`. Se ja existir um hub com nome diferente (apelido), use o existente (nao renomeie).
 
 ## 5. Algoritmo de leitura (inicio do command)
 

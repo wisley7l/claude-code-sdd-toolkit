@@ -31,7 +31,7 @@ MEM_DIR="$PROJ_DIR/memory"
 
 **Antes de prosseguir**, validar nessa ordem:
 
-1. **Se `$MEM_DIR` não existe**: procurar siblings com nome `*-memory/` em `$PROJ_DIR/` (ex: `gopay-memory/`, `backup-memory/`). Esses dirs podem ser renames antigos ou backups esquecidos.
+1. **Se `$MEM_DIR` não existe**: procurar siblings com nome `*-memory/` em `$PROJ_DIR/` (ex: `meuprojeto-memory/`, `backup-memory/`). Esses dirs podem ser renames antigos ou backups esquecidos.
    - **Encontrou sibling com conteúdo** (>1 arquivo `.md` além de `MEMORY.md`): **NÃO criar stub vazio**. Reportar pro usuário e perguntar:
      ```
      ⚠️ memory/ não existe, mas achei sibling com dados:
