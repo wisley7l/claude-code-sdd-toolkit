@@ -1,5 +1,5 @@
 ---
-description: MODO LIVRE — toggle do modo autônomo. `on` instala settings (allow + ask pra commit/push + deny dos perigosos), `off` restaura backup, `update` reescreve com o JSON canônico. NUNCA commita/pusha/rm por iniciativa própria.
+description: MODO LIVRE — toggle do modo autônomo. `on` instala settings (allow/deny), `off` restaura backup, `update` reescreve com o JSON canônico. NUNCA commita/pusha/rm sem autorização.
 model: claude-sonnet-4-6
 argument-hint: [on|off|update|status]
 ---
@@ -65,12 +65,8 @@ Backup: <"presente em thoughts/modo-livre/settings.local.json.bak" OU "nenhum (s
    1. Ctrl+C
    2. claude (novamente, na mesma pasta)
 
-As regras NUNCA (commit/push por iniciativa própria, rm, etc) continuam valendo —
-guardrail comportamental + harness: commit/push promptam SEMPRE (ask),
-force push e destrutivos ficam bloqueados (deny) em qualquer permission mode.
-
-💡 Compatível com permission mode AUTO (Shift+Tab após opt-in, ou
-   `claude --permission-mode auto`) — deny/ask continuam valendo nele.
+As regras NUNCA (commit/push/rm/etc) continuam valendo —
+elas são guardrail comportamental, não só do harness.
 ```
 
 ## DESATIVAR (`off`)
@@ -175,9 +171,7 @@ O JSON canônico vive no reference `modo-livre-settings.json` — procure em `.c
 
 **Observações sobre o pattern matching:**
 
-- **Três camadas — allow amplo + ask no humano + deny cirúrgico**: `Bash(git *)` libera tudo de git; `git commit`/`git push` (formas canônicas) ficam em **`ask`** — promptam SEMPRE, **em qualquer permission mode, inclusive `auto` e `bypassPermissions`** (regra do harness: avaliação é `deny → ask → allow`); e os denies bloqueiam o que nunca pode (`git push --force*`, `reset --hard`, `clean -f *`, variantes exóticas de commit/push). Fonte: [docs de permissions](https://code.claude.com/docs/en/permissions.md) — "Deny rules and explicit ask rules apply in every mode, including bypassPermissions".
-- **Por que `ask` e não `deny` pra commit/push**: o toolkit define commit/push como decisão humana. Com deny, até o commit que o usuário acabou de aprovar na conversa (ex: opção 1/2 do fim do `/executor-plan`) era bloqueado pelo harness — fricção sem ganho. Com ask, o harness garante o humano no loop no momento exato, e o fluxo aprovado prossegue com 1 clique. **Force push continua deny** (nunca, nem com prompt). Borda conhecida: `git push origin main --force` (flag no FIM) não casa os denies de force e cai no ask — prompta em vez de bloquear; o humano nega ao ver
-- **Auto mode é compatível**: com modo-livre ativo, ligar o permission mode `auto` (Claude Code ≥2.1.83, Sonnet/Opus 4.6+; Shift+Tab após opt-in, ou `claude --permission-mode auto`) zera os prompts de tudo que não é deny/ask — e as cercas deny/ask continuam valendo. Nesse mode o `allow` vira irrelevante (tudo já é aprovado); ele segue importando pro mode `default`/`acceptEdits`
+- **Allow amplo + deny cirúrgico** pra `git` e `gh`: `Bash(git *)` libera tudo de git, mas os denies (`git commit`, `git push`, `git reset --hard`, `git clean -f *`) bloqueiam o que não pode. Deny tem precedência sobre allow.
 - **Flags posicionais antes do subcomando burlam pattern matching ingênuo** — `Bash(git commit *)` matcha comandos que **começam** com `git commit`, mas NÃO matcha `git -C <path> commit` nem `git --git-dir=<dir> commit`. Por isso os denies cobrem explicitamente todas as variantes:
   - `Bash(git -C * commit)` / `Bash(git -C * commit *)`
   - `Bash(git --git-dir=* commit *)` / `Bash(git --work-tree=* commit *)`
@@ -198,8 +192,8 @@ Estas regras valem SEMPRE que o agente trabalhar em um projeto com `/modo-livre 
 
 Você NUNCA deve executar os comandos abaixo. Se julgar que um deles é necessário, PARE, explique o motivo, e aguarde o usuário digitar autorização EXPLÍCITA na mensagem imediatamente seguinte. "Provavelmente ele quer" NÃO é autorização.
 
-- `git commit` / `git push` **por iniciativa própria** (qualquer variante, incluindo `--amend`). Quando o fluxo de um command prevê commit/push E o usuário escolheu explicitamente (ex: opção 1/2 no fim do `/executor-plan`, push da branch no `/pr-draft`), emita a forma canônica (`git commit ...` / `git push ...`) — o harness vai promptar (regra `ask`) e o usuário confirma. Forma canônica SEMPRE: nunca `-C`/`--git-dir` pra commit/push (são deny e são burla)
-- `git push --force` / `--force-with-lease` / `-f` — NUNCA, nem com prompt (deny). Se rebase exigir force push, instrua o usuário a rodar
+- `git commit` (qualquer variante, incluindo `--amend`)
+- `git push` (qualquer variante: `--force`, `--force-with-lease`, `-f`)
 - `gh pr merge` / `gh pr close` (criar e editar body de PR está liberado)
 - `gh release create/delete` / `gh repo delete`
 - `git reset --hard` / `git clean -f*` / `git checkout -- <path>`

@@ -46,7 +46,7 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/worktree-detect`** — detects opportunities to isolate branches/PRs into worktrees.
 
-**`/modo-livre`** — autonomous mode toggle (broad allow + deny of dangerous ops). Requires a session reload.
+**`/modo-livre`** — autonomous mode toggle with three layers: broad allow (flows), **`ask` for `git commit`/`git push`** (human in the loop enforced by the harness — prompts in **any** permission mode, including `auto`) and deny for the dangerous ops (force push, `reset --hard`, `rm -rf`, publishes — always blocked). Compatible with the `auto` permission mode. Requires a session reload.
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — git and worktree utilities.
 

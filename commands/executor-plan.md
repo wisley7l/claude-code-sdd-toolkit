@@ -139,7 +139,7 @@ Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. C
 Antes de mostrar o resumo, verifique se modo-livre esta ativo neste projeto:
 - Cheque `thoughts/modo-livre/active` (marker do `/modo-livre`)
 - Se NAO existir: inclua a dica "Modo livre INATIVO" no resumo, sugerindo `/modo-livre on` antes de comecar (acelera a execucao autonoma cortando prompts de permissao)
-- Se existir: inclua "Modo livre ATIVO" no resumo
+- Se existir: inclua "Modo livre ATIVO" no resumo + a dica do **auto mode**: "pra zero prompts nesta execucao, ligue o permission mode `auto` (Shift+Tab ate AUTO, se disponivel apos opt-in — requer Claude Code ≥2.1.83 e Sonnet/Opus 4.6+; ou abra a sessao com `claude --permission-mode auto`). As cercas do modo-livre continuam valendo: commit/push promptam sempre (ask) e os perigosos ficam bloqueados (deny) em qualquer mode."
 
 ```
 Pronto para executar: [Nome]

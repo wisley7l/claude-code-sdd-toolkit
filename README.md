@@ -46,7 +46,7 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/worktree-detect`** — detecta oportunidades de isolar branches/PRs em worktrees.
 
-**`/modo-livre`** — toggle do modo autônomo (allow amplo + deny dos perigosos). Requer reload da sessão.
+**`/modo-livre`** — toggle do modo autônomo em três camadas: allow amplo (flui), **`ask` pra `git commit`/`git push`** (humano no loop garantido pelo harness — prompta em **qualquer** permission mode, inclusive `auto`) e deny dos perigosos (force push, `reset --hard`, `rm -rf`, publishes — bloqueados sempre). Compatível com o permission mode `auto`. Requer reload da sessão.
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — utilitários de git e worktree.
 
