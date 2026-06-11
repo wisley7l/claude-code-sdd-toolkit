@@ -44,6 +44,7 @@ LICENSE
 - `/sdd-plan` → pesquisa + planejamento em 1 doc auto-sized (Medium/Large/Complex). `/sdd-plan-eco` é a variante econômica pra Medium (main em Sonnet, quebra de tarefas + checks num subagente Opus)
 - `/pr-draft` → abre PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC), devolve o root pra branch default e cria worktree via `/git-worktree`. Bloqueado pra criar PR → instrui o usuário comando-por-comando. **Nunca commita código nem sai de draft sozinho**
 - `/executor-plan` → executa TDD autônomo, faz `git add` por tarefa, **nunca commita sozinho**
+- `/pair-review` → companheiro interativo do review manual pós-executor, em **sessão nova**: re-hidrata do staged + SPEC/IMP, perguntas de julgamento vão pra subagentes Opus focados, ajustes com gate + test count protection. **Nunca commita sem escolha explícita**
 - `/quick-task` → atalho pra mudança pequena (≤3 arquivos), sem SPEC formal
 - `/sdd-review` → review de PR/branch/diff, oferece gerar fixes via `/quick-task`
 - `/sdd-learning` → extrai aprendizados não-óbvios de IMPs/reviews e propõe registro em memória

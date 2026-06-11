@@ -621,7 +621,7 @@ Como quer commitar?
 - **Nao pusha.** Informe lista de hashes.
 
 **Se 3 (depois)**:
-- Informe: "Staged esta pronto. Revise com `/sdd-review` e commite quando quiser. Para descartar: `git reset --hard`."
+- Informe: "Staged esta pronto. Pra revisar voce tem 2 caminhos: `/sdd-review` (relatorio batch com subagentes) ou, pra revisao manual interativa, abra sessao nova (`/clear`) e rode `/pair-review` — ele re-hidrata do staged + SPEC/IMP sem o ruido desta sessao. Para descartar tudo: `git reset --hard`."
 - Termine sem commitar.
 
 **Em qualquer caso**: nao pushe. Push e sempre acao do usuario.
@@ -640,7 +640,8 @@ Feature concluida.
 - Commits: [hash(es) ou "staged, aguardando aprovacao"]
 
 Relatorio: thoughts/history/IMP-DD-MM-YYYY-[slug].md
-Proximo: /sdd-review pra checar antes do push.
+Proximo: /sdd-review (relatorio batch) — e pra revisao manual,
+sessao nova (/clear) + /pair-review (re-hidrata do staged + SPEC/IMP).
 ```
 
 ---

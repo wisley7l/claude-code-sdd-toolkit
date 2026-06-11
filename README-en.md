@@ -18,6 +18,8 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/quick-task`** — small change (≤3 files) with no formal SPEC. Escalates to the formal flow if scope grows.
 
+**`/pair-review`** — interactive companion for the human's manual review after `/executor-plan`. Runs in a **fresh session** (`/clear`): re-hydrates from the staged diff + SPEC/IMP (~3-4k tokens, none of the execution noise), answers factual questions directly and delegates judgment questions to Opus subagents scoped to the files in question, applies small fixes with gate + test count protection. Optional per-task walkthrough and hotspots. Never commits without explicit choice.
+
 **`/sdd-learning`** — after the PR closes, extracts non-obvious learnings from IMPs, reviews, and the GitHub PR and proposes recording them in memory, case by case.
 
 **`/memory-organize`** — reorganizes the auto-memory: orphans, broken links, duplicates, and sub-summaries when `MEMORY.md` grows.
@@ -50,6 +52,7 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 Normal feature:   /sdd-plan → /pr-draft → (cd <worktree> && claude) → /executor-plan → /sdd-review
                                                                                           ↓
                                                               you review the diff and commit/push
+Manual review:    /clear → /pair-review   (interactive companion over the staged diff, no execution noise)
 Small change:     /quick-task
 After PR closes:  /sdd-learning
 When needed:      /busca · /complexidade · /roadmap · /memory-organize
@@ -139,8 +142,8 @@ Result: `[Claude Sonnet 4.5] gopay ████░░░░░░ 42% ctx • 5h
 
 ```
 commands/                   # Slash commands — CANONICAL SOURCE (copied to ~/.claude/commands/)
-  sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · quick-task.md
-  sdd-review.md · sdd-learning.md · memory-organize.md · roadmap.md
+  sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
+  quick-task.md · sdd-review.md · sdd-learning.md · memory-organize.md · roadmap.md
   busca.md · pr-report.md · complexidade.md · worktree-detect.md · modo-livre.md
   git-worktree.md · git-remove-worktree.md · sync-tests.md · git-prune-branches.md
   references/               # Templates loaded on demand (progressive disclosure)
