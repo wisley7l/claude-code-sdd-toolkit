@@ -183,6 +183,7 @@ O JSON canônico vive no reference `modo-livre-settings.json` — procure em `.c
   - `Bash(git --git-dir=* commit *)` / `Bash(git --work-tree=* commit *)`
   - Mesma lógica pra `push`, `reset --hard`, `clean -f*`, `checkout --`.
 - **Aprendizado de incidente real**: um agente conseguiu burlar `Bash(git commit *)` usando `git -C /worktree/path commit -F /tmp/msg.txt`. Os denies atuais fecham esse vetor. Se aparecer outro flag global posicional (ex: `--literal-pathspecs`, `-c key=val`), adicionar variante correspondente.
+- **MCP: allow exige servidor nomeado**: `mcp__*` global é INVÁLIDO em allow (o harness pula a regra e avisa toda sessão) — allow só aceita glob na posição da tool após servidor literal: `mcp__context7__*` ✅, `mcp__*` ❌. Deny/ask aceitam wildcard em qualquer posição. O canônico libera só o `context7` (pré-requisito do toolkit); pra liberar outros MCPs do seu projeto, adicione uma linha `mcp__<server>__*` por servidor no settings local (vão sobreviver ao `/modo-livre update`? NÃO — update sobrescreve; prefira adicioná-los via `/permissions` depois do update, ou aceite o prompt por sessão).
 - **Docker conservador**: só leitura (`ps`, `images`, `logs`, `inspect`). `docker exec/rm/rmi/stop/kill/run` continuam pedindo prompt.
 - **Publish bloqueado**: `npm/pnpm/yarn/cargo publish` denied pra não publicar pacote por engano.
 - **rm bloqueado em formas com flags**: `rm -rf/-fr/-r/-f` denied. `rm arquivo.txt` solto continua pedindo prompt (não tem regra que o pegue).

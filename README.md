@@ -12,7 +12,7 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/sdd-plan-eco`** — variante econômica do `/sdd-plan` pra escopo Medium: main em Sonnet, quebra de tarefas + 3 checks delegadas a um único subagente Opus de contexto focado.
 
-**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC) e cria a worktree pra implementação isolada. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer — problema, porquê, como foi resolvido (com desvios do plano), guia de review e validação — tudo rastreável a SPEC/IMP/diff. Nunca tira o PR de draft.
+**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC) e cria a worktree pra implementação isolada. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer em 4 seções — **O quê · Por quê · Como · Test plan** (incluindo desvios do plano e como testar manualmente) — tudo rastreável a SPEC/IMP/diff. Nunca tira o PR de draft.
 
 **`/executor-plan`** — executa as tarefas com TDD em modo autônomo, sub-agents paralelos pras tarefas marcadas `[P]`, staging por tarefa. Commits sob aprovação humana; `--step` volta ao modo pausado.
 

@@ -96,7 +96,7 @@
       "Bash(env *)",
       "Bash(true)",
       "Bash(false)",
-      "mcp__*"
+      "mcp__context7__*"
     ],
     "ask": [
       "Bash(git commit)",

@@ -169,16 +169,19 @@ E la dentro, rode /executor-plan pra executar o plano.
 
 ## Modo sync — body como prévia pro reviewer (pós-implementação)
 
-Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica` + review interno, antes de marcar o PR como ready. O body de kickoff ("draft, implementação não iniciada") fica obsoleto — o sync o reescreve como um **mini-spec pro reviewer**: o problema, o porquê, como foi resolvido e por onde revisar.
+Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica` + review interno, antes de marcar o PR como ready. O body de kickoff ("draft, implementação não iniciada") fica obsoleto — o sync o reescreve como um **mini-spec pro reviewer** em 4 seções: **O quê** (a mudança), **Por quê** (o problema/motivação), **Como** (a solução, com decisões e desvios) e **Test plan** (como foi validado e como o reviewer testa).
+
+**Funciona de sessão limpa** (e é o uso recomendado, pós-`/clear`): todo o necessário é re-hidratado dos artefatos + código — nada depende do histórico da conversa.
 
 ### Passos
 
 1. **Detectar o PR**: `gh pr list --head $(git branch --show-current) --state open --limit 1`. Sem PR aberto → avise e encerre (sync atualiza, não cria).
-2. **Coletar o estado real**:
+2. **Coletar o estado real** (leia de fato, não presuma):
    - **SPEC** (`thoughts/plans/`): Entendimento (o problema + porquê) e Decisões Resolvidas (o como, com justificativa)
    - **IMP** (`thoughts/history/`): o que foi feito de fato, desvios do plano, test count
    - **Verificação comportamental** (seção do IMP ou `VER-*.md`), se existir
-   - **Diff real**: `gh pr diff <N> --name-only` (arquivos), commits da branch
+   - **Diff completo**: `gh pr diff <N>` (não só nomes de arquivos) — é dele que saem o "O quê" real e os apontadores do "Comece o review por"
+   - **O próprio código**: abra os arquivos centrais da mudança quando o diff sozinho não explicar (contexto em volta, contrato da função alterada). O body descreve o código real, não a intenção do plano. Diff volumoso (>10 arquivos): delegue a leitura a um subagente (`Agent`, `subagent_type: Explore`) que devolve a síntese por arquivo
 3. **Montar o body novo** (template abaixo) e mostrar ao usuário o resumo da troca (seções novas vs body atual).
 4. **Aplicar com confirmação**: `gh pr edit <N> --body-file "$BODY_FILE"`. Title só muda se o usuário pedir explicitamente.
 5. **Nunca saia de draft**: se tudo estiver pronto, encerre com "PR pronto pra ready — o clique é seu (`gh pr ready <N>`)".
@@ -186,34 +189,32 @@ Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica`
 ### Template do body (sync)
 
 ```markdown
-## Problema
+## O quê
 
-<O que estava errado/faltando e POR QUE importa — 2-4 linhas. Fonte: Entendimento do SPEC + issue>
+<O que este PR faz — a mudança em si, 1-3 linhas diretas. Fonte: Resumo Executivo do SPEC + diff real>
 
-## Solução
+## Por quê
 
-<COMO foi resolvido — estratégia em 2-3 linhas, depois as decisões-chave com o porquê:>
+<O problema/motivação — o que estava errado ou faltando e por que importa, 2-4 linhas. Fonte: Entendimento do SPEC + issue>
+
+## Como
+
+<A estratégia em 2-3 linhas, depois as decisões-chave com justificativa:>
 
 - <decisão 1 — por quê (Decisões Resolvidas do SPEC)>
 - <decisão 2 — por quê>
-- <desvio do plano, se houve — o que mudou e por quê (IMP)>
+- <desvio do plano, se houve — o que mudou e por quê (IMP). NUNCA omitir>
+- Comece o review por: `<arquivo central>` — <papel dele em 1 linha> <pontos de atenção: trade-off, edge case, área sensível>
 
-## Guia pro review
-
-- Comece por: `<arquivo central>` — <papel dele em 1 linha>
-- Pontos que merecem atenção: <trade-off aceito, edge case tratado, área sensível tocada>
-- <ordem de leitura sugerida, se o diff for grande>
-
-## Validação
+## Test plan
 
 - Testes: <N unitários + M integração — test count preservado>
 - Gates: <typecheck/lint green>
 - Verificação comportamental: <checagens ✅ do /verifica, ou "não rodou">
+- Pra testar manualmente: <passos curtos — como o reviewer reproduz/exercita a mudança, se aplicável>
 
-## Referências
-
-- SPEC: `thoughts/plans/<arquivo>` · IMP: `thoughts/history/<arquivo>`
-- Issue: <link, se houver>
+---
+SPEC: `thoughts/plans/<arquivo>` · IMP: `thoughts/history/<arquivo>` · Issue: <link, se houver>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
