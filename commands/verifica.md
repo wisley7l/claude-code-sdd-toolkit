@@ -76,7 +76,7 @@ Data: DD-MM-YYYY · App: [comando de boot] · Ambiente: [local/dev/sandbox]
 
 ### 6. Resultado
 
-- **Tudo ✅**: informe e sugira o próximo passo (`/sdd-review` ou marcar PR ready).
+- **Tudo ✅**: informe e sugira o próximo passo (`/sdd-review` ou marcar PR ready). Se houver PR aberto com body desatualizado, sugira também `/pr-draft sync` — a tabela de verificação entra na seção "Validação" do body novo.
 - **Alguma ❌**: mostre a evidência da falha e ofereça: (a) `/quick-task` pro fix, (b) investigar com `/investiga` se a causa não for óbvia, (c) parar aqui. A checagem que falhou re-roda após o fix.
 
 ## Guardrails

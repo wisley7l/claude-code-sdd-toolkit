@@ -42,7 +42,7 @@ LICENSE
 ## Workflow principal (resumo)
 
 - `/sdd-plan` → pesquisa + planejamento em 1 doc auto-sized (Medium/Large/Complex). `/sdd-plan-eco` é a variante econômica pra Medium (main em Sonnet, quebra de tarefas + checks num subagente Opus)
-- `/pr-draft` → abre PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC), devolve o root pra branch default e cria worktree via `/git-worktree`. Bloqueado pra criar PR → instrui o usuário comando-por-comando. **Nunca commita código nem sai de draft sozinho**
+- `/pr-draft` → abre PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC), devolve o root pra branch default e cria worktree via `/git-worktree`. Bloqueado pra criar PR → instrui o usuário comando-por-comando. `/pr-draft sync` reescreve o body pós-implementação como prévia pro reviewer (problema/solução/guia/validação, rastreável a SPEC/IMP/diff). **Nunca commita código nem sai de draft sozinho**
 - `/executor-plan` → executa TDD autônomo, faz `git add` por tarefa, **nunca commita sozinho**
 - `/pair-review` → companheiro interativo do review manual, em **sessão nova**: re-hidrata do staged + SPEC/IMP, perguntas de julgamento vão pra subagentes Opus focados, ajustes com gate + test count protection. Com PR sob review do time, valida cada fix contra o comentário humano de origem (modo `r`). **Nunca commita sem escolha explícita, nunca posta no PR**
 - `/quick-task` → atalho pra mudança pequena (≤3 arquivos), sem SPEC formal

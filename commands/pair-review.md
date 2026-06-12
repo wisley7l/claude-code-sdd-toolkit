@@ -140,7 +140,8 @@ Quando o usuário sinalizar que terminou ("aprovei", "pode fechar", "bora commit
    ```
    Execute a escolha. **Não pushe** — push é sempre do usuário.
 3. **Rascunhos de resposta** (se houve modo `(r)`): entregue o texto de resposta de cada thread num bloco único, pronto pra colar no PR — comentário, o que foi feito, `arquivo:linha`, hash do commit se já existir.
-4. **Memória**: se o review revelou algo não-óbvio (decisão validada, lição), lembre que o `/sdd-learning` extrai pós-merge — só proponha registro direto (via skill `memory-keeper`) se for definitivo e independente de review futuro.
+4. **Body do PR**: se há PR aberto e o body ainda descreve o kickoff (ou ficou atrás das mudanças), sugira `/pr-draft sync` — reescreve o body como prévia pro reviewer (problema, solução, guia de review, validação).
+5. **Memória**: se o review revelou algo não-óbvio (decisão validada, lição), lembre que o `/sdd-learning` extrai pós-merge — só proponha registro direto (via skill `memory-keeper`) se for definitivo e independente de review futuro.
 
 ## Guardrails
 

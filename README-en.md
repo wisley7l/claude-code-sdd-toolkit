@@ -12,7 +12,7 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/sdd-plan-eco`** — economical variant of `/sdd-plan` for Medium scope: main thread on Sonnet, task breakdown + 3 checks delegated to a single focused-context Opus subagent.
 
-**`/pr-draft`** — opens the initial PR as a draft from the plan (branch + empty commit + title/body from the SPEC) and creates the worktree for isolated implementation.
+**`/pr-draft`** — opens the initial PR as a draft from the plan (branch + empty commit + title/body from the SPEC) and creates the worktree for isolated implementation. **`/pr-draft sync`** (post-implementation) rewrites the body as a preview for the reviewer — problem, why, how it was solved (including plan deviations), review guide and validation — everything traceable to SPEC/IMP/diff. Never takes the PR out of draft.
 
 **`/executor-plan`** — runs the tasks with TDD in autonomous mode, parallel sub-agents for tasks marked `[P]`, staging per task. Commits are human-approved; `--step` restores the paused mode.
 

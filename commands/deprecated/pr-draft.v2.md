@@ -1,7 +1,7 @@
 ---
-description: Abre PR inicial em draft a partir do plano — branch, empty commit, title/body do SPEC, worktree via /git-worktree. `sync` reescreve o body pós-implementação como prévia pro reviewer.
+description: Abre PR inicial em draft a partir do plano — cria branch, empty commit, title/body do SPEC. Ao final, isola o trabalho em worktree via /git-worktree.
 model: claude-sonnet-4-6
-argument-hint: [nome-da-branch | sync]
+argument-hint: [nome-da-branch opcional]
 allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git checkout*), Bash(git switch*), Bash(git commit*), Bash(git push*), Bash(git remote show origin*), Bash(git rev-parse*), Bash(git log*), Bash(gh *), Bash(ls *), Bash(find *), Bash(mkdir *), Bash(pwd)
 ---
 
@@ -19,7 +19,6 @@ Voce abre o **pull request inicial em draft** pra uma feature que ja foi planeja
 ## Argumentos
 
 - `$ARGUMENTS` (opcional) — nome da branch. Se fornecido, usa ele direto (pulando a derivacao do SPEC). Se vazio, deriva do plano (ver Passo 3).
-- `sync` — **modo de atualizacao**: nao cria nada; reescreve o body do PR aberto da branch atual pra refletir o que foi implementado de fato, como previa pro reviewer. Ver secao "Modo sync" no final.
 
 ## Principios
 
@@ -167,61 +166,6 @@ E la dentro, rode /executor-plan pra executar o plano.
 
 ---
 
-## Modo sync — body como prévia pro reviewer (pós-implementação)
-
-Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica` + review interno, antes de marcar o PR como ready. O body de kickoff ("draft, implementação não iniciada") fica obsoleto — o sync o reescreve como um **mini-spec pro reviewer**: o problema, o porquê, como foi resolvido e por onde revisar.
-
-### Passos
-
-1. **Detectar o PR**: `gh pr list --head $(git branch --show-current) --state open --limit 1`. Sem PR aberto → avise e encerre (sync atualiza, não cria).
-2. **Coletar o estado real**:
-   - **SPEC** (`thoughts/plans/`): Entendimento (o problema + porquê) e Decisões Resolvidas (o como, com justificativa)
-   - **IMP** (`thoughts/history/`): o que foi feito de fato, desvios do plano, test count
-   - **Verificação comportamental** (seção do IMP ou `VER-*.md`), se existir
-   - **Diff real**: `gh pr diff <N> --name-only` (arquivos), commits da branch
-3. **Montar o body novo** (template abaixo) e mostrar ao usuário o resumo da troca (seções novas vs body atual).
-4. **Aplicar com confirmação**: `gh pr edit <N> --body-file "$BODY_FILE"`. Title só muda se o usuário pedir explicitamente.
-5. **Nunca saia de draft**: se tudo estiver pronto, encerre com "PR pronto pra ready — o clique é seu (`gh pr ready <N>`)".
-
-### Template do body (sync)
-
-```markdown
-## Problema
-
-<O que estava errado/faltando e POR QUE importa — 2-4 linhas. Fonte: Entendimento do SPEC + issue>
-
-## Solução
-
-<COMO foi resolvido — estratégia em 2-3 linhas, depois as decisões-chave com o porquê:>
-
-- <decisão 1 — por quê (Decisões Resolvidas do SPEC)>
-- <decisão 2 — por quê>
-- <desvio do plano, se houve — o que mudou e por quê (IMP)>
-
-## Guia pro review
-
-- Comece por: `<arquivo central>` — <papel dele em 1 linha>
-- Pontos que merecem atenção: <trade-off aceito, edge case tratado, área sensível tocada>
-- <ordem de leitura sugerida, se o diff for grande>
-
-## Validação
-
-- Testes: <N unitários + M integração — test count preservado>
-- Gates: <typecheck/lint green>
-- Verificação comportamental: <checagens ✅ do /verifica, ou "não rodou">
-
-## Referências
-
-- SPEC: `thoughts/plans/<arquivo>` · IMP: `thoughts/history/<arquivo>`
-- Issue: <link, se houver>
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
-```
-
-**Regras do template**: cada afirmação rastreável a SPEC/IMP/diff — não invente narrativa; desvio do plano NUNCA é omitido (é o que o reviewer mais precisa saber); "Guia pro review" aponta arquivos reais do diff, não genéricos. Sem SPEC/IMP (PR fora do fluxo SDD): derive do diff + commits e marque "Body derivado do diff — sem SPEC formal".
-
----
-
 ## Modo Manual (quando bloqueado)
 
 Acionado quando `git push`, `gh pr create` sao negados por permissao, ou `gh` nao esta autenticado. **Nao tente contornar.** Em vez disso:
@@ -263,8 +207,7 @@ gh auth login
 
 ## Guardrails
 
-- **PR sempre em `--draft`** — sair de draft e decisao humana (vale tambem no modo sync: `gh pr ready` e do usuario)
-- **Sync nao inventa narrativa** — toda afirmacao do body rastreavel a SPEC/IMP/diff; desvios do plano nunca omitidos; `gh pr edit` so com confirmacao
+- **PR sempre em `--draft`** — sair de draft e decisao humana
 - **Empty commit, nunca codigo** — o commit do kickoff e vazio (`--allow-empty`); implementacao so na worktree
 - **Root volta pra branch default** — o repositorio principal nunca fica preso na branch da feature
 - **Nunca force-push, nunca delete branch, nunca reescreva historico**
