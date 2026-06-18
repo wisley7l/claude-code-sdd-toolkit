@@ -6,9 +6,20 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git
 
 # Roadmap — Visao Multi-Feature
 
-Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto. Mantem 3 secoes: Backlog, Em andamento (tem SPEC), Concluido.
+Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto.
 
-**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no SPEC/IMP correspondente.
+O eixo das secoes e o **estado real do trabalho (o PR)**, NAO a presenca de SPEC. Quatro secoes:
+
+| Secao | Significado |
+|---|---|
+| `## 🔴 Próximos (fila priorizada)` | Fila curta, curada manualmente — o que fazer a seguir. O sync NAO mexe aqui automaticamente. |
+| `## Backlog (resto)` | Tudo identificado mas sem PR aberto. Sem ordem. Pode ter SPEC ou nao. |
+| `## Em progresso (PR aberto)` | Tem PR aberto e ativo. |
+| `## Concluído (merged)` | PR merged. |
+
+**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no SPEC/IMP/PR correspondente.
+
+**Escopo**: ver memoria de feedback do projeto sobre o que entra no roadmap (ex: backend-only) — respeitar a regra vigente. Em duvida, perguntar.
 
 ## Resolucao do diretorio root
 
@@ -22,9 +33,9 @@ Use esse caminho como base para `thoughts/ROADMAP.md`.
 
 | Invocacao | O que faz |
 |---|---|
-| `/roadmap` (sem args) | Mostra estado atual + atualiza secoes (migra entre status) + sugere proximos passos |
-| `/roadmap add "<descricao>"` | Adiciona entrada nova ao Backlog |
-| `/roadmap add #123` | Busca issue do GH via `gh` e adiciona ao Backlog com link, titulo e corpo |
+| `/roadmap` (sem args) | Mostra estado atual + sincroniza secoes por status de PR + sugere proximos passos |
+| `/roadmap add "<descricao>"` | Adiciona entrada nova ao Backlog (resto) |
+| `/roadmap add #123` | Busca issue do GH via `gh` e adiciona ao Backlog (resto) com link, titulo e corpo |
 
 ## Configuracao Inicial
 
@@ -53,18 +64,12 @@ Se nao existir, crie usando o template (final deste documento).
 
 1. Le o ROADMAP atual
 2. Decide o proximo numero (NNN) baseado em todas as entradas existentes (max + 1, com 3 digitos)
-3. Adiciona ao **Backlog**:
+3. Adiciona ao **Backlog (resto)**:
 ```markdown
 - [ ] NNN — <descricao> — [criado: DD-MM-YYYY]
 ```
 4. Salva
-5. Informa:
-```
-Adicionado ao Backlog:
-NNN — <descricao>
-
-Total Backlog: [N]
-```
+5. Informa: `Adicionado ao Backlog: NNN — <descricao>`
 
 ---
 
@@ -83,61 +88,53 @@ gh issue view 123 --json title,body,url,labels,number
 
 3. Le o ROADMAP atual, decide o proximo NNN
 
-4. Adiciona ao **Backlog** com link e resumo:
+4. Adiciona ao **Backlog (resto)** com link e resumo:
 ```markdown
 - [ ] NNN — [<titulo da issue>](<url da issue>) [#123] — [criado: DD-MM-YYYY]
 ```
 
-5. Se a issue tem body relevante (>1 linha de contexto), pergunte:
-```
-Issue #123 tem contexto extenso. Quer que eu adicione um resumo de 1 linha?
-```
+5. Se a issue tem body relevante (>1 linha de contexto), pergunte se deve adicionar um resumo de 1 linha.
 
-6. Se aprovado, complemente a entrada com `— <resumo>`.
-
-7. Salva e informa.
+6. Salva e informa.
 
 ---
 
 ## Modo: Sync (sem args)
 
+O sync e **PR-driven**: o que dita a secao de cada item e o status do(s) PR(s) que ele referencia, nao a existencia de arquivo SPEC/IMP.
+
 ### Passos
 
-1. Le o ROADMAP atual e extrai todas entradas com seu NNN/slug.
+1. Le o ROADMAP atual e extrai cada entrada com seu NNN e qualquer `#<PR>` referenciado.
 
-2. Para cada entrada do **Backlog**, verifica se ha SPEC em `thoughts/plans/`:
-   - Padrao: `SPEC-*-<slug>.md` (slug derivado da descricao)
-   - Se encontrar: move para **Em andamento (tem SPEC)** com link
-```markdown
-- [ ] NNN — [titulo] → [SPEC-DD-MM-YYYY-slug.md](plans/SPEC-DD-MM-YYYY-slug.md)
+2. Para cada entrada que referencia um PR, consulta o status:
+```bash
+gh pr view <N> --json state,mergedAt,updatedAt,title
 ```
+   Aplica as transicoes:
+   - **merged** → mover para **Concluído (merged)**, marcar `[x]`, normalizar o link para `→ [PR #N](url)`.
+   - **open com atividade recente** (updatedAt < ~4 semanas) → **Em progresso (PR aberto)**.
+   - **open mas parado** (updatedAt > ~4 semanas) → NAO move sozinho: sinaliza ao usuario sugerindo rebaixar para Backlog com nota `WIP parado desde DD-MM`.
+   - **closed sem merge** → sinaliza (PR morto); sugere voltar ao **Backlog (resto)** preservando o contexto.
 
-3. Para cada entrada de **Em andamento**, verifica se ha IMP em `thoughts/history/`:
-   - Padrao: `IMP-*-<slug>.md`
-   - Se encontrar: move para **Concluido** (marca `[x]`)
-```markdown
-- [x] NNN — [titulo] → [IMP-DD-MM-YYYY-slug.md](history/IMP-DD-MM-YYYY-slug.md)
-```
+3. **🔴 Próximos** e **Backlog (resto)** sao curados manualmente — o sync nao promove/rebaixa entre eles automaticamente. Apenas: se um item de Próximos/Backlog ganhou PR aberto, move para Em progresso; se foi concluido, para Concluído.
 
-4. Detecta arquivos SPEC/IMP que NAO tem entrada correspondente no roadmap. Para cada:
-   - Mostre ao usuario:
+4. Detecta PRs abertos do autor que NAO tem entrada no roadmap:
+```bash
+gh pr list --author "@me" --state open --json number,title,headRefName
 ```
-Encontrei [SPEC/IMP] sem entrada no roadmap:
-- thoughts/plans/SPEC-DD-MM-YYYY-foo.md
-
-Quer adicionar como entrada nova? (s/n)
-```
+   Para cada, mostre ao usuario e pergunte se quer adicionar (respeitando o escopo vigente do roadmap — ex: backend-only).
 
 5. Apresente resumo:
 ```
-Roadmap sincronizado:
+Roadmap sincronizado (PR-driven):
 
-- Backlog: [N]
-- Em andamento: [P] (moveu Q do Backlog)
-- Concluido: [R] (moveu S de Em andamento)
+- 🔴 Próximos: [N]
+- Backlog: [M]
+- Em progresso: [P] (PRs abertos)
+- Concluído: [R] (moveu S por merge)
 
-Itens sem entrada detectados: [T] (perguntei sobre cada)
-Sugestao: itens em Backlog ha >14 dias podem precisar revisao
+Sinais: [T] PRs parados (>4 sem) · [U] PRs fechados sem merge · [V] PRs abertos sem entrada
 ```
 
 6. Salva o ROADMAP atualizado.
@@ -151,21 +148,25 @@ Quando criar pela primeira vez:
 ```markdown
 # Roadmap
 
-> Visao multi-feature do projeto. Cada linha aponta para SPEC/IMP correspondente quando existir.
-> Use `/roadmap add "<descricao>"` ou `/roadmap add #issue` para adicionar.
-> Use `/roadmap` para sincronizar status com arquivos existentes.
+> Visao multi-feature do projeto. O eixo das secoes e o **estado real do trabalho (o PR)**, nao a presenca de SPEC.
+> 🔴 Próximos = fila priorizada · Backlog = resto (sem ordem) · Em progresso = PR aberto ativo · Concluído = merged.
+> `/roadmap add "<descricao>"` ou `/roadmap add #issue` para adicionar · `/roadmap` sincroniza status via PR.
 
-## Backlog
+## 🔴 Próximos (fila priorizada)
 
-[Itens identificados mas sem SPEC ainda]
+[Fila curta do que fazer a seguir — curada manualmente]
 
-## Em andamento (tem SPEC)
+## Backlog (resto)
 
-[Itens com plano aprovado, sendo executados]
+[Tudo identificado mas sem PR aberto]
 
-## Concluido
+## Em progresso (PR aberto)
 
-[Itens entregues — ver IMP para detalhes]
+[Itens com PR aberto e ativo]
+
+## Concluído (merged)
+
+[Itens entregues — ver PR/IMP para detalhes]
 ```
 
 ---
@@ -173,10 +174,11 @@ Quando criar pela primeira vez:
 ## Guardrails
 
 - **NNN sequencial**: nunca reuse numero. Sempre `max(numeros existentes) + 1`
-- **Slug consistente**: o slug usado no roadmap deve bater com o slug do SPEC/IMP para a migracao automatica funcionar
 - **Nunca duplique entradas**: antes de adicionar issue, verifique se ja existe (por numero #)
-- **Migracao sem perda**: ao mover entre secoes, preserve NNN e titulo. So adiciona o link do artefato
-- **Sync nao deleta**: itens sem SPEC/IMP correspondente ficam onde estao (nao move para tras)
-- **Itens orfaos**: SPEC/IMP sem entrada no roadmap perguntam ao usuario, nao adicionam automaticamente
+- **Migracao sem perda**: ao mover entre secoes, preserve NNN e titulo. So ajusta o link/status
+- **Sync e PR-driven**: a secao segue o status do PR (merged/open/closed), nao a presenca de SPEC/IMP
+- **Próximos e manual**: o sync nunca promove itens para 🔴 Próximos sozinho — isso e priorizacao humana
+- **PRs parados/fechados**: o sync sinaliza mas nao rebaixa sozinho — pede confirmacao
 - **GitHub via `gh` CLI**: nunca tokens manuais
-- **1 linha por entrada**: detalhes vivem no SPEC/IMP, nao no roadmap
+- **1 linha por entrada**: detalhes vivem no SPEC/IMP/PR, nao no roadmap
+- **Escopo do roadmap**: respeitar a regra vigente (ex: backend-only, via memoria de feedback do projeto)

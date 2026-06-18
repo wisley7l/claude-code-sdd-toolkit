@@ -26,7 +26,7 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 **`/memory-organize`** — reorganizes the auto-memory: orphans, broken links, duplicates, and sub-summaries when `MEMORY.md` grows.
 
-**`/roadmap`** — manages `thoughts/ROADMAP.md`: entries, GitHub issue imports, sync with SPEC/IMP.
+**`/roadmap`** — manages `thoughts/ROADMAP.md`: entries, GitHub issue imports, sync sections by PR status (Up next / Backlog / In progress / Done).
 
 ### Utilities
 

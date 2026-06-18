@@ -26,7 +26,7 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/memory-organize`** — reorganiza o auto-memory: órfãs, links quebrados, duplicatas e sub-sumários quando `MEMORY.md` cresce.
 
-**`/roadmap`** — gerencia `thoughts/ROADMAP.md`: entradas, import de issues do GitHub, sync com SPEC/IMP.
+**`/roadmap`** — gerencia `thoughts/ROADMAP.md`: entradas, import de issues do GitHub, sync de seções por status de PR (Próximos / Backlog / Em progresso / Concluído).
 
 ### Utilitários
 

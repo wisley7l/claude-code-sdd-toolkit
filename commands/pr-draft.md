@@ -102,7 +102,8 @@ Template do body:
 
 ## Plano
 
-- SPEC: `thoughts/plans/SPEC-DD-MM-YYYY-NNN-<slug>.md`  <!-- ou: "Sem SPEC formal — derivado da conversa" -->
+<!-- Body publico: NUNCA o caminho do SPEC (`thoughts/plans/...` e local, o reviewer nao abre). So o sinal de que ha plano + meta derivada. -->
+- Planejado via SPEC formal  <!-- ou: "Sem SPEC formal — derivado da conversa" -->
 - Escopo: <Medium | Large | Complex | n/a>
 - Tarefas: <N> em <M> phases  <!-- omitir se nao houver SPEC -->
 - Issue: <link, se houver>
@@ -113,6 +114,8 @@ Template do body:
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
+
+> **Body e publico** — vale pro kickoff e pro sync: nunca exponha caminho de `thoughts/` (SPEC/IMP), numero de ROADMAP nem link de sessao do Claude (`claude.ai/code/session_...`). Só sobrevive o que o reviewer abre: link da Issue/PR.
 
 O empty commit usa o **mesmo title** do PR como mensagem.
 
@@ -214,12 +217,20 @@ Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica`
 - Pra testar manualmente: <passos curtos — como o reviewer reproduz/exercita a mudança, se aplicável>
 
 ---
-SPEC: `thoughts/plans/<arquivo>` · IMP: `thoughts/history/<arquivo>` · Issue: <link, se houver>
+<!-- Rodapé: SÓ referências que o reviewer externo consegue abrir. Issue: <link> quando houver — senão, omita a linha inteira. -->
+Issue: <link, se houver>
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
 **Regras do template**: cada afirmação rastreável a SPEC/IMP/diff — não invente narrativa; desvio do plano NUNCA é omitido (é o que o reviewer mais precisa saber); "Guia pro review" aponta arquivos reais do diff, não genéricos. Sem SPEC/IMP (PR fora do fluxo SDD): derive do diff + commits e marque "Body derivado do diff — sem SPEC formal".
+
+**Guardrail — body é público, não vaze artefato interno**: o body do PR é lido por gente que NÃO tem acesso ao seu ambiente. NUNCA inclua no body:
+- **Link de sessão do Claude** (`https://claude.ai/code/session_...`, IDs de sessão/conversa) — privado, sem valor pro reviewer. O rodapé `🤖 Generated with [Claude Code](https://claude.com/claude-code)` é o único marcador permitido.
+- **Caminhos internos** de `thoughts/` (SPEC `thoughts/plans/...`, IMP `thoughts/history/...`) — são locais/não-versionados, o reviewer não os abre. A rastreabilidade SPEC/IMP é insumo SEU pra escrever o body, não conteúdo dele.
+- **Número/posição no ROADMAP** (`ROADMAP: 106`) e qualquer numeração de planejamento interno.
+
+Só sobrevive no body o que o reviewer consegue abrir: link da Issue/PR. Na dúvida sobre um item, omita.
 
 ---
 
@@ -266,6 +277,7 @@ gh auth login
 
 - **PR sempre em `--draft`** — sair de draft e decisao humana (vale tambem no modo sync: `gh pr ready` e do usuario)
 - **Sync nao inventa narrativa** — toda afirmacao do body rastreavel a SPEC/IMP/diff; desvios do plano nunca omitidos; `gh pr edit` so com confirmacao
+- **Body e publico, sem artefato interno** — NUNCA inclua link de sessao do Claude (`claude.ai/code/session_...`), caminhos de `thoughts/` (SPEC/IMP) nem numero de ROADMAP no body. Sobrevive so o que o reviewer abre: link da Issue/PR
 - **Empty commit, nunca codigo** — o commit do kickoff e vazio (`--allow-empty`); implementacao so na worktree
 - **Root volta pra branch default** — o repositorio principal nunca fica preso na branch da feature
 - **Nunca force-push, nunca delete branch, nunca reescreva historico**
