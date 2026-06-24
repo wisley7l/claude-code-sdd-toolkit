@@ -11,7 +11,7 @@ Um comando de terminal que lê **a última resposta do Claude Code na sessão at
 ## Como funciona
 
 1. Descobre a pasta da sessão a partir do diretório atual (o Claude Code troca `/` por `-` no caminho — `/home/voce/meu-projeto` vira `-home-voce-meu-projeto`).
-2. Procura o transcript `.jsonl` mais recente dessa pasta **em todas as instalações** `~/.claude*/projects/` (cobre instalações múltiplas ou com nome customizado).
+2. Identifica **a sessão daquela aba** (ver "Qual sessão é lida" abaixo) e localiza o transcript `.jsonl` correspondente **em todas as instalações** `~/.claude*/projects/` (cobre instalações múltiplas ou com nome customizado).
 3. Lê a última mensagem do assistente que seja `type=="assistant"`, **não** seja de subagente (`isSidechain` falso/ausente) e tenha texto de fato (pula mensagens que são só chamada de ferramenta).
 4. Remove a marcação Markdown (negrito, headers, blocos de código, links…) pra não soletrar símbolos.
 5. Sintetiza pelo **engine** escolhido, com fallback em cascata (ver abaixo).
@@ -19,6 +19,14 @@ Um comando de terminal que lê **a última resposta do Claude Code na sessão at
 Sem dependências além do **Python 3** (já vem no sistema) e de um **player de áudio** (`pw-play`/`paplay`/`aplay`, presentes por padrão em Pop!_OS/Ubuntu).
 
 ---
+
+## Qual sessão é lida (várias abas)
+
+Se você tem **várias abas abertas no mesmo projeto**, cada uma é uma sessão diferente do Claude Code (transcripts `.jsonl` distintos na mesma pasta). Pra não ler a resposta da aba errada, o `ouvir`:
+
+- **Crava a sessão da aba** quando é rodado de dentro dela — ele herda a variável `CLAUDE_CODE_SESSION_ID` (que o Claude Code exporta) e lê exatamente aquele transcript. **Por isso, com múltiplas abas, dispare com `!ouvir`** (dentro da sessão): assim ele pega a sessão certa.
+- **Cai pro mais recente** do diretório só quando roda em terminal puro (sem sessão associada).
+- **Override manual**: `ouvir --session <id>` ou `OUVIR_SESSION_ID=<id> ouvir` força uma sessão específica.
 
 ## Engines e fallback
 
@@ -143,6 +151,7 @@ Baixe o `.onnx` + `.onnx.json` pra `~/.local/share/piper/` e aponte com `OUVIR_P
 |---|---|---|
 | `OUVIR_ENGINE` | `auto` (= `piper,espeak`) | Ordem dos engines (locais sempre anexados no fim) |
 | `OUVIR_CLAUDE_GLOB` | `~/.claude*` | Onde procurar as instalações/transcripts |
+| `OUVIR_SESSION_ID` | `$CLAUDE_CODE_SESSION_ID` | Força a sessão a ler (senão usa a da aba; ou `--session <id>`) |
 | `OUVIR_PIPER_MODEL` | `~/.local/share/piper/pt_BR-faber-medium.onnx` | Modelo do piper |
 | `OUVIR_ESPEAK_VOICE` | `pt-br` | Voz do espeak-ng |
 | `OUVIR_DRY_RUN` | — | Se setada, só imprime o texto (igual `--text-only`) |

@@ -19,6 +19,12 @@ Engines:
   minimax  cloud, pt-BR (precisa MINIMAX_API_KEY [+ MINIMAX_GROUP_ID] e um voice_id)
   groq     cloud, EN/AR (precisa GROQ_API_KEY) — OpenAI-compatible
 
+Qual sessão é lida (importante com várias abas no mesmo projeto):
+  Rodando via `!ouvir` (ou um hook), o `ouvir` herda CLAUDE_CODE_SESSION_ID e crava
+  o transcript daquela aba — não lê a resposta de outra sessão. Em terminal puro
+  (sem essa env) cai pro .jsonl mais recente do diretório. Override: `--session <id>`
+  ou OUVIR_SESSION_ID.
+
 Privacidade: engines cloud ENVIAM o texto da resposta pro provedor. Por isso o
 default é local. Cloud só é usado quando você pede explicitamente em OUVIR_ENGINE.
 
@@ -58,11 +64,41 @@ def project_dir_name(cwd):
     return cwd.replace("/", "-")
 
 
-def find_transcript(cwd):
+def resolve_session_id(argv):
+    """Session id desta aba: --session <id>  >  OUVIR_SESSION_ID  >  CLAUDE_CODE_SESSION_ID."""
+    if "--session" in argv:
+        i = argv.index("--session")
+        if i + 1 < len(argv):
+            return argv[i + 1]
+    return os.environ.get("OUVIR_SESSION_ID") or os.environ.get("CLAUDE_CODE_SESSION_ID")
+
+
+def transcript_by_session(session_id):
+    """O .jsonl de uma sessão específica, em qualquer instalação/projeto (o id é único)."""
+    matches = glob.glob(os.path.join(CLAUDE_GLOB, "projects", "*", session_id + ".jsonl"))
+    return matches[0] if matches else None
+
+
+def transcript_latest_for_cwd(cwd):
     """O .jsonl mais recente do projeto atual entre TODAS as instalações (~/.claude*)."""
     pattern = os.path.join(CLAUDE_GLOB, "projects", project_dir_name(cwd), "*.jsonl")
     matches = glob.glob(pattern)
     return max(matches, key=os.path.getmtime) if matches else None
+
+
+def find_transcript(cwd, session_id=None):
+    """
+    Resolve o transcript a ler:
+      - com session_id (rodando via !ouvir/hook, ou --session): crava a sessão daquela
+        aba — evita ler a resposta de outra aba quando há várias sessões no mesmo projeto;
+      - sem session_id (terminal puro): cai pro .jsonl mais recente do diretório atual.
+    """
+    if session_id:
+        t = transcript_by_session(session_id)
+        if t:
+            return t
+        log(f"sessão {session_id} não encontrada; usando a mais recente deste diretório.")
+    return transcript_latest_for_cwd(cwd)
 
 
 def extract_last_reply(transcript_path):
@@ -294,7 +330,8 @@ def speak(text):
 # --------------------------------------------------------------------------- #
 def main():
     cwd = os.getcwd()
-    transcript = find_transcript(cwd)
+    session_id = resolve_session_id(sys.argv)
+    transcript = find_transcript(cwd, session_id)
     if not transcript:
         log("nenhuma sessão do Claude Code encontrada para este diretório.")
         return 0
