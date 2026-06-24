@@ -25,6 +25,10 @@ Qual sessão é lida (importante com várias abas no mesmo projeto):
   (sem essa env) cai pro .jsonl mais recente do diretório. Override: `--session <id>`
   ou OUVIR_SESSION_ID.
 
+Parar o áudio:
+  `ouvir --stop` mata o que está tocando NESTA sessão (pidfile por sessão, então
+  com várias abas cada uma para só o seu). Em foreground, Ctrl+C também para.
+
 Privacidade: engines cloud ENVIAM o texto da resposta pro provedor. Por isso o
 default é local. Cloud só é usado quando você pede explicitamente em OUVIR_ENGINE.
 
@@ -36,6 +40,7 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -152,6 +157,53 @@ def strip_markdown(text):
 # --------------------------------------------------------------------------- #
 # 2. Reprodução de áudio                                                       #
 # --------------------------------------------------------------------------- #
+_PID_FILE = None  # setado no main() — guarda o pid do player atual (por sessão)
+
+
+def pid_path(session_id):
+    base = os.environ.get("XDG_RUNTIME_DIR") or tempfile.gettempdir()
+    d = os.path.join(base, "ouvir")
+    try:
+        os.makedirs(d, exist_ok=True)
+    except OSError:
+        d = tempfile.gettempdir()
+    return os.path.join(d, f"{session_id or 'default'}.pid")
+
+
+def _write_pid(pid):
+    if _PID_FILE:
+        try:
+            with open(_PID_FILE, "w") as f:
+                f.write(str(pid))
+        except OSError:
+            pass
+
+
+def _clear_pid():
+    if _PID_FILE and os.path.exists(_PID_FILE):
+        try:
+            os.unlink(_PID_FILE)
+        except OSError:
+            pass
+
+
+def _run_player(args):
+    """Toca via Popen, registra o pid (pra `ouvir --stop`), espera terminar.
+    Ctrl+C interrompe e mata o player. True se tocou (ou foi interrompido)."""
+    try:
+        proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return False
+    _write_pid(proc.pid)
+    try:
+        return proc.wait() == 0
+    except KeyboardInterrupt:
+        proc.terminate()
+        return True
+    finally:
+        _clear_pid()
+
+
 def _players():
     return [p for p in ("pw-play", "paplay", "aplay") if shutil.which(p)]
 
@@ -169,15 +221,11 @@ def play_file(path, fmt):
     else:
         cand = _players()
     for player in cand:
-        try:
-            args = [player, path]
-            if player == "ffplay":
-                args = ["ffplay", "-autoexit", "-nodisp", "-loglevel", "quiet", path]
-            subprocess.run(args, check=True,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        args = [player, path]
+        if player == "ffplay":
+            args = ["ffplay", "-autoexit", "-nodisp", "-loglevel", "quiet", path]
+        if _run_player(args):
             return True
-        except subprocess.CalledProcessError:
-            continue
     if fmt == "mp3" and not cand:
         log("áudio mp3 recebido mas nenhum player de mp3 (ffplay/mpv/mpg123). Instale um ou use piper.")
     return False
@@ -226,12 +274,7 @@ def engine_espeak(text):
     espeak = shutil.which("espeak-ng") or shutil.which("espeak")
     if not espeak:
         return False
-    try:
-        subprocess.run([espeak, "-v", ESPEAK_VOICE, text], check=True)
-        return True
-    except subprocess.CalledProcessError as exc:
-        log(f"espeak falhou ({exc}).")
-        return False
+    return _run_player([espeak, "-v", ESPEAK_VOICE, text])
 
 
 # --------------------------------------------------------------------------- #
@@ -328,9 +371,31 @@ def speak(text):
 
 
 # --------------------------------------------------------------------------- #
+def stop():
+    """Mata o áudio que está tocando NESTA sessão (pidfile por sessão)."""
+    if not _PID_FILE or not os.path.exists(_PID_FILE):
+        log("nada tocando nesta sessão.")
+        return 0
+    try:
+        pid = int(open(_PID_FILE).read().strip())
+        os.kill(pid, signal.SIGTERM)
+        log(f"áudio parado (pid {pid}).")
+    except (OSError, ValueError) as exc:
+        log(f"nada pra parar ({exc}).")
+    finally:
+        _clear_pid()
+    return 0
+
+
 def main():
+    global _PID_FILE
     cwd = os.getcwd()
     session_id = resolve_session_id(sys.argv)
+    _PID_FILE = pid_path(session_id)
+
+    if "--stop" in sys.argv:
+        return stop()
+
     transcript = find_transcript(cwd, session_id)
     if not transcript:
         log("nenhuma sessão do Claude Code encontrada para este diretório.")

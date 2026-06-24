@@ -27,6 +27,7 @@ Se você tem **várias abas abertas no mesmo projeto**, cada uma é uma sessão 
 - **Crava a sessão da aba** quando é rodado de dentro dela — ele herda a variável `CLAUDE_CODE_SESSION_ID` (que o Claude Code exporta) e lê exatamente aquele transcript. **Por isso, com múltiplas abas, dispare com `!ouvir`** (dentro da sessão): assim ele pega a sessão certa.
 - **Cai pro mais recente** do diretório só quando roda em terminal puro (sem sessão associada).
 - **Override manual**: `ouvir --session <id>` ou `OUVIR_SESSION_ID=<id> ouvir` força uma sessão específica.
+- **Parar o áudio**: `ouvir --stop` mata só o áudio **desta** sessão (cada aba para o seu, via pidfile por sessão). Em foreground, `Ctrl+C` também para.
 
 ## Engines e fallback
 
@@ -98,6 +99,7 @@ Depois, dentro de **qualquer projeto com sessão ativa do Claude Code**:
 
 ```bash
 ouvir              # lê em voz alta a última resposta
+ouvir --stop       # para o áudio que está tocando nesta sessão (Ctrl+C também para)
 ouvir --text-only  # só imprime o texto que seria falado (debug, sem áudio)
 !ouvir             # de dentro de uma sessão do Claude Code (o prefixo ! roda shell)
 ```
