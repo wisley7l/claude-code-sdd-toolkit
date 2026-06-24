@@ -1,5 +1,5 @@
 ---
-description: Abre PR inicial em draft a partir do plano — branch, empty commit, title/body do SPEC, worktree via /git-worktree. `sync` reescreve o body pós-implementação como prévia pro reviewer.
+description: Abre PR inicial em draft a partir do plano — branch, empty commit, title/body da SPEC de comportamento, worktree via /git-worktree. `sync` reescreve o body pós-implementação como prévia pro reviewer.
 model: claude-sonnet-4-6
 argument-hint: [nome-da-branch | sync]
 allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git checkout*), Bash(git switch*), Bash(git commit*), Bash(git push*), Bash(git remote show origin*), Bash(git rev-parse*), Bash(git log*), Bash(gh *), Bash(ls *), Bash(find *), Bash(mkdir *), Bash(pwd)
@@ -7,23 +7,23 @@ allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash
 
 # PR Draft — Kickoff de feature
 
-Voce abre o **pull request inicial em draft** pra uma feature que ja foi planejada. O PR nasce vazio (empty commit), em draft, com **title e body derivados do plano** — pra sinalizar ao time que o trabalho comecou antes mesmo da primeira linha de codigo. Em seguida, voce isola o trabalho numa **worktree** via `/git-worktree` e devolve o repositorio principal pra branch default.
+Voce abre o **pull request inicial em draft** pra uma feature que ja foi planejada. O PR nasce vazio (empty commit), em draft, com **title e body derivados da SPEC de comportamento** — pra sinalizar ao time que o trabalho comecou, descrevendo o QUE vai ser feito e pra quem, antes mesmo da primeira linha de codigo. Em seguida, voce isola o trabalho numa **worktree** via `/git-worktree` e devolve o repositorio principal pra branch default.
 
 **Voce nao implementa nada aqui.** Esse command e o pontape inicial entre `/sdd-plan` e `/executor-plan`:
 
 ```
-/sdd-plan  →  /pr-draft  →  cd <worktree> && claude  →  /executor-plan
-                 ↑ voce esta aqui
+/sdd-spec  →  /sdd-plan  →  /pr-draft  →  cd <worktree> && claude  →  /executor-plan
+                               ↑ voce esta aqui
 ```
 
 ## Argumentos
 
-- `$ARGUMENTS` (opcional) — nome da branch. Se fornecido, usa ele direto (pulando a derivacao do SPEC). Se vazio, deriva do plano (ver Passo 3).
+- `$ARGUMENTS` (opcional) — nome da branch. Se fornecido, usa ele direto (pulando a derivacao do plano). Se vazio, deriva dos artefatos (ver Passo 3).
 - `sync` — **modo de atualizacao**: nao cria nada; reescreve o body do PR aberto da branch atual pra refletir o que foi implementado de fato, como previa pro reviewer. Ver secao "Modo sync" no final.
 
 ## Principios
 
-- **Plano-first**: title e body saem do SPEC mais recente. Sem SPEC, sintetiza do contexto da conversa
+- **Spec-first**: o "o que" do body sai da **SPEC de comportamento** (`thoughts/specs/`); a meta (escopo, N tarefas) sai do **PLAN tecnico** (`thoughts/plans/`). Sem nenhum, sintetiza do contexto da conversa
 - **Draft sempre**: o PR nasce `--draft`. Sair de draft e acao humana, depois da implementacao
 - **Empty commit e andaime**: o unico proposito do commit vazio e dar ao PR um diff inicial. O codigo real vem no worktree
 - **Branch default intocada**: ao final, o root **volta pra branch default**. Todo trabalho acontece na worktree
@@ -56,16 +56,18 @@ Atualize a default:
 git fetch origin "$DEFAULT"
 ```
 
-### Passo 2 — Detectar o plano
+### Passo 2 — Detectar os artefatos (SPEC de comportamento + PLAN tecnico)
 
-Procure o SPEC mais recente:
+Localize o **PLAN tecnico** mais recente e a **SPEC de comportamento** que o originou:
 
 ```bash
-ls -t "$ROOT"/thoughts/plans/SPEC-*.md 2>/dev/null | head -1
+ls -t "$ROOT"/thoughts/plans/PLAN-*.md 2>/dev/null | head -1   # PLAN tecnico
+ls -t "$ROOT"/thoughts/specs/spec-*.md 2>/dev/null | head -1   # SPEC de comportamento (fallback)
 ```
 
-- **SPEC encontrado**: leia o frontmatter (`scope`, `issue`, `skills`), o titulo (`# SPEC: ...`) e o **Resumo Executivo**. Essa e a fonte de title/body.
-- **Nenhum SPEC**: sintetize title/body a partir do **contexto desta conversa** (o que foi discutido/decidido). Marque no body que o PR nao tem SPEC formal.
+- **PLAN encontrado**: leia o frontmatter (`scope`, `issue`, `skills`, `spec`) e a lista de tarefas (pra contar `N tarefas em M phases`). O campo `spec:` aponta a SPEC de comportamento que originou o plano — **abra essa SPEC** (se o campo existir; senao, use a SPEC mais recente).
+- **SPEC de comportamento**: leia o titulo (`# SPEC: ...`), o **Resumo**, as **Historias de Usuario** e os **Criterios de Sucesso**. Essa e a fonte do "o que"/"pra quem" do body.
+- **Nem PLAN nem SPEC**: sintetize title/body a partir do **contexto desta conversa**. Marque no body que o PR nao tem planejamento formal.
 
 ### Passo 3 — Derivar a branch
 
@@ -73,20 +75,20 @@ Se `$ARGUMENTS` foi fornecido, use-o como nome da branch e pule pra validacao no
 
 Caso contrario, derive `<prefixo>/<slug>`:
 
-- **slug**: do nome do arquivo SPEC (`SPEC-DD-MM-YYYY-NNN-<slug>.md` → `<slug>`). Sem SPEC, gere um slug kebab-case curto (≤4 palavras) do titulo sintetizado.
+- **slug**: do nome do arquivo do PLAN (`PLAN-DD-MM-YYYY-NNN-<slug>.md` → `<slug>`) ou, sem PLAN, da SPEC (`spec-<ts>-<slug>.md` → `<slug>`). Sem nenhum, gere um slug kebab-case curto (≤4 palavras) do titulo sintetizado.
 - **prefixo por escopo/natureza**:
   - bug fix (root cause, correcao) → `fix/`
   - refatoracao sem mudanca de comportamento → `refactor/`
   - qualquer feature nova (Medium/Large/Complex) → `feat/`
   - tarefa de infra/config/doc → `chore/`
 
-  Use o `scope` do SPEC + o teor do Resumo pra decidir. Na duvida entre dois, mostre o nome derivado e confirme com AskUserQuestion antes de criar.
+  Use o `scope` do PLAN + o teor da SPEC pra decidir. Na duvida entre dois, mostre o nome derivado e confirme com AskUserQuestion antes de criar.
 
 **Validacao**: confirme que a branch ainda nao existe (`git branch --list "<branch>"` e `git ls-remote --exit-code origin "<branch>"`). Se existir, avise e pergunte: reusar (pula a criacao, vai direto pro PR/worktree) ou escolher outro nome.
 
 ### Passo 4 — Title e body do PR
 
-- **title** (conventional commit): `<prefixo>: <descricao curta>` — ex.: `feat: autenticacao via OAuth`. Derive do titulo do SPEC.
+- **title** (conventional commit): `<prefixo>: <descricao curta>` — ex.: `feat: autenticacao via OAuth`. Derive do titulo da SPEC.
 - **body**: escreva num arquivo temporario e use `--body-file` (evita problemas de escaping):
 
 ```bash
@@ -98,14 +100,14 @@ Template do body:
 ```markdown
 ## Contexto
 
-<O que vamos implementar — 2-3 linhas do Resumo Executivo do SPEC, ou do contexto da conversa>
+<O que vamos implementar e pra quem — 2-3 linhas do Resumo + Historias de Usuario da SPEC de comportamento, ou do contexto da conversa>
 
 ## Plano
 
-<!-- Body publico: NUNCA o caminho do SPEC (`thoughts/plans/...` e local, o reviewer nao abre). So o sinal de que ha plano + meta derivada. -->
-- Planejado via SPEC formal  <!-- ou: "Sem SPEC formal — derivado da conversa" -->
+<!-- Body publico: NUNCA o caminho dos artefatos (`thoughts/specs/...`, `thoughts/plans/...` sao locais, o reviewer nao abre). So o sinal de que ha planejamento + meta derivada. -->
+- Planejado via SPEC + PLAN formais  <!-- ou: "Sem planejamento formal — derivado da conversa" -->
 - Escopo: <Medium | Large | Complex | n/a>
-- Tarefas: <N> em <M> phases  <!-- omitir se nao houver SPEC -->
+- Tarefas: <N> em <M> phases  <!-- omitir se nao houver PLAN -->
 - Issue: <link, se houver>
 
 ## Status
@@ -115,7 +117,7 @@ Template do body:
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-> **Body e publico** — vale pro kickoff e pro sync: nunca exponha caminho de `thoughts/` (SPEC/IMP), numero de ROADMAP nem link de sessao do Claude (`claude.ai/code/session_...`). Só sobrevive o que o reviewer abre: link da Issue/PR.
+> **Body e publico** — vale pro kickoff e pro sync: nunca exponha caminho de `thoughts/` (SPEC/PLAN/IMP), numero de ROADMAP nem link de sessao do Claude (`claude.ai/code/session_...`). Só sobrevive o que o reviewer abre: link da Issue/PR.
 
 O empty commit usa o **mesmo title** do PR como mensagem.
 
@@ -180,7 +182,8 @@ Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica`
 
 1. **Detectar o PR**: `gh pr list --head $(git branch --show-current) --state open --limit 1`. Sem PR aberto → avise e encerre (sync atualiza, não cria).
 2. **Coletar o estado real** (leia de fato, não presuma):
-   - **SPEC** (`thoughts/plans/`): Entendimento (o problema + porquê) e Decisões Resolvidas (o como, com justificativa)
+   - **SPEC de comportamento** (`thoughts/specs/`): o problema, as histórias de usuário e os critérios de sucesso — fonte do **Por quê** e do **O quê**
+   - **PLAN técnico** (`thoughts/plans/`): Decisões Técnicas (o como, com justificativa) — fonte do **Como**
    - **IMP** (`thoughts/history/`): o que foi feito de fato, desvios do plano, test count
    - **Verificação comportamental** (seção do IMP ou `VER-*.md`), se existir
    - **Diff completo**: `gh pr diff <N>` (não só nomes de arquivos) — é dele que saem o "O quê" real e os apontadores do "Comece o review por"
@@ -194,17 +197,17 @@ Invocado como `/pr-draft sync`, tipicamente após `/executor-plan` + `/verifica`
 ```markdown
 ## O quê
 
-<O que este PR faz — a mudança em si, 1-3 linhas diretas. Fonte: Resumo Executivo do SPEC + diff real>
+<O que este PR faz — a mudança em si, 1-3 linhas diretas. Fonte: Resumo da SPEC + diff real>
 
 ## Por quê
 
-<O problema/motivação — o que estava errado ou faltando e por que importa, 2-4 linhas. Fonte: Entendimento do SPEC + issue>
+<O problema/motivação — o que estava errado ou faltando e por que importa, 2-4 linhas. Fonte: SPEC de comportamento (problema + critérios de sucesso) + issue>
 
 ## Como
 
 <A estratégia em 2-3 linhas, depois as decisões-chave com justificativa:>
 
-- <decisão 1 — por quê (Decisões Resolvidas do SPEC)>
+- <decisão 1 — por quê (Decisões Técnicas do PLAN)>
 - <decisão 2 — por quê>
 - <desvio do plano, se houve — o que mudou e por quê (IMP). NUNCA omitir>
 - Comece o review por: `<arquivo central>` — <papel dele em 1 linha> <pontos de atenção: trade-off, edge case, área sensível>
@@ -223,11 +226,11 @@ Issue: <link, se houver>
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 ```
 
-**Regras do template**: cada afirmação rastreável a SPEC/IMP/diff — não invente narrativa; desvio do plano NUNCA é omitido (é o que o reviewer mais precisa saber); "Guia pro review" aponta arquivos reais do diff, não genéricos. Sem SPEC/IMP (PR fora do fluxo SDD): derive do diff + commits e marque "Body derivado do diff — sem SPEC formal".
+**Regras do template**: cada afirmação rastreável a SPEC/PLAN/IMP/diff — não invente narrativa; desvio do plano NUNCA é omitido (é o que o reviewer mais precisa saber); "Comece o review por" aponta arquivos reais do diff, não genéricos. Sem SPEC/PLAN/IMP (PR fora do fluxo SDD): derive do diff + commits e marque "Body derivado do diff — sem planejamento formal".
 
 **Guardrail — body é público, não vaze artefato interno**: o body do PR é lido por gente que NÃO tem acesso ao seu ambiente. NUNCA inclua no body:
 - **Link de sessão do Claude** (`https://claude.ai/code/session_...`, IDs de sessão/conversa) — privado, sem valor pro reviewer. O rodapé `🤖 Generated with [Claude Code](https://claude.com/claude-code)` é o único marcador permitido.
-- **Caminhos internos** de `thoughts/` (SPEC `thoughts/plans/...`, IMP `thoughts/history/...`) — são locais/não-versionados, o reviewer não os abre. A rastreabilidade SPEC/IMP é insumo SEU pra escrever o body, não conteúdo dele.
+- **Caminhos internos** de `thoughts/` (SPEC `thoughts/specs/...`, PLAN `thoughts/plans/...`, IMP `thoughts/history/...`) — são locais/não-versionados, o reviewer não os abre. A rastreabilidade SPEC/PLAN/IMP é insumo SEU pra escrever o body, não conteúdo dele.
 - **Número/posição no ROADMAP** (`ROADMAP: 106`) e qualquer numeração de planejamento interno.
 
 Só sobrevive no body o que o reviewer consegue abrir: link da Issue/PR. Na dúvida sobre um item, omita.
@@ -276,8 +279,8 @@ gh auth login
 ## Guardrails
 
 - **PR sempre em `--draft`** — sair de draft e decisao humana (vale tambem no modo sync: `gh pr ready` e do usuario)
-- **Sync nao inventa narrativa** — toda afirmacao do body rastreavel a SPEC/IMP/diff; desvios do plano nunca omitidos; `gh pr edit` so com confirmacao
-- **Body e publico, sem artefato interno** — NUNCA inclua link de sessao do Claude (`claude.ai/code/session_...`), caminhos de `thoughts/` (SPEC/IMP) nem numero de ROADMAP no body. Sobrevive so o que o reviewer abre: link da Issue/PR
+- **Sync nao inventa narrativa** — toda afirmacao do body rastreavel a SPEC/PLAN/IMP/diff; desvios do plano nunca omitidos; `gh pr edit` so com confirmacao
+- **Body e publico, sem artefato interno** — NUNCA inclua link de sessao do Claude (`claude.ai/code/session_...`), caminhos de `thoughts/` (SPEC/PLAN/IMP) nem numero de ROADMAP no body. Sobrevive so o que o reviewer abre: link da Issue/PR
 - **Empty commit, nunca codigo** — o commit do kickoff e vazio (`--allow-empty`); implementacao so na worktree
 - **Root volta pra branch default** — o repositorio principal nunca fica preso na branch da feature
 - **Nunca force-push, nunca delete branch, nunca reescreva historico**

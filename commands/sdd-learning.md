@@ -423,7 +423,7 @@ Se o `MEMORY.md` cresceu muito (> 150 linhas), sugira rodar `/memory-organize` a
 
 ## Relacao com outros commands
 
-- `/sdd-plan` / `/quick-task` / `/executor-plan` / `/sdd-review` produzem os artefatos locais (SPEC, IMP, review) que viram fonte deste command. Eles tambem oferecem `(m)` salvar memoria direto durante a execucao quando a decisao ja eh definitiva — nesse caso `/sdd-learning` so deduplica.
+- `/sdd-spec` / `/sdd-plan` / `/quick-task` / `/executor-plan` / `/sdd-review` produzem os artefatos locais (SPEC, PLAN, IMP, review) que viram fonte deste command. Eles tambem oferecem `(m)` salvar memoria direto durante a execucao quando a decisao ja eh definitiva — nesse caso `/sdd-learning` so deduplica.
 - `/sdd-learning` **substitui o antigo `/sdd-confirm`** (movido pra `commands/deprecated/`). A fonte GitHub PR (body + reviews + threads de discussao) cobre o caso de "decisoes validadas pelo merge" que o sdd-confirm tratava via drafts locais — agora extraidas direto do PR mergeado, com o contexto humano do review.
 - `/memory-organize` arruma a memoria periodicamente (sub-sumarios, orfaos, links quebrados).
 

@@ -130,16 +130,16 @@ Dependências de merge:
   Worktree 2 só pode ser mergiada após Worktree 1 ✓
 
 O que deseja fazer?
-  a) Gerar sub-SPECs retroativos — documenta o que foi implementado, organizado por worktree
+  a) Gerar sub-PLANs retroativos — documenta o que foi implementado, organizado por worktree
   b) Apenas mapeamento — lista os arquivos por worktree sem gerar documentação
   c) Só análise — nenhuma ação adicional
 ```
 
 ---
 
-## Opção A — Sub-SPECs Retroativos
+## Opção A — Sub-PLANs Retroativos
 
-Se o usuário escolher **"a)"**, gere um sub-SPEC por worktree proposta.
+Se o usuário escolher **"a)"**, gere um sub-PLAN por worktree proposta.
 
 ### Resolução do diretório root
 
@@ -151,11 +151,11 @@ git worktree list | head -1 | awk '{print $1}'
 
 Use esse caminho como base para todos os caminhos de `thoughts/`. Isso garante que os outputs sejam salvos no repositório principal mesmo quando executando dentro de um worktree.
 
-**Diferença do sdd-plan normal**: aqui o SPEC documenta o que *já foi implementado*, não o que será. O Part B (Plan) descreve as tarefas como já concluídas e serve como registro histórico + guia de review.
+**Diferença do sdd-plan normal**: aqui o PLAN documenta o que *já foi implementado*, não o que será. O Part B (Plan) descreve as tarefas como já concluídas e serve como registro histórico + guia de review.
 
-### Formato do sub-SPEC retroativo
+### Formato do sub-PLAN retroativo
 
-- **Nome**: `SPEC-DD-MM-YYYY-[feature-slug]-[domínio].md`
+- **Nome**: `PLAN-DD-MM-YYYY-[feature-slug]-[domínio].md`
 - **Localização**: `thoughts/plans/`
 - **Status**: `retroactive` (diferente de `approved`)
 
@@ -243,5 +243,5 @@ feat/[slug]-[domínio-B]:
 - **Nunca classifique sem ler**: Se nao conseguir determinar o proposito de um arquivo pelo caminho/nome, leia o diff antes de classificar. Nunca chute
 - **Nunca omita dependencias**: Sempre indique quando worktree B depende de worktree A para o merge. Ordem de merge e obrigatoria
 - **Nunca esconda o score**: Mostre quais criterios foram verdadeiros para o score calculado. Transparencia total
-- **Nunca confunda retroativo com plano**: Sub-SPECs retroativos descrevem codigo existente (status `retroactive`), nao prescrevem implementacao
+- **Nunca confunda retroativo com plano**: Sub-PLANs retroativos descrevem codigo existente (status `retroactive`), nao prescrevem implementacao
 - **GitHub via `gh` CLI**: Nunca tokens manuais

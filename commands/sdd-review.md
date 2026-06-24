@@ -105,7 +105,7 @@ Corrija e rode `/sdd-review` de novo.
 
 5. Liste arquivos modificados e volume de mudanças (`+X / -Y linhas`)
 6. Leia os **arquivos completos** modificados pelo diff — o diff sozinho não dá contexto suficiente para avaliar impacto real
-7. Se existir SPEC relacionada em `thoughts/plans/`, leia-a para contexto adicional
+7. Se existir PLAN relacionada em `thoughts/plans/`, leia-a para contexto adicional
 
 8. **Check determinístico de complexidade ciclomática** (mecânico, sem subagente — custo ~zero tokens):
    - **Escopo**: APENAS os arquivos alterados pelo diff. Nunca o repo inteiro

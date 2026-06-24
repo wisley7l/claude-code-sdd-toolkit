@@ -8,16 +8,16 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git
 
 Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto.
 
-O eixo das secoes e o **estado real do trabalho (o PR)**, NAO a presenca de SPEC. Quatro secoes:
+O eixo das secoes e o **estado real do trabalho (o PR)**, NAO a presenca de PLAN. Quatro secoes:
 
 | Secao | Significado |
 |---|---|
 | `## 🔴 Próximos (fila priorizada)` | Fila curta, curada manualmente — o que fazer a seguir. O sync NAO mexe aqui automaticamente. |
-| `## Backlog (resto)` | Tudo identificado mas sem PR aberto. Sem ordem. Pode ter SPEC ou nao. |
+| `## Backlog (resto)` | Tudo identificado mas sem PR aberto. Sem ordem. Pode ter PLAN ou nao. |
 | `## Em progresso (PR aberto)` | Tem PR aberto e ativo. |
 | `## Concluído (merged)` | PR merged. |
 
-**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no SPEC/IMP/PR correspondente.
+**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no PLAN/IMP/PR correspondente.
 
 **Escopo**: ver memoria de feedback do projeto sobre o que entra no roadmap (ex: backend-only) — respeitar a regra vigente. Em duvida, perguntar.
 
@@ -101,7 +101,7 @@ gh issue view 123 --json title,body,url,labels,number
 
 ## Modo: Sync (sem args)
 
-O sync e **PR-driven**: o que dita a secao de cada item e o status do(s) PR(s) que ele referencia, nao a existencia de arquivo SPEC/IMP.
+O sync e **PR-driven**: o que dita a secao de cada item e o status do(s) PR(s) que ele referencia, nao a existencia de arquivo PLAN/IMP.
 
 ### Passos
 
@@ -148,7 +148,7 @@ Quando criar pela primeira vez:
 ```markdown
 # Roadmap
 
-> Visao multi-feature do projeto. O eixo das secoes e o **estado real do trabalho (o PR)**, nao a presenca de SPEC.
+> Visao multi-feature do projeto. O eixo das secoes e o **estado real do trabalho (o PR)**, nao a presenca de PLAN.
 > 🔴 Próximos = fila priorizada · Backlog = resto (sem ordem) · Em progresso = PR aberto ativo · Concluído = merged.
 > `/roadmap add "<descricao>"` ou `/roadmap add #issue` para adicionar · `/roadmap` sincroniza status via PR.
 
@@ -176,9 +176,9 @@ Quando criar pela primeira vez:
 - **NNN sequencial**: nunca reuse numero. Sempre `max(numeros existentes) + 1`
 - **Nunca duplique entradas**: antes de adicionar issue, verifique se ja existe (por numero #)
 - **Migracao sem perda**: ao mover entre secoes, preserve NNN e titulo. So ajusta o link/status
-- **Sync e PR-driven**: a secao segue o status do PR (merged/open/closed), nao a presenca de SPEC/IMP
+- **Sync e PR-driven**: a secao segue o status do PR (merged/open/closed), nao a presenca de PLAN/IMP
 - **Próximos e manual**: o sync nunca promove itens para 🔴 Próximos sozinho — isso e priorizacao humana
 - **PRs parados/fechados**: o sync sinaliza mas nao rebaixa sozinho — pede confirmacao
 - **GitHub via `gh` CLI**: nunca tokens manuais
-- **1 linha por entrada**: detalhes vivem no SPEC/IMP/PR, nao no roadmap
+- **1 linha por entrada**: detalhes vivem no PLAN/IMP/PR, nao no roadmap
 - **Escopo do roadmap**: respeitar a regra vigente (ex: backend-only, via memoria de feedback do projeto)

@@ -1,63 +1,60 @@
 ---
-description: Consome a SPEC de comportamento (/sdd-spec) e gera o plano tecnico — pesquisa + tarefas TDD num doc auto-sized (Medium/Large/Complex). Quick delega pra /quick-task.
+description: Pesquisa e planeja feature em 1 doc auto-sized (Medium/Large/Complex). Quick delega pra /quick-task.
 model: claude-opus-4-8
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
-# Conceitos adaptados: doc auto-sized, Knowledge Verification Chain, memoria persistente,
-# checks de qualidade, test co-location, handoff explicito. Pipeline SPEC (comportamento) -> PLAN (tecnico).
+# Conceitos adaptados: 1 doc auto-sized (substitui pipeline PRD->SPEC), Knowledge Verification Chain,
+# memoria persistente, 3 checks de qualidade, test co-location, handoff explicito para /quick-task
 ---
 
-# SDD Plan — Da SPEC de comportamento ao plano tecnico
+# SDD Plan — Pesquisar + Planejar em 1 doc
 
-Voce e um **par tecnico** que recebe a **SPEC de comportamento** (o QUE, produzida pelo `/sdd-spec`), pesquisa o que precisa, decide a abordagem e quebra em tarefas executaveis — o PLAN tecnico (o COMO). O tamanho do doc se ajusta ao escopo.
+Voce e um **par tecnico** que entende o problema, pesquisa o que precisa, decide a abordagem e quebra em tarefas — tudo num documento so. O tamanho do doc se ajusta ao escopo: nao infla feature pequena nem comprime feature grande.
 
 **Voce nao escreve codigo — investiga, decide, organiza. A execucao e do `/executor-plan`.**
-**Voce nao re-especifica comportamento — isso ja esta na SPEC. Se faltar comportamento, volte pro `/sdd-spec`.**
 
 ## Quando NAO usar este skill
 
 - **Mudanca trivial** (≤3 arquivos, 1 frase, sem decisao arquitetural): use `/quick-task`. Este skill detecta esse caso e delega.
 - **Bug fix simples** (root cause obvio, fix em 1 arquivo): use `/quick-task`.
-- **Comportamento ainda nao especificado**: rode `/sdd-spec` antes — o PLAN se apoia na SPEC.
+- **Exploracao sem intencao de implementar**: pesquisa pura sem doc estruturado.
 
 ## Principios
 
-- **SPEC-first**: o PLAN se apoia na SPEC de comportamento. Cada tarefa rastreia a um Requisito Funcional (RF) ou Teste de Aceitacao (AT) da SPEC. Comportamento ausente/ambiguo na SPEC = volte pro `/sdd-spec`, nao improvise
-- **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` delimitam toda decisao tecnica
-- **Memoria persistente**: o `MEMORY.md` ja vem carregado pelo harness. Abra notas individuais relevantes sob demanda. Proponha registro novo so com confirmacao. Detalhes no skill `memory-keeper`
+- **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` delimitam toda decisao
+- **Memoria persistente**: o `MEMORY.md` ja vem carregado pelo harness no inicio da sessao. Abra notas individuais relevantes sob demanda. Proponha registro novo so com confirmacao. Detalhes no skill `memory-keeper`
 - **Knowledge Verification Chain**: Memoria (cache verificado) → Codebase → Project docs → Context7 → Web → Flag como incerto. Nunca pule etapas
 - **Zero Inferencia**: toda afirmacao tecnica com `[Fonte: url]` ou `[Fonte: path:line]`. Sem fonte = `[NEEDS VERIFICATION]`
 - **Nunca fabrique**: prefira "nao encontrei documentacao para X" a chutar
 - **Profundidade proporcional**: pesquisa rasa para Medium, profunda para Complex
 - **Test co-location**: testes na MESMA tarefa que cria o codigo. Defer = anti-pattern
 - **Test count protection**: toda tarefa com Gate declara contagem esperada
-- **Cobertura da SPEC**: todo RF/AT da SPEC tem ≥1 tarefa que o cobre. Lacuna = plano incompleto
 - **Skills do projeto**: liste e ative — executor depende disso
 
 ## Auto-sizing
 
-A SPEC ja delimita o comportamento; o auto-sizing aqui calibra a **profundidade da pesquisa tecnica e do plano**:
+Antes de qualquer pesquisa, classifique o escopo:
 
-| Escopo | Sinais | O que o PLAN contem |
+| Escopo | Sinais | O que o doc contem |
 |---|---|---|
-| **Quick** | ≤3 arquivos, sem decisao arquitetural, sem nova lib | **Saia e sugira `/quick-task`** — nao escreva plano |
-| **Medium** | <10 tarefas, sem decisao arquitetural nova, dominio conhecido | Plano enxuto: analise local + decisoes tecnicas + tarefas. Pesquisa externa so se houver lib/API nao consolidada |
-| **Large** | Multi-componente, 10+ tarefas, decisoes arquiteturais novas, dominio conhecido | Plano completo: pesquisa externa + decisoes embasadas + tarefas formalizadas + diagrama |
-| **Complex** | Integracao com sistema critico, decisoes tecnicas de alto impacto, multiplos `[NEEDS VERIFICATION]` | Plano completo + discussao das decisoes tecnicas com usuario antes de quebrar tarefas |
+| **Quick** | ≤3 arquivos, 1 frase, sem decisao arquitetural, sem nova lib | **Saia e sugira `/quick-task`** — nao escreva spec |
+| **Medium** | Feature clara, <10 tarefas, sem decisao arquitetural nova, dominio conhecido | Spec enxuto: entendimento + decisoes + tarefas. Pesquisa externa so se houver lib/API nao consolidada no projeto |
+| **Large** | Multi-componente, 10+ tarefas, decisoes arquiteturais novas, mas dominio conhecido | Spec completo: pesquisa externa + decisoes embasadas + tarefas formalizadas + diagrama |
+| **Complex** | Ambiguidade, dominio novo, integracao com sistema critico, multiplos `[NEEDS CLARIFICATION]` | Spec completo + sessao de fechamento de gray areas com usuario (resolver antes de quebrar tarefas) |
 
-**Safety valve**: se comecou Medium e ao quebrar tarefas surgir >10 ou dependencia nao obvia, escale para Large e refaca a quebra.
+**Safety valve**: se voce comecou Medium e ao quebrar tarefas surgir >10 ou dependencia nao obvia, escale para Large e refaca a quebra.
 
-**Handoff para Quick**: se classificar como Quick, **nao continue**. Apresente:
+**Handoff para Quick**: se classificar como Quick, **nao continue este fluxo**. Apresente:
 
 ```
-Esta task parece quick (≤3 arquivos, sem decisao arquitetural).
-Sugiro rodar /quick-task — plano formal seria overhead.
+Esta task parece quick (≤3 arquivos, 1 frase, sem decisao arquitetural).
+Sugiro rodar /quick-task — fluxo formal seria overhead.
 
 Confirma quick-task ou prefere o fluxo formal mesmo assim?
 ```
 
-Se confirmar quick, encerre. Se insistir, classifique como Medium e prossiga.
+Se o usuario confirmar quick, encerre. Se insistir no formal, classifique como Medium e prossiga.
 
 ## Resolucao do diretorio root
 
@@ -67,56 +64,54 @@ Antes de salvar qualquer arquivo em `thoughts/`, resolva o root do projeto princ
 git worktree list | head -1 | awk '{print $1}'
 ```
 
-Use esse caminho como base para `thoughts/` (specs, plans, history, STATE.md, ROADMAP.md). Garante que outputs sejam salvos no repo principal mesmo executando dentro de worktree.
+Use esse caminho como base para `thoughts/` (plans, history, STATE.md, ROADMAP.md). Garante que outputs sejam salvos no repo principal mesmo executando dentro de worktree.
 
 **Excecao: `thoughts/tests/`** — andaime TDD fica local ao worktree (gerenciado pelo `/executor-plan`).
 
 ## Configuracao inicial
 
+Ao ser invocado:
+
 ### 1. Modelo (Opus — excecao deliberada)
 
-Este e um dos dois commands do toolkit que rodam em Opus na thread principal (o outro e o `/sdd-spec`). O motivo: o planejamento e um raciocinio interativo denso (auto-sizing, knowledge verification chain, reconciliacao de docs, quebra de tarefas, checks) entrelacado com checkpoints do usuario — nao da pra isolar num subagente sem perder a interacao. O `model: claude-opus-4-8` no frontmatter ja sobe a execucao em Opus: **siga direto pro Passo 1, sem mencionar nada e sem rodar `/model`** (trocar de modelo na main invalida o cache de prompt).
+Este e o **unico** command do toolkit que roda em Opus na thread principal. O motivo: o planejamento e um raciocinio interativo denso e espalhado (auto-sizing, knowledge verification chain, reconciliacao de docs, quebra de tarefas, 3 checks) entrelacado com checkpoints do usuario (Passos 6, 7, 10) — nao da pra isolar num subagente sem perder a interacao. O `model: claude-opus-4-8` no frontmatter ja sobe a execucao em Opus automaticamente: **siga direto pro Passo 2, sem mencionar nada e sem rodar `/model`** (trocar de modelo na main invalida o cache de prompt).
 
-Pra manter o contexto Opus enxuto, **delegue toda leitura volumosa a subagentes** (Passos 3, 4 e 5): o subagente le os arquivos/docs/fontes no modelo dele e devolve so a sintese.
+Pra manter o contexto Opus enxuto (e o gasto sob controle), **delegue toda leitura volumosa a subagentes** (Passos 2, 3 e 4): o subagente le os arquivos/docs/fontes no modelo dele e devolve so a sintese, sem despejar conteudo cru na thread Opus.
 
-**Variante economica**: pra escopo Medium com orcamento apertado existe o `/sdd-plan-eco` — main em Sonnet, com a quebra de tarefas + checks delegadas a um unico subagente Opus de contexto focado.
+**Variante economica**: pra escopo Medium com orcamento apertado existe o `/sdd-plan-eco` — main em Sonnet, com a quebra de tarefas + 3 checks delegadas a um unico subagente Opus de contexto focado.
 
-### 2. Localizar e ler a SPEC de comportamento
+### 2. Receber a demanda
+Se o usuario nao descreveu:
+```
+O que voce quer planejar? Pode ser:
+- Feature nova
+- Refatoracao com decisoes arquiteturais
+- Bug complexo que exige redesign
+- Issue ou PR (passe numero/link)
 
-A SPEC e a entrada principal deste skill.
-
-- **Path passado em `$ARGUMENTS`**: use direto (ex.: `thoughts/specs/spec-<ts>-<slug>.md`).
-- **Sem path**: procure a SPEC mais recente:
-  ```bash
-  ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
-  ls -t "${ROOT:-.}"/thoughts/specs/spec-*.md 2>/dev/null | head -1
-  ```
-  Confirme com o usuario qual SPEC usar antes de prosseguir.
-- **Nenhuma SPEC encontrada**: sugira rodar `/sdd-spec` primeiro:
-  ```
-  Nao encontrei SPEC de comportamento em thoughts/specs/.
-  O fluxo recomendado e /sdd-spec antes do plano.
-
-  Quer (a) rodar /sdd-spec agora, ou (b) seguir mesmo assim — eu sintetizo um
-  entendimento minimo a partir da sua descricao e do codebase (sem SPEC formal)?
-  ```
-  Se `(b)`, registre no PLAN que **nao houve SPEC formal** e derive o entendimento inline.
-
-Da SPEC, extraia: historias de usuario, criterios de sucesso, **RFs numerados**, requisitos nao funcionais, fora de escopo, contexto tecnico/integracao e **testes de aceitacao**. Eles guiam a quebra de tarefas e a checagem de Cobertura (Passo 9).
+Se for mudanca pequena (≤3 arquivos, 1 frase), prefiro encaminhar para /quick-task.
+```
 
 ### 3. Ler constitution
 `CLAUDE.md` e `ARCHITECTURE.md`.
 
 ### 4. Ler memoria persistente
 
-O `MEMORY.md` ja esta carregado pelo harness. Use as tabelas como indice, abra apenas as notas (`<tipo>_<slug>.md`) relevantes pro plano (decisoes ja tomadas, blockers, licoes, ideias adiadas). Se houver sub-sumarios (`_summary_<tipo>.md`), abra so quando o tipo for relevante.
+O `MEMORY.md` do auto-memory ja esta carregado pelo harness no system prompt. Use ele como indice:
 
-Resolva o path do auto-memory pra escritas (Passo 13):
+- Pelas linhas das tabelas, identifique notas relevantes pra demanda atual (decisoes ja tomadas no projeto, blockers conhecidos, licoes aplicaveis, ideias adiadas).
+- Abra apenas as notas individuais (`<tipo>_<slug>.md`) que importam para o plano em construcao.
+- Se houver sub-sumarios (`_summary_<tipo>.md`), abra apenas quando o tipo for relevante.
+
+Resolva o path do auto-memory pra escritas (Passo 13). Use o **root do worktree** pra centralizar memorias:
+
 ```bash
 ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
 PROJ_ENC=$(echo "${ROOT:-$(pwd)}" | sed 's|/|-|g')
 MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 ```
+
+Detalhes no skill `memory-keeper`.
 
 ### 5. Ler skills do projeto
 `.claude/skills/` — absorva padroes que vao virar `Skills:` nas tarefas.
@@ -127,7 +122,7 @@ MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 
 ### Passo 1 — Classificar escopo
 
-Aplique o auto-sizing (calibra a profundidade tecnica). Apresente:
+Aplique o auto-sizing. Apresente:
 
 ```
 Classifiquei como [Medium/Large/Complex] porque:
@@ -155,18 +150,18 @@ Se Quick, **encerre** com handoff (ver secao Auto-sizing).
 
 Para cada doc encontrado: **RELEVANTE** | **DESATUALIZADO** | **NAO RELEVANTE**.
 
-Para varredura ampla, use subagent `Agent` (`subagent_type: Explore`) — localiza e classifica, devolvendo so o resumo.
+Para varredura ampla (varios docs/diretorios), use subagent `Agent` (`subagent_type: Explore`) — ele localiza e classifica, devolvendo so o resumo, sem carregar os docs inteiros na thread Opus principal.
 
-Registre na secao "Design Docs Existentes" do PLAN. **Conflitos** entre docs e codigo viram pendencias bloqueantes.
+Registre na secao "Design Docs Existentes" do spec. **Conflitos** entre docs e codigo viram pendencias bloqueantes.
 
 ### Passo 3 — Pesquisa do codebase
 
 Identifique:
-- Arquivos relevantes (partindo do Contexto Tecnico da SPEC)
+- Arquivos relevantes
 - Dependencias instaladas (verificar antes de sugerir lib nova)
 - Padroes ja em uso para problemas similares
 
-Use subagent `Agent` com `subagent_type: Explore` para pesquisas amplas (>3 queries).
+Use subagent `Agent` com `subagent_type: Explore` para pesquisas amplas (>3 queries) — preserva contexto principal.
 
 ### Passo 4 — Pesquisa externa (condicional)
 
@@ -188,7 +183,7 @@ Step 5: Flag incerto → "nao encontrei documentacao para X" + [NEEDS VERIFICATI
 - Step 5 e SEMPRE flagado como `[NEEDS VERIFICATION]`
 - **Step 0 (cache de conhecimento)**: se existir nota `reference` cobrindo o claim, com fonte + data de verificacao <90 dias + mesma major version da lib, use-a e pule Steps 3-4 **pra esse claim** — cite `[Fonte: <url da nota>, cache <data>]`. Cache vencido ou major version diferente = re-verifique na fonte e atualize a nota
 
-Delegue a pesquisa externa a um subagente `Agent` quando envolver multiplas queries — devolve so a sintese com `[Fonte: url]`.
+Delegue a pesquisa externa (Context7 + web) a um subagente `Agent` quando envolver multiplas queries — ele consulta as fontes e devolve so a sintese com `[Fonte: url]`, preservando o contexto Opus principal.
 
 ### Passo 5 — Issue/PR (se aplicavel)
 
@@ -199,31 +194,29 @@ gh pr view <numero>
 gh api repos/<org>/<repo>/pulls/<numero>/comments  # se houver inline comments relevantes
 ```
 
-### Passo 6 — Resolver decisoes tecnicas pendentes
+### Passo 6 — Resolver pendencias `[NEEDS CLARIFICATION]`
 
 **Bloqueante** — nao avance sem resolver.
 
-Gray areas de **comportamento** ja foram fechadas na SPEC. Aqui resolva apenas **decisoes tecnicas** que a pesquisa abriu (escolha de lib, padrao de integracao, estrategia de migracao) e que dependem do usuario:
+Se a pesquisa gerou questoes que dependem de decisao do usuario (gray areas), apresente:
 
 ```
-A pesquisa abriu [N] decisoes tecnicas antes do plano:
+Identifiquei [N] questoes que precisam de decisao antes do plano:
 
-1. [Questao tecnica] — Impacto: [o que bloqueia]
-2. [Questao tecnica] — Impacto: [o que bloqueia]
+1. [Questao] — Impacto: [o que bloqueia]
+2. [Questao] — Impacto: [o que bloqueia]
 
 Como voce quer resolver cada uma?
 ```
 
-Se a duvida for de **comportamento** (o sistema deveria fazer X ou Y?), isso e lacuna da SPEC — **pare e volte pro `/sdd-spec`** pra fechar antes de planejar.
+Aguarde respostas. Registre na secao "Decisoes Resolvidas" do spec com data e justificativa.
 
-Aguarde respostas. Registre na secao "Decisoes Tecnicas" do PLAN com justificativa.
-
-**Para escopo Complex**: dedique uma discussao explicita das decisoes tecnicas antes de quebrar tarefas.
+**Para escopo Complex**: dedique uma sessao explicita de discussao das gray areas antes de quebrar tarefas. Nao tente quebrar tarefas com `[NEEDS CLARIFICATION]` em aberto.
 
 ### Passo 7 — Reconciliar com docs existentes
 
 Para cada doc RELEVANTE listado no Passo 2:
-- **Alinhado**: o PLAN respeita o doc. Referencie em `Baseado em:` das tarefas
+- **Alinhado**: o spec respeita o doc. Referencie em `Baseado em:` das tarefas
 - **Conflito**: **BLOQUEIE** e pergunte:
 
 ```
@@ -241,7 +234,6 @@ Como prefere resolver?
 
 **Cada tarefa tem**:
 - `What:` — entrega exata (1 frase)
-- `Covers:` — RF/AT da SPEC que esta tarefa atende (ex.: `RF2, AT2`)
 - `Where:` — caminho do arquivo
 - `Depends on:` — tarefas anteriores (ou `None`)
 - `Reuses:` — codigo existente a reaproveitar (poupa tokens)
@@ -263,9 +255,9 @@ Como prefere resolver?
 - **Core**: implementacao principal (geralmente onde `[P]` aparece)
 - **Integration**: wiring, e2e (sequencial)
 
-### Passo 9 — 4 checks de qualidade (bloqueantes)
+### Passo 9 — 3 checks de qualidade (bloqueantes)
 
-Execute os 4 antes de apresentar. FALHA = reestruture e re-rode.
+Execute os 3 antes de apresentar. FALHA = reestruture e re-rode.
 
 **Check 1: Granularity**
 
@@ -298,19 +290,6 @@ Regras:
 - Se uma tarefa cria codigo so testavel depois de outra, **reestruture** (merge forward/backward).
 - Toda tarefa que cria codigo produz codigo testavel naquela tarefa.
 
-**Check 4: SPEC Coverage**
-
-| RF/AT da SPEC | Coberto por tarefa | Status |
-|---|---|---|
-| RF1 | T2 | OK |
-| RF3 | — | FALHA — sem tarefa |
-| AT2 | T4 | OK |
-
-Regras:
-- Todo RF e todo AT da SPEC tem ≥1 tarefa em `Covers:`.
-- RF/AT sem tarefa = plano incompleto: adicione tarefa ou, se for comportamento fora de escopo, confirme com o usuario que sai do PLAN.
-- Tarefa sem `Covers:` = escopo inventado: rastreie a um RF/AT ou remova.
-
 ### Passo 10 — Checkpoint pre-aprovacao
 
 **Antes de escrever o arquivo**, apresente para o usuario:
@@ -318,7 +297,6 @@ Regras:
 ```
 ## Classificacao
 Escopo: [Medium/Large/Complex]
-SPEC base: [path da SPEC]
 
 ## Resumo Executivo (preview)
 [2-3 linhas do que vai ser feito]
@@ -328,23 +306,19 @@ SPEC base: [path da SPEC]
 - Core: [T3 [P], T4 [P]]
 - Integration: [T5]
 
-## Decisoes Tecnicas
-[Decisoes tecnicas resolvidas no Passo 6]
+## Decisoes Resolvidas
+[Questoes [NEEDS CLARIFICATION] e como ficaram]
 
 ## Reconciliacao com Docs
 [Docs RELEVANTES / conflitos resolvidos]
 
-## Cobertura da SPEC
-[Todo RF/AT coberto? lacunas resolvidas?]
-
 ## Riscos principais
 [bullets curtos]
 
-## 4 Checks
+## 3 Checks
 - Granularity: OK
 - Diagram-Definition Cross-Check: OK
 - Test Co-location: OK
-- SPEC Coverage: OK
 
 Faz sentido? Ajusta algo antes de eu finalizar?
 ```
@@ -390,7 +364,7 @@ Pergunte:
 Identifiquei algo util como memoria persistente:
 
 [Item]
-[Tipo: decision | blocker | lesson | idea | reference]
+[Tipo: decision | blocker | lesson | idea]
 [Por que importa para futuras sessoes]
 
 Salvar?
@@ -399,54 +373,52 @@ Salvar?
   (n) Nao salvar
 ```
 
-**Default sugerido**: `(l) pendente pro /sdd-learning` quando o plano vai virar PR (caso comum). `(m) memory direto` apenas quando a decisao e puramente de planejamento ja resolvida.
+**Default sugerido**: `(l) pendente pro /sdd-learning` quando o plano vai virar PR (que e o caso comum) — apos o PR fechar, o /sdd-learning extrai a decisao definitiva, considerando comentarios do review humano que podem mudar/refinar o approach. `(m) memory direto` apenas quando a decisao eh puramente de planejamento ja resolvida (ex: escolha de stack pre-aprovada, sem influencia de review). Nao detecte PR — apenas sugira (l) por padrao em planos que vao virar implementacao.
 
-Se `(l)`: **nao crie arquivo** agora — mantenha a observacao no proprio PLAN (secao "Decisoes Tecnicas" ou "Observacoes"). O `/sdd-learning` extrai pos-merge com base nos filtros duros + comentarios do review humano.
+Se `(l)` pendente pro /sdd-learning:
+- **Nao crie arquivo** agora. Apenas mantenha a observacao no proprio spec (passo 1 da seção "Decisoes Resolvidas" do template, ou em "Observacoes") — anote a decisao + por que como linha do spec. O `/sdd-learning` vai ler o spec/IMP/review/PR apos o merge e extrair candidatos com base nos 5 filtros duros + comentarios do review humano.
+- Isso elimina drafts orfas em `thoughts/decisions-draft/` (pasta nao precisa mais existir nos projetos novos; em projetos legados com drafts pendentes, use o command deprecated `/sdd-confirm` em `commands/deprecated/sdd-confirm.v7.md` se precisar).
 
-Se `(m)`: nota em `$MEM_DIR/<tipo>_<slug>.md` (ver skill `memory-keeper`) + linha na tabela do `MEMORY.md`.
+Se `(m)` MEMORY direto:
+- Nota em `$MEM_DIR/<tipo>_<slug>.md` (ver skill `memory-keeper` para formato completo).
+- Atualize o `MEMORY.md`: adicione linha na tabela da secao `## <Type capitalizado>`.
 
 Se `(n)`: pule.
 
 ### Passo 14 — Informar usuario
 
 ```
-PLAN salvo em thoughts/plans/PLAN-DD-MM-YYYY-NNN-[slug].md
-SPEC base: thoughts/specs/spec-<ts>-<slug>.md
+SPEC salvo em thoughts/plans/SPEC-DD-MM-YYYY-NNN-[slug].md
 
 Escopo: [Medium/Large/Complex]
 [N] tarefas em [M] phases ([X] paralelizaveis)
-Cobertura da SPEC: [todos RF/AT cobertos]
 Links verificados: [Y OK, Z quebrados]
-4 Checks: PASS
+3 Checks: PASS
 
-Proximos passos:
-  /pr-draft       → abre PR em draft (body a partir da SPEC de comportamento)
-  /executor-plan  → executa o PLAN com TDD
+Pronto para /executor-plan quando quiser.
 ```
 
 ---
 
-## Output: template do PLAN.md
+## Output: template do spec.md
 
-Caminho: `thoughts/plans/PLAN-DD-MM-YYYY-NNN-[slug].md`
+Caminho: `thoughts/plans/SPEC-DD-MM-YYYY-NNN-[slug].md`
 
-Escreva o doc seguindo o template do reference `sdd-plan-plan-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas na hora de escrever** (Passo 11+).
+Escreva o doc seguindo o template do reference `sdd-plan-spec-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas na hora de escrever** (Passo 11+) — ele nao e necessario antes disso.
 
-**Fallback** (reference ausente): monte com frontmatter (date, scope, spec, issue, skills) + secoes: Resumo Executivo (escrito por ultimo), 1. SPEC de Referencia (link + resumo do comportamento), 2. Decisoes Tecnicas, 3. Analise Local (componentes, dependencias, design docs/reconciliacao), 4. Referencias Externas (omitir se Medium sem pesquisa), 5. Diagrama (mermaid; obrigatorio Large/Complex), 6. Estrategia de Testes, 7. Tarefas (phases + estrutura What/Covers/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit), 8. Parallel Execution Map, 9. Cobertura da SPEC (mapa RF/AT → tarefa), 10. Simplificacao, 11. Validacao Pre-Aprovacao (4 checks), 12. Duvidas Pendentes, 13. Verificacao de Links.
+**Fallback** (reference ausente): monte com frontmatter (date, scope, issue, skills) + secoes: Resumo Executivo (escrito por ultimo), 1. Entendimento, 2. Decisoes Resolvidas, 3. Analise Local (componentes, dependencias, design docs/reconciliacao), 4. Referencias Externas (omitir se Medium sem pesquisa), 5. Diagrama (mermaid; obrigatorio Large/Complex), 6. Estrategia de Testes, 7. Tarefas (phases + estrutura What/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit), 8. Parallel Execution Map, 9. Simplificacao, 10. Validacao Pre-Aprovacao (3 checks), 11. Duvidas Pendentes, 12. Verificacao de Links.
 
 ---
 
 ## Guardrails
 
-- **SPEC e a base**: cada tarefa rastreavel a um RF/AT da SPEC (`Covers:`). Comportamento ausente = volte pro `/sdd-spec`, nao improvise
 - **Nunca pule o checkpoint do passo 10**: apresente preview antes de escrever. Sem excecao
-- **Nunca invente escopo**: tarefa sem `Covers:` = escopo inventado
-- **Decisoes de comportamento sao da SPEC**: aqui so decisoes tecnicas
+- **Nunca invente escopo**: cada tarefa rastreavel a uma decisao do spec
+- **Resolva `[NEEDS CLARIFICATION]` primeiro**: bloqueia quebra de tarefas
 - **Reconcilie docs antes**: conflito com design doc existente = bloqueio
-- **4 checks bloqueantes**: FALHA = reestruture
+- **3 checks bloqueantes**: FALHA = reestruture
 - **Test co-location e regra**: defer = anti-pattern
 - **Test count obrigatorio**: toda tarefa com `Gate` declara contagem
-- **Cobertura da SPEC**: todo RF/AT coberto por ≥1 tarefa
 - **Fonte ou NEEDS VERIFICATION**: claim externa sem fonte verificavel nao entra nas tarefas
 - **Skills nao opcionais**: identifique e liste — executor as ativa
 - **Constitution inegociavel**: CLAUDE.md/ARCHITECTURE.md

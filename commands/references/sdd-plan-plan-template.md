@@ -1,17 +1,19 @@
-# Reference: template do SPEC (/sdd-plan)
+# Reference: template do PLAN tecnico (/sdd-plan)
 
 > Carregado sob demanda pelo `/sdd-plan` no momento de escrever o doc (Passo 11+).
-> Caminho do output: `thoughts/plans/SPEC-DD-MM-YYYY-NNN-[slug].md`
+> Caminho do output: `thoughts/plans/PLAN-DD-MM-YYYY-NNN-[slug].md`
+> O PLAN e o COMO (pesquisa + tarefas). O QUE (comportamento) vive na SPEC referenciada.
 
 ```markdown
 ---
 date: DD-MM-YYYY (UTC-3)
 scope: Medium | Large | Complex
+spec: thoughts/specs/spec-<ts>-<slug>.md   # SPEC de comportamento que originou este plano
 issue: [link se aplicavel]
 skills: [lista]
 ---
 
-# SPEC: [Titulo]
+# PLAN: [Titulo]
 
 ## Resumo Executivo
 
@@ -24,23 +26,31 @@ skills: [lista]
 - Core: [T3 [P] — entrega, T4 [P] — entrega]
 - Integration: [T5 — entrega]
 **Riscos principais**: [bullets]
-**Pre-requisitos**: [decisoes resolvidas, dependencias externas]
+**Pre-requisitos**: [decisoes tecnicas resolvidas, dependencias externas]
 
 ---
 
-## 1. Entendimento
+## 1. SPEC de Referencia
 
-[O que entendi do problema e como vou resolver — 1 paragrafo]
+**SPEC**: `thoughts/specs/spec-<ts>-<slug>.md`
+
+> Resumo do comportamento especificado (1 paragrafo). RFs e ATs que este PLAN implementa.
+> Se nao houve SPEC formal, registre aqui: "Sem SPEC formal — entendimento derivado da conversa + codebase".
+
+| RF/AT da SPEC | O que exige |
+|---|---|
+| RF1 | [comportamento] |
+| AT1 | [cenario de aceite] |
 
 ---
 
-## 2. Decisoes Resolvidas
+## 2. Decisoes Tecnicas
 
-| Questao | Decisao | Justificativa | Fonte |
+> Decisoes de implementacao resolvidas no planejamento (NAO comportamento — isso e da SPEC).
+
+| Questao tecnica | Decisao | Justificativa | Fonte |
 |---|---|---|---|
 | [pergunta] | [resposta] | [por que] | [Fonte: ...] |
-
-**[Apenas para escopo Complex]**: incluir transcricao curta da sessao de discussao se houve gray areas resolvidas com usuario.
 
 ---
 
@@ -54,10 +64,10 @@ skills: [lista]
 
 ### 3.3 Design docs existentes (reconciliacao)
 
-| Doc | Status | Como o spec se relaciona |
+| Doc | Status | Como o PLAN se relaciona |
 |---|---|---|
 | [path] | RELEVANTE | [referencia/respeita/atualiza] |
-| [path] | DESATUALIZADO | [conflito resolvido, ver Decisoes] |
+| [path] | DESATUALIZADO | [conflito resolvido, ver Decisoes Tecnicas] |
 
 ---
 
@@ -109,6 +119,7 @@ T3, T4, T5 → T6
 #### T1: [Titulo]
 
 - [ ] **What**: [1 frase — entrega exata]
+- **Covers**: RF1, AT1
 - **Where**: `path/to/file.ext`
 - **Depends on**: None
 - **Reuses**: [path:line]
@@ -145,7 +156,20 @@ Phase 3 (Sequencial): T3, T4, T5 → T6
 
 ---
 
-## 9. Simplificacao
+## 9. Cobertura da SPEC
+
+| RF/AT da SPEC | Coberto por | Status |
+|---|---|---|
+| RF1 | T1 | OK |
+| RF2 | T3 | OK |
+| AT1 | T1 | OK |
+| AT2 | T4 | OK |
+
+[Todo RF/AT da SPEC tem ≥1 tarefa. Lacuna aqui = plano incompleto.]
+
+---
+
+## 10. Simplificacao
 
 Ao executar este plano, `/executor-plan`:
 - Ao fim de cada tarefa (apos testes verdes, antes do commit): pergunta se passa o subagent `code-simplifier`
@@ -155,25 +179,26 @@ Confirmacao a cada vez — usuario decide tarefa a tarefa.
 
 ---
 
-## 10. Validacao Pre-Aprovacao (3 checks)
+## 11. Validacao Pre-Aprovacao (4 checks)
 
 | Check | Status |
 |---|---|
 | Granularity | PASS |
 | Diagram-Definition Cross-Check | PASS |
 | Test Co-location | PASS |
+| SPEC Coverage | PASS |
 
 [Se houve VIOLACAO em alguma tabela, mostre o detalhe da reestruturacao aqui.]
 
 ---
 
-## 11. Duvidas Pendentes
+## 12. Duvidas Pendentes
 
 [Itens `[NEEDS VERIFICATION]` e claims sem fonte que nao bloqueiam mas precisam ser validados durante execucao]
 
 ---
 
-## 12. Verificacao de Links
+## 13. Verificacao de Links
 
 | URL | Status |
 |---|---|

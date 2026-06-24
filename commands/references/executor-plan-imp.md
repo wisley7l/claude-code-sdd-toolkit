@@ -7,7 +7,7 @@
 # Implementacao: [Nome]
 
 Data: DD-MM-YYYY
-SPEC: [caminho]
+PLAN: [caminho]
 [DESIGN: caminho, se aplicavel]
 
 ## O que foi feito

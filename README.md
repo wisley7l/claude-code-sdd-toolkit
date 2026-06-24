@@ -2,25 +2,31 @@
 
 > **[Read in English](./README-en.md)**
 
-Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) que transformam o agente num par de programação com TDD, seguindo um processo disciplinado: **Pesquisar → Entender → Codar com TDD**.
+Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/docs/claude-code) que transformam o agente num par de programação com TDD, seguindo um processo disciplinado: **Especificar comportamento → Planejar → Codar com TDD**.
+
+O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QUÊ, via `/sdd-spec`) e o **PLAN técnico** (o COMO, via `/sdd-plan`).
 
 ## Commands
 
 ### Workflow principal
 
-**`/sdd-plan`** — pesquisa, entende e quebra a feature em tarefas num único doc auto-sized (Medium/Large/Complex). Detecta escopo Quick e delega pra `/quick-task`.
+**`/sdd-spec`** — escreve a **especificação de comportamento** (o QUÊ): pesquisa o codebase e produz a SPEC com histórias de usuário, critérios de sucesso, requisitos funcionais/não funcionais, fora de escopo e testes de aceitação em `thoughts/specs/spec-<ts>-<slug>.md`. **Não escreve código, plano nem tarefas** — descreve comportamento, não implementação. Detecta escopo trivial e delega pra `/quick-task`. (Inspirado na gist ["Formação da especificação"](https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3) por @parruda.)
 
-**`/sdd-plan-eco`** — variante econômica do `/sdd-plan` pra escopo Medium: main em Sonnet, quebra de tarefas + 3 checks delegadas a um único subagente Opus de contexto focado.
+**`/sdd-plan`** — consome a SPEC de comportamento e produz o **plano técnico** (o COMO): pesquisa + quebra em tarefas TDD num único doc auto-sized (Medium/Large/Complex) em `thoughts/plans/PLAN-<...>.md`. Cada tarefa rastreia a um requisito funcional (RF) ou teste de aceitação (AT) da SPEC — um 4º check de **Cobertura** garante que nada da SPEC fique sem tarefa. Detecta escopo Quick e delega pra `/quick-task`.
 
-**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body do SPEC) e cria a worktree pra implementação isolada. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer em 4 seções — **O quê · Por quê · Como · Test plan** (incluindo desvios do plano e como testar manualmente) — tudo rastreável a SPEC/IMP/diff. Nunca tira o PR de draft.
+**`/sdd-plan-eco`** — variante econômica do `/sdd-plan` pra escopo Medium: main em Sonnet, quebra de tarefas + 4 checks delegadas a um único subagente Opus de contexto focado.
+
+**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body derivados da **SPEC de comportamento** — histórias de usuário e critérios são a melhor prévia pro reviewer) e cria a worktree pra implementação isolada. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer em 4 seções — **O quê · Por quê · Como · Test plan** (incluindo desvios do plano e como testar manualmente) — tudo rastreável a SPEC/PLAN/IMP/diff. Nunca tira o PR de draft.
 
 **`/executor-plan`** — executa as tarefas com TDD em modo autônomo, sub-agents paralelos pras tarefas marcadas `[P]`, staging por tarefa. Commits sob aprovação humana; `--step` volta ao modo pausado.
 
 **`/verifica`** — verificação comportamental pós-implementação: sobe a aplicação, exercita os fluxos que a mudança tocou e registra **evidência real** no IMP (testes verdes ≠ feature funcionando). Nunca aponta pra produção; pagamentos sempre em test mode; side effects externos só com confirmação.
 
-**`/quick-task`** — mudança pequena (≤3 arquivos) sem SPEC formal. Sobe pro fluxo formal se o escopo crescer.
+**`/pr-ready`** — entrega de PR de ponta a ponta. **Avalia** se o PR segue os padrões do projeto (delega ao `/sdd-review` — subagentes Opus independentes); se passar, atualiza o body (`/pr-draft sync`) e faz o handoff pro review humano. **Tirar de draft e marcar reviewer são gates `AskUserQuestion`** (cada um com a opção de "agora não") — nunca automáticos; o handle do reviewer nunca é hardcode. Se não passar, **loop de correção** via `/quick-task` (staging only) → re-avalia → **repete até zero must-fix** ("continue até tudo ok"), quando aprova PARA e te entrega os comandos de commit+push, **aguarda o push**, e só então faz o handoff. O loop é nativo no protocolo (reproduz o builtin `/goal` sem depender dele) e tem circuit-breaker por progresso: rodada que não reduz os must-fix → para e escala (`/sdd-plan`). **Nunca commita/pusha sozinho; só tira de draft com PR aprovado E código pushado.**
 
-**`/pair-review`** — companheiro interativo do review manual. Roda em **sessão nova** (`/clear`): re-hidrata do staged + SPEC/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Com PR sob review do time, o modo `(r)` valida cada fix **contra o comentário humano que o originou** (detecta não-endereçados, escopa o diff à rodada de fixes, gera rascunhos de resposta pras threads). Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha, nunca posta no PR.
+**`/quick-task`** — mudança pequena (≤3 arquivos) sem SPEC/PLAN formal. Sobe pro fluxo formal se o escopo crescer.
+
+**`/pair-review`** — companheiro interativo do review manual. Roda em **sessão nova** (`/clear`): re-hidrata do staged + PLAN/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Com PR sob review do time, o modo `(r)` valida cada fix **contra o comentário humano que o originou** (detecta não-endereçados, escopa o diff à rodada de fixes, gera rascunhos de resposta pras threads). Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha, nunca posta no PR.
 
 **`/sdd-learning`** — após o PR fechar, extrai aprendizado não-óbvio de IMPs, reviews e do PR no GitHub e propõe registro na memória, caso a caso.
 
@@ -50,16 +56,17 @@ Coleção de slash commands para [Claude Code](https://docs.anthropic.com/en/doc
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — utilitários de git e worktree.
 
-**Modelo por command**: a thread principal roda leve (Sonnet base, ou Haiku nos utilitários de git) e só sobe pra Opus **dentro de subagentes**, na etapa que realmente exige raciocínio — assim o modelo caro processa só o contexto focado, sem queimar token nas etapas mecânicas (git, leitura de arquivo, escrita de doc). Trocar de modelo na thread principal (`/model`) invalida o cache de prompt, então os commands evitam isso. Exceção: `/sdd-plan` roda em Opus na main (planejamento é raciocínio interativo denso e espalhado, não isolável num subagente) e delega só as leituras volumosas a subagentes — pra escopo Medium, o `/sdd-plan-eco` derruba esse custo. Nos frontmatters os modelos são IDs completos (formato documentado pra slash commands); nos spawns de subagent são **aliases** (`opus`/`sonnet`/`haiku`), garantidos pela doc do Agent SDK — acompanham o melhor modelo de cada tier sem manutenção.
+**Modelo por command**: a thread principal roda leve (Sonnet base, ou Haiku nos utilitários de git) e só sobe pra Opus **dentro de subagentes**, na etapa que realmente exige raciocínio — assim o modelo caro processa só o contexto focado, sem queimar token nas etapas mecânicas (git, leitura de arquivo, escrita de doc). Trocar de modelo na thread principal (`/model`) invalida o cache de prompt, então os commands evitam isso. Exceção: `/sdd-spec` e `/sdd-plan` rodam em Opus na main (especificar comportamento e planejar são raciocínio interativo denso e espalhado, não isolável num subagente) e delegam só as leituras volumosas a subagentes — pra escopo Medium, o `/sdd-plan-eco` derruba o custo do planejamento. Nos frontmatters os modelos são IDs completos (formato documentado pra slash commands); nos spawns de subagent são **aliases** (`opus`/`sonnet`/`haiku`), garantidos pela doc do Agent SDK — acompanham o melhor modelo de cada tier sem manutenção.
 
 **Progressive disclosure**: os commands grandes mantêm no corpo só o protocolo; templates e blocos de uso pontual vivem em `commands/references/` (instalados em `~/.claude/sdd-references/` — fora de `commands/`, pra não serem registrados como commands namespaced) e são carregados via `Read` apenas no passo que os usa. Isso corta o custo fixo por invocação (~30-40% nos commands pesados) e evita arrastar template de relatório por dezenas de turnos de execução.
 
 ### Fluxo recomendado
 
 ```
-Feature normal:   /sdd-plan → /pr-draft → (cd <worktree> && claude) → /executor-plan → /sdd-review
-                                                                                          ↓
-                                                              você revisa o diff e commita/pusha
+Feature normal:   /sdd-spec → /sdd-plan → /pr-draft → (cd <worktree> && claude) → /executor-plan → /verifica → /pr-ready
+                                                                                                    ↓
+                                                    avalia → corrige em loop → você commita/pusha → handoff
+Entregar um PR:   /pr-ready   (avalia, corrige, sync do body; tira de draft e marca reviewer só se você confirmar — commit/push é seu)
 Review manual:    /clear → /pair-review   (companheiro interativo sobre o staged, sem ruído da execução)
 Mudança pequena:  /quick-task
 Bug misterioso:   /investiga → root cause com fonte → /quick-task ou /sdd-plan
@@ -68,7 +75,7 @@ Projeto novo:     /sdd-init (uma vez)
 Quando precisar:  /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```
 
-`/pr-draft` é opcional, mas recomendado: isola a implementação numa worktree e sinaliza o kickoff ao time. Os artefatos em `thoughts/` servem de handoff entre sessões — limpe a sessão (`/clear`) entre commands grandes pra maximizar a janela de contexto. O custo de re-hidratação é baixo (SPEC + `MEMORY.md` ≈ 2-3k tokens), então limpar é quase sempre ganho: o estado durável vive em arquivo, não na conversa.
+`/pr-draft` é opcional, mas recomendado: isola a implementação numa worktree e sinaliza o kickoff ao time. Os artefatos em `thoughts/` servem de handoff entre sessões — limpe a sessão (`/clear`) entre commands grandes pra maximizar a janela de contexto. O custo de re-hidratação é baixo (SPEC/PLAN + `MEMORY.md` ≈ 2-3k tokens), então limpar é quase sempre ganho: o estado durável vive em arquivo, não na conversa.
 
 ## Como usar
 
@@ -152,8 +159,8 @@ Resultado: `[Claude Sonnet 4.5] meu-projeto ████░░░░░░ 42% c
 
 ```
 commands/                   # Slash commands — FONTE CANÔNICA (copiada pra ~/.claude/commands/)
-  sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
-  quick-task.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
+  sdd-spec.md · sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
+  quick-task.md · pr-ready.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
   sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md
   complexidade.md · worktree-detect.md · modo-livre.md · git-worktree.md
   git-remove-worktree.md · git-rebase-seguro.md · sync-tests.md · git-prune-branches.md
@@ -172,7 +179,8 @@ skills/
 ```
 thoughts/
   ROADMAP.md                  # Visão multi-feature (opcional)
-  plans/SPEC-DD-MM-YYYY-slug.md      # /sdd-plan
+  specs/spec-<ts>-slug.md            # /sdd-spec (comportamento — o QUÊ)
+  plans/PLAN-DD-MM-YYYY-slug.md      # /sdd-plan (técnico — o COMO)
   history/IMP-DD-MM-YYYY-slug.md     # /executor-plan
   reviews/                    # /sdd-review
   research/YYYY-MM-DD-slug.md        # /busca --save

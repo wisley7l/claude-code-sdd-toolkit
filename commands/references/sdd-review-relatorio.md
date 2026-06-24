@@ -158,6 +158,6 @@ graph LR
 ## Referências
 
 - Fonte: [PR #N / branch / commit]
-- SPEC relacionada: [caminho em thoughts/plans/, se existir]
+- PLAN relacionada: [caminho em thoughts/plans/, se existir]
 - CLAUDE.md constraint relevante: [se algum foi violado]
 ````

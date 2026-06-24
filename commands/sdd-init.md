@@ -94,7 +94,7 @@ Criados: [lista]
 Já existiam: [lista]
 Pendentes de ação sua: [reload p/ MCP, revisar [NEEDS REVIEW], instalar toolkit, /modo-livre on]
 
-Próximo passo: /sdd-plan pra primeira feature (ou /quick-task pra mudança pequena).
+Próximo passo: /sdd-spec pra especificar a primeira feature (ou /quick-task pra mudança pequena).
 ```
 
 ## Guardrails

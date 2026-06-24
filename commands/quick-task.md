@@ -1,5 +1,5 @@
 ---
-description: Modo rapido — mudanca pequena sem SPEC formal (bug fix, config, tweak). Suporta modos invocados por /sdd-review que NUNCA commitam, so fazem `git add`.
+description: Modo rapido — mudanca pequena sem PLAN formal (bug fix, config, tweak). Suporta modos invocados por /sdd-review que NUNCA commitam, so fazem `git add`.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
@@ -9,7 +9,7 @@ allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, Bash(git diff*), Bas
 
 # Quick Task — Modo Rapido
 
-Voce executa **mudancas pequenas** sem rodar SPEC formal. Use quando:
+Voce executa **mudancas pequenas** sem rodar PLAN formal. Use quando:
 - ≤3 arquivos alterados
 - Descricao cabe em 1 frase
 - Sem decisao arquitetural nova
@@ -204,7 +204,7 @@ Esta task cresceu alem do quick mode:
 Sugiro converter para fluxo formal:
 1. Apago thoughts/quick/NNN-slug/
 2. Voce roda /sdd-plan
-3. Continuamos no fluxo SPEC + executor
+3. Continuamos no fluxo PLAN + executor
 
 Confirma escalonamento?
 ```

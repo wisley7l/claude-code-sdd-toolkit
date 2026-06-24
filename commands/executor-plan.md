@@ -1,5 +1,5 @@
 ---
-description: Executa o plano (SPEC) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. --step ativa pausas + commits atomicos.
+description: Executa o plano (PLAN) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. --step ativa pausas + commits atomicos.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(lizard *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
@@ -87,14 +87,14 @@ Use o que voce leu para:
 - Considerar ideias adiadas (`idea`) que se conectam com a tarefa atual
 - Respeitar regras de colaboracao (`feedback`) e contexto de projeto (`project`)
 
-**Se a leitura mudar sua interpretacao do plano** (ex: decisao previa contradiz uma escolha do SPEC), pare antes da execucao e levante isso ao usuario.
+**Se a leitura mudar sua interpretacao do plano** (ex: decisao previa contradiz uma escolha do PLAN), pare antes da execucao e levante isso ao usuario.
 
 Detalhes no skill `memory-keeper`.
 
 ### 4. Localizar o Plano
 Se nao fornecido:
 ```
-Qual SPEC devo executar?
+Qual PLAN devo executar?
 Planos ficam em thoughts/plans/
 ```
 
@@ -196,7 +196,7 @@ Antes de qualquer codigo de producao:
 - Nomes descritivos, sem dependencia externa
 - Execute — devem FALHAR (red phase)
 
-**Delegacao opcional pra agent especializado em testes** — entre os agents ja listados no passo 7 da Configuracao Inicial, considere **match forte** se a `description` mencionar ≥2 termos especificos de teste ("TDD", "red-phase", "edge cases", "fixtures", "mocking"...). Se houver, **prefira delegar** a escrita em modo red-phase via `Agent` (`subagent_type: <name>`), passando: modo red-phase, comportamento esperado da tarefa T\<N\>, path onde a implementacao vai morar, path do SPEC e os criterios de `Done when:`. Ele devolve paths dos testes + comando do gate + status — voce continua no passo 3 (Implementar) usando esses testes. Sem match: escreva voce mesmo seguindo o padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
+**Delegacao opcional pra agent especializado em testes** — entre os agents ja listados no passo 7 da Configuracao Inicial, considere **match forte** se a `description` mencionar ≥2 termos especificos de teste ("TDD", "red-phase", "edge cases", "fixtures", "mocking"...). Se houver, **prefira delegar** a escrita em modo red-phase via `Agent` (`subagent_type: <name>`), passando: modo red-phase, comportamento esperado da tarefa T\<N\>, path onde a implementacao vai morar, path do PLAN e os criterios de `Done when:`. Ele devolve paths dos testes + comando do gate + status — voce continua no passo 3 (Implementar) usando esses testes. Sem match: escreva voce mesmo seguindo o padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
 
 **3. Implementar**
 
@@ -288,7 +288,7 @@ Se aprovado:
 
 **10. Marcar e Avancar**
 
-- Edite o SPEC: `- [ ]` → `- [x]`
+- Edite o PLAN: `- [ ]` → `- [x]`
 
 **Em modo autonomo**: avance direto para a proxima tarefa, sem pausa. Informe brevemente (1-2 linhas) com **fatos auditaveis** — esse log e a unica evidencia que o validador independente da Etapa 3 (Verificacao Final) tem pra auditar a execucao:
 ```
@@ -397,7 +397,7 @@ Se aprovado: simplifier escopado aos arquivos do grupo. Reexecute todos os Gates
 
 **8. Marcar e Avancar**
 
-Edite o SPEC marcando todas as `[P]` concluidas.
+Edite o PLAN marcando todas as `[P]` concluidas.
 
 **Em modo autonomo**: informe brevemente e avance:
 ```
@@ -512,7 +512,7 @@ Dispare `Agent` com:
 - `subagent_type`: `general-purpose`
 - `model`: `haiku` (mecanico, rapido, barato)
 - `description`: "Validar conclusao do plano"
-- `prompt`: monte a partir do reference `executor-plan-validador.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte um prompt que proibe executar codigo, lista as 5 checagens (marcacoes `[x]` no SPEC vs total, test count atual >= esperado, gate green, staging reportado, sinais de parada dura) e exige retorno JSON estrito `{complete, checks: {spec_marks, test_count, gate, staging, hard_stops}, reason}`.
+- `prompt`: monte a partir do reference `executor-plan-validador.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte um prompt que proibe executar codigo, lista as 5 checagens (marcacoes `[x]` no PLAN vs total, test count atual >= esperado, gate green, staging reportado, sinais de parada dura) e exige retorno JSON estrito `{complete, checks: {plan_marks, test_count, gate, staging, hard_stops}, reason}`.
 
 **Processamento do retorno**:
 
@@ -601,7 +601,7 @@ Sugiro rodar `/sdd-review` antes de commitar.
 
 Como quer commitar?
   (1) 1 commit grande — eu monto a mensagem com title + body listando T1/T2/T3
-  (2) Atomico por tarefa — eu unstage tudo e refaço N commits com as mensagens da SPEC
+  (2) Atomico por tarefa — eu unstage tudo e refaço N commits com as mensagens do PLAN
   (3) Agora nao — vou revisar primeiro (deixo staged como esta)
 
 [1/2/3]
@@ -617,11 +617,11 @@ Como quer commitar?
   T1 e T2 editaram o mesmo arquivo (X.ts). Commits atomicos perderiam parte do contexto.
   Sugiro opcao 1 (grande). Continuar atomico mesmo assim? (s/n)
   ```
-- Se sem overlap (ou usuario confirmou): `git reset` → para cada T_i em ordem: `git add <arquivos>` + `git commit -m "<msg da SPEC>"`
+- Se sem overlap (ou usuario confirmou): `git reset` → para cada T_i em ordem: `git add <arquivos>` + `git commit -m "<msg do PLAN>"`
 - **Nao pusha.** Informe lista de hashes.
 
 **Se 3 (depois)**:
-- Informe: "Staged esta pronto. Pra revisar voce tem 2 caminhos: `/sdd-review` (relatorio batch com subagentes) ou, pra revisao manual interativa, abra sessao nova (`/clear`) e rode `/pair-review` — ele re-hidrata do staged + SPEC/IMP sem o ruido desta sessao. Para descartar tudo: `git reset --hard`."
+- Informe: "Staged esta pronto. Pra revisar voce tem 2 caminhos: `/sdd-review` (relatorio batch com subagentes) ou, pra revisao manual interativa, abra sessao nova (`/clear`) e rode `/pair-review` — ele re-hidrata do staged + PLAN/IMP sem o ruido desta sessao. Para descartar tudo: `git reset --hard`."
 - Termine sem commitar.
 
 **Em qualquer caso**: nao pushe. Push e sempre acao do usuario.
@@ -641,7 +641,7 @@ Feature concluida.
 
 Relatorio: thoughts/history/IMP-DD-MM-YYYY-[slug].md
 Proximo: /sdd-review (relatorio batch) — e pra revisao manual,
-sessao nova (/clear) + /pair-review (re-hidrata do staged + SPEC/IMP).
+sessao nova (/clear) + /pair-review (re-hidrata do staged + PLAN/IMP).
 ```
 
 ---
@@ -676,7 +676,7 @@ Apos escrever, lance subagente para verificar links (instrucoes detalhadas no me
 - **Memoria ao final**: proponha entradas com base no que aprendeu na execucao (via memory-keeper)
 - **Doc do projeto sob confirmacao**: se tarefa altera arquitetura documentada, pergunte se atualiza (parada dura mesmo em autonomo)
 - **Constitution inegociavel**: CLAUDE.md e ARCHITECTURE.md
-- **Checkpoint no SPEC**: edite e marque `[x]` apos concluir cada tarefa
+- **Checkpoint no PLAN**: edite e marque `[x]` apos concluir cada tarefa
 - **Commits sob aprovacao humana (autonomo)**: executor faz `git add` por tarefa; commit so no fim sob escolha do user. Em `--step`, commit atomico imediato por tarefa
 - **Nunca pushe**: push e sempre acao do usuario, em qualquer modo
 - **Tracking de arquivos por tarefa**: `thoughts/.executor-staged.log` mantem o mapeamento T_i → arquivos para permitir commits atomicos opcionais no fim

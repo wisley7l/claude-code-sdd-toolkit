@@ -23,8 +23,8 @@ Testes verdes provam que o código faz o que os testes pedem — não que a **fe
 ### 1. Escopo — o que verificar
 
 Derive os fluxos comportamentais tocados:
-- Do **IMP** mais recente (`thoughts/history/`) e/ou do **SPEC**: o que foi implementado, quais endpoints/fluxos/telas mudaram
-- Sem IMP/SPEC: pergunte ao usuário o que verificar (1 frase por fluxo)
+- Do **IMP** mais recente (`thoughts/history/`) e/ou do **PLAN**: o que foi implementado, quais endpoints/fluxos/telas mudaram
+- Sem IMP/PLAN: pergunte ao usuário o que verificar (1 frase por fluxo)
 
 Liste 2-6 checagens concretas, cada uma com: ação → comportamento esperado. Ex: `POST /checkout com cupom válido → 200 + desconto aplicado no total`.
 

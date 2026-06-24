@@ -1,5 +1,5 @@
 ---
-description: Companheiro interativo de review manual — re-hidrata do staged + SPEC/IMP, valida fixes contra comentários humanos do PR, responde via subagentes Opus focados, aplica ajustes. Nunca commita sem escolha.
+description: Companheiro interativo de review manual — re-hidrata do staged + PLAN/IMP, valida fixes contra comentários humanos do PR, responde via subagentes Opus focados, aplica ajustes. Nunca commita sem escolha.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(git reset*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(lizard *)
 ---
@@ -17,8 +17,8 @@ Você acompanha o **review manual humano** do que o `/executor-plan` (ou uma cad
 ## Princípios
 
 - **Main em Sonnet, julgamento em Opus focado**: perguntas factuais você responde direto; perguntas de julgamento vão pra um subagente Opus escopado APENAS nos arquivos da pergunta. O subagente não herda histórico — é a independência que captura o que o implementador não viu
-- **Re-hidratação por artefatos**: staged diff + SPEC + IMP + `thoughts/.executor-staged.log` são a fonte de verdade. Nunca reconstrua de memória o que o artefato responde
-- **Rastreabilidade por tarefa**: toda mudança tem origem (`T<N>` no staged log + decisão no SPEC). Responda "de onde veio isso" citando ambos
+- **Re-hidratação por artefatos**: staged diff + PLAN + IMP + `thoughts/.executor-staged.log` são a fonte de verdade. Nunca reconstrua de memória o que o artefato responde
+- **Rastreabilidade por tarefa**: toda mudança tem origem (`T<N>` no staged log + decisão no PLAN). Responda "de onde veio isso" citando ambos
 - **Ajustes com a régua de sempre**: edição → gate → test count protection → `git add`. Silent deletion para tudo
 - **Safety valve**: ajuste que crescer (>3 arquivos, decisão arquitetural, lib nova) vira `/quick-task` ou `/sdd-plan` — não incha o review
 - **Nunca commita sem escolha explícita. Nunca pusha**
@@ -40,8 +40,8 @@ Carregue, nesta ordem:
    3. `git diff <base>...HEAD` — branch inteira vs base (sem review humano e nada pendente).
 
    **Tudo vazio com review humano presente** (fixes ainda não feitos — o usuário veio direto do review do time): siga mesmo assim. O review vira a **pauta**: todos os comentários aparecem como `não endereçado` e o modo `(r)` vira execução dos fixes, um por um, sob direção do usuário (mesmo protocolo de ajuste: gate + test count + `git add`).
-2. **Staged log**: `thoughts/.executor-staged.log` (mapeamento T → arquivos). Se não existir, monte o mapeamento aproximado pelo SPEC (campo `Where:` das tarefas).
-3. **SPEC**: o mais recente em `thoughts/plans/` (ou o que o usuário indicar). Leia o Resumo Executivo + a lista de tarefas; seções detalhadas só sob demanda.
+2. **Staged log**: `thoughts/.executor-staged.log` (mapeamento T → arquivos). Se não existir, monte o mapeamento aproximado pelo PLAN (campo `Where:` das tarefas).
+3. **PLAN**: o mais recente em `thoughts/plans/` (ou o que o usuário indicar). Leia o Resumo Executivo + a lista de tarefas; seções detalhadas só sob demanda.
 4. **IMP**: o mais recente em `thoughts/history/` — desvios do plano e observações são o contexto mais útil aqui.
 5. **Review batch** (se existir): `thoughts/reviews/REV-*.md` da mesma branch — issues já conhecidas não precisam ser redescobertas.
 6. **PR aberto + review humano** (se houver): `gh pr list --head $(git branch --show-current) --state open --limit 1`. Se achar PR, carregue os comentários do time:
@@ -61,7 +61,7 @@ Escopo: [staged | commits desde o review de DD-MM | branch vs base]
   [N] arquivos (+X/-Y) em [M] tarefas
   T1 → file1.ts, file2.ts
   T2 → file3.ts
-SPEC: [path] · IMP: [path] · Review batch: [path ou "nenhum"]
+PLAN: [path] · IMP: [path] · Review batch: [path ou "nenhum"]
 Review humano: [PR #N — X comentários de @users, Y atendidos, Z parciais, W não endereçados | "sem PR/review"]
 Desvios do plano reportados no IMP: [K — resumo de 1 linha cada, ou "nenhum"]
 
@@ -78,7 +78,7 @@ Classifique cada mensagem do usuário e responda no nível certo:
 
 ### Pergunta factual (responda direto da main)
 
-"O que mudou nesse arquivo?", "De qual tarefa veio isso?", "Onde está o tratamento de X?" — responda com o diff + staged log + SPEC, citando `arquivo:linha` e `T<N>`. Sem subagente: é lookup, não julgamento.
+"O que mudou nesse arquivo?", "De qual tarefa veio isso?", "Onde está o tratamento de X?" — responda com o diff + staged log + PLAN, citando `arquivo:linha` e `T<N>`. Sem subagente: é lookup, não julgamento.
 
 ### Pergunta de julgamento (delegue a Opus focado)
 
@@ -86,9 +86,9 @@ Classifique cada mensagem do usuário e responda no nível certo:
 
 - `subagent_type`: `code-reviewer` se disponível, senão `general-purpose`
 - `model: opus`
-- Prompt com: a pergunta do usuário, os arquivos envolvidos (paths — o subagente lê), o trecho do SPEC da tarefa de origem, e a regra de output: "Resposta compacta: veredito + evidência (arquivo:linha) + risco se houver + alternativa só se concretamente melhor (com fonte: padrão do projeto ou doc oficial). Sem narrativa."
+- Prompt com: a pergunta do usuário, os arquivos envolvidos (paths — o subagente lê), o trecho do PLAN da tarefa de origem, e a regra de output: "Resposta compacta: veredito + evidência (arquivo:linha) + risco se houver + alternativa só se concretamente melhor (com fonte: padrão do projeto ou doc oficial). Sem narrativa."
 
-Consolide a resposta do subagente com o contexto que só você tem (decisões do SPEC, desvios do IMP, memória) — não repasse cru.
+Consolide a resposta do subagente com o contexto que só você tem (decisões do PLAN, desvios do IMP, memória) — não repasse cru.
 
 ### Respostas ao review (r) — só quando há PR com review humano
 
@@ -110,11 +110,11 @@ Comentário [i/N] — @fulano em src/foo.ts:42 (thread com 2 mensagens)
 
 ### Walkthrough guiado (w)
 
-Para cada tarefa do staged log, em ordem: o que a tarefa entregou (SPEC), o que mudou de fato (diff), desvios (IMP), e 1-2 pontos onde o olho humano vale mais (lógica nova, edge case, query). Pause entre tarefas — o ritmo é do usuário.
+Para cada tarefa do staged log, em ordem: o que a tarefa entregou (PLAN), o que mudou de fato (diff), desvios (IMP), e 1-2 pontos onde o olho humano vale mais (lógica nova, edge case, query). Pause entre tarefas — o ritmo é do usuário.
 
 ### Hotspots (h)
 
-Um único subagente Opus recebe o diff staged completo + Resumo Executivo do SPEC e retorna **no máximo 5** pontos priorizados que merecem atenção humana (lógica não-óbvia, edge case duvidoso, desvio do plano, risco em escala), formato `arquivo:linha — 1 frase — por quê`. Não é o `/sdd-review`: sem relatório, sem scoring — é um mapa pro olho humano.
+Um único subagente Opus recebe o diff staged completo + Resumo Executivo do PLAN e retorna **no máximo 5** pontos priorizados que merecem atenção humana (lógica não-óbvia, edge case duvidoso, desvio do plano, risco em escala), formato `arquivo:linha — 1 frase — por quê`. Não é o `/sdd-review`: sem relatório, sem scoring — é um mapa pro olho humano.
 
 ### Pedido de ajuste
 

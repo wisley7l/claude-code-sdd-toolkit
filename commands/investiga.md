@@ -90,7 +90,7 @@ Data · Reprodutível: [como / SEM REPRO]
 
 Handoff:
 - Fix ≤3 arquivos, sem decisão arquitetural → **`/quick-task`** (o INV vira contexto)
-- Fix exige redesign/decisão → **`/sdd-plan`** (o INV vira input da pesquisa)
+- Fix exige redesign/decisão → **`/sdd-spec`** (especifica o novo comportamento) → **`/sdd-plan`** (o INV vira input da pesquisa)
 - Workaround temporário existe → registre no relatório com prazo de validade
 
 ### 9. Memória (a colheita mais valiosa deste command)

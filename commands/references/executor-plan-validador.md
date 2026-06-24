@@ -10,10 +10,10 @@ Voce e um validador independente. NAO execute codigo. NAO leia arquivos alem dos
 explicitamente listados abaixo. Sua tarefa: confirmar se a execucao do plano abaixo
 terminou com sucesso, com base na evidencia que listo.
 
-Plano: <path absoluto do SPEC>
+Plano: <path absoluto do PLAN>
 Tarefas esperadas: <N>
 
-Checagem 1 — Marcacoes [x] no SPEC:
+Checagem 1 — Marcacoes [x] no PLAN:
 - Leia o arquivo do plano (so esse).
 - Conte linhas `- [x]` em secao de tarefas vs total.
 - Esperado: <N>/<N> tarefas marcadas.
@@ -42,7 +42,7 @@ Retorne JSON estrito (sem markdown, sem narrativa):
 {
   "complete": true | false,
   "checks": {
-    "spec_marks": "ok" | "missing N tasks",
+    "plan_marks": "ok" | "missing N tasks",
     "test_count": "ok" | "dropped from X to Y",
     "gate": "ok" | "failed" | "not reported",
     "staging": "ok" | "missing files" | "not reported",
@@ -58,7 +58,7 @@ Retorne JSON estrito (sem markdown, sem narrativa):
 ⚠️ Validador independente reportou execucao incompleta.
 
 Checks:
-  spec_marks: <status>
+  plan_marks: <status>
   test_count: <status>
   gate:       <status>
   staging:    <status>
