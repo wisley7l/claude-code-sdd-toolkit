@@ -167,6 +167,7 @@ skills/
   memory-keeper/            # Auto-memory: 9 types, flat convention, MEMORY.md as index
   conciso/                  # Concise response mode in pt-BR (lite/full/ultra)
   deprecated/               # Older skills — fallback
+scripts/                    # Opt-in extras (e.g. `ouvir` — speaks the last reply via local TTS). See scripts/README.md
 ```
 
 **`commands/` vs `skills/`** (Anthropic convention): commands are invoked manually (`/sdd-plan`); skills auto-trigger by description when the context matches. `memory-keeper` is a skill because it must always be available to read/write memory without the user having to ask.

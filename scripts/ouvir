@@ -1,0 +1,325 @@
+#!/usr/bin/env python3
+"""
+ouvir — lê em voz alta a última resposta do Claude Code na sessão atual, via TTS.
+
+Engines plugáveis com fallback em cascata. A cadeia SEMPRE termina nos engines
+locais (piper/espeak), então se um provedor cloud falhar (key expirada, rate
+limit, mudança de plano, rede fora) o `ouvir` continua funcionando localmente.
+
+Seleção de engine (OUVIR_ENGINE):
+  auto (default)        -> piper, espeak           (100% local; privacidade por padrão)
+  minimax               -> minimax, piper, espeak  (cloud pt-BR + fallback local)
+  groq                  -> groq, piper, espeak     (cloud; vozes EN/AR só)
+  "minimax,piper"       -> ordem exata que você listar (locais são anexados no fim
+                           como rede de segurança, se você não os incluir)
+
+Engines:
+  piper    local, voz natural pt-BR (modelo .onnx em ~/.local/share/piper/)
+  espeak   local, robótico (fallback zero-config)
+  minimax  cloud, pt-BR (precisa MINIMAX_API_KEY [+ MINIMAX_GROUP_ID] e um voice_id)
+  groq     cloud, EN/AR (precisa GROQ_API_KEY) — OpenAI-compatible
+
+Privacidade: engines cloud ENVIAM o texto da resposta pro provedor. Por isso o
+default é local. Cloud só é usado quando você pede explicitamente em OUVIR_ENGINE.
+
+Variáveis de ambiente: ver scripts/README.md.
+"""
+
+import glob
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.request
+import urllib.error
+
+HOME = os.path.expanduser("~")
+CLAUDE_GLOB = os.environ.get("OUVIR_CLAUDE_GLOB", os.path.join(HOME, ".claude*"))
+PIPER_MODEL = os.environ.get(
+    "OUVIR_PIPER_MODEL", os.path.join(HOME, ".local/share/piper/pt_BR-faber-medium.onnx")
+)
+ESPEAK_VOICE = os.environ.get("OUVIR_ESPEAK_VOICE", "pt-br")
+
+LOCAL_ENGINES = ("piper", "espeak")
+
+
+def log(msg):
+    print(f"ouvir: {msg}", file=sys.stderr)
+
+
+# --------------------------------------------------------------------------- #
+# 1. Localizar transcript e extrair a última resposta                         #
+# --------------------------------------------------------------------------- #
+def project_dir_name(cwd):
+    """Mesma transformação que o Claude Code usa pra nomear a pasta: '/' -> '-'."""
+    return cwd.replace("/", "-")
+
+
+def find_transcript(cwd):
+    """O .jsonl mais recente do projeto atual entre TODAS as instalações (~/.claude*)."""
+    pattern = os.path.join(CLAUDE_GLOB, "projects", project_dir_name(cwd), "*.jsonl")
+    matches = glob.glob(pattern)
+    return max(matches, key=os.path.getmtime) if matches else None
+
+
+def extract_last_reply(transcript_path):
+    """
+    Última resposta do assistente principal:
+      type=="assistant", isSidechain falso/ausente, com bloco de texto real.
+    Itera de trás pra frente e retorna a primeira que casa.
+    """
+    with open(transcript_path, "r", encoding="utf-8") as fh:
+        lines = fh.readlines()
+
+    for line in reversed(lines):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            obj = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if obj.get("type") != "assistant" or obj.get("isSidechain"):
+            continue
+        content = (obj.get("message") or {}).get("content") or []
+        texts = [
+            b.get("text", "")
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "text"
+        ]
+        joined = "\n".join(t for t in texts if t).strip()
+        if joined:
+            return joined
+    return ""
+
+
+def strip_markdown(text):
+    """Remove marcação que viraria ruído falado (pragmático, não um parser completo)."""
+    text = re.sub(r"```.*?```", " ", text, flags=re.DOTALL)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", text)
+    text = re.sub(r"(\*\*|\*|__|_)(.+?)\1", r"\2", text)
+    text = re.sub(r"^[ \t]*#{1,6}[ \t]*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*>[ \t]?", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*[-*+][ \t]+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*\|.*$", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*-{3,}[ \t]*$", "", text, flags=re.MULTILINE)
+    text = text.replace("→", " para ").replace("✅", "").replace("⚠️", "")
+    text = re.sub(r"\n{2,}", "\n", text)
+    text = re.sub(r"[ \t]{2,}", " ", text)
+    return text.strip()
+
+
+# --------------------------------------------------------------------------- #
+# 2. Reprodução de áudio                                                       #
+# --------------------------------------------------------------------------- #
+def _players():
+    return [p for p in ("pw-play", "paplay", "aplay") if shutil.which(p)]
+
+
+def _mp3_players():
+    return [p for p in ("ffplay", "mpv", "mpg123") if shutil.which(p)]
+
+
+def play_file(path, fmt):
+    """Toca um arquivo de áudio. fmt in {wav, flac, ogg, mp3}. True se tocou."""
+    if fmt in ("wav", "flac", "ogg"):
+        cand = _players()
+    elif fmt == "mp3":
+        cand = _mp3_players()
+    else:
+        cand = _players()
+    for player in cand:
+        try:
+            args = [player, path]
+            if player == "ffplay":
+                args = ["ffplay", "-autoexit", "-nodisp", "-loglevel", "quiet", path]
+            subprocess.run(args, check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return True
+        except subprocess.CalledProcessError:
+            continue
+    if fmt == "mp3" and not cand:
+        log("áudio mp3 recebido mas nenhum player de mp3 (ffplay/mpv/mpg123). Instale um ou use piper.")
+    return False
+
+
+def play_bytes(audio, fmt):
+    with tempfile.NamedTemporaryFile(suffix="." + fmt, delete=False) as tmp:
+        tmp.write(audio)
+        path = tmp.name
+    try:
+        return play_file(path, fmt)
+    finally:
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
+# --------------------------------------------------------------------------- #
+# 3. Engines LOCAIS (retornam True se falaram)                                 #
+# --------------------------------------------------------------------------- #
+def engine_piper(text):
+    piper = shutil.which("piper") or shutil.which("piper-tts")
+    if not piper or not os.path.isfile(PIPER_MODEL):
+        return False
+    if not _players():
+        return False
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+        wav = tmp.name
+    try:
+        subprocess.run([piper, "--model", PIPER_MODEL, "--output_file", wav],
+                       input=text.encode("utf-8"), check=True,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return play_file(wav, "wav")
+    except subprocess.CalledProcessError as exc:
+        log(f"piper falhou ({exc}).")
+        return False
+    finally:
+        try:
+            os.unlink(wav)
+        except OSError:
+            pass
+
+
+def engine_espeak(text):
+    espeak = shutil.which("espeak-ng") or shutil.which("espeak")
+    if not espeak:
+        return False
+    try:
+        subprocess.run([espeak, "-v", ESPEAK_VOICE, text], check=True)
+        return True
+    except subprocess.CalledProcessError as exc:
+        log(f"espeak falhou ({exc}).")
+        return False
+
+
+# --------------------------------------------------------------------------- #
+# 4. Engines CLOUD (retornam True se falaram; None/False => tenta o próximo)   #
+#    Enviam o texto ao provedor — usados só quando pedidos em OUVIR_ENGINE.    #
+# --------------------------------------------------------------------------- #
+def _http_post(url, headers, body, timeout=60):
+    req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read(), resp.headers.get("Content-Type", "")
+
+
+def engine_groq(text):
+    """Groq PlayAI TTS (OpenAI-compatible). Vozes EN/AR — não ideal pra pt-BR."""
+    key = os.environ.get("GROQ_API_KEY")
+    if not key:
+        return False
+    model = os.environ.get("OUVIR_GROQ_MODEL", "playai-tts")
+    voice = os.environ.get("OUVIR_GROQ_VOICE", "Fritz-PlayAI")
+    payload = json.dumps({
+        "model": model, "voice": voice, "input": text, "response_format": "wav",
+    }).encode("utf-8")
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    try:
+        audio, _ = _http_post("https://api.groq.com/openai/v1/audio/speech", headers, payload)
+        return play_bytes(audio, "wav")
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+        log(f"groq indisponível ({exc}) — caindo pro próximo engine.")
+        return False
+
+
+def engine_minimax(text):
+    """MiniMax T2A v2 (speech-02). Suporta pt-BR via language_boost=Portuguese."""
+    key = os.environ.get("MINIMAX_API_KEY")
+    voice = os.environ.get("OUVIR_MINIMAX_VOICE")  # voice_id da sua conta MiniMax
+    if not key or not voice:
+        if key and not voice:
+            log("MiniMax: defina OUVIR_MINIMAX_VOICE com um voice_id da sua conta.")
+        return False
+    base = os.environ.get("OUVIR_MINIMAX_BASE", "https://api.minimax.io/v1/t2a_v2")
+    model = os.environ.get("OUVIR_MINIMAX_MODEL", "speech-02-turbo")
+    group = os.environ.get("MINIMAX_GROUP_ID")
+    url = f"{base}?GroupId={group}" if group else base
+    payload = json.dumps({
+        "model": model,
+        "text": text,
+        "stream": False,
+        "language_boost": "Portuguese",
+        "voice_setting": {"voice_id": voice, "speed": 1.0, "vol": 1.0, "pitch": 0},
+        "audio_setting": {"format": "mp3", "sample_rate": 32000},
+    }).encode("utf-8")
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    try:
+        raw, _ = _http_post(url, headers, payload)
+        data = json.loads(raw)
+        # T2A v2 retorna o áudio como string hex em data.audio
+        hexstr = (data.get("data") or {}).get("audio")
+        if not hexstr:
+            log(f"MiniMax sem áudio na resposta: {data.get('base_resp', data)}")
+            return False
+        return play_bytes(bytes.fromhex(hexstr), "mp3")
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError,
+            json.JSONDecodeError, ValueError) as exc:
+        log(f"minimax indisponível ({exc}) — caindo pro próximo engine.")
+        return False
+
+
+CLOUD_ENGINES = {"groq": engine_groq, "minimax": engine_minimax}
+ALL_ENGINES = {"piper": engine_piper, "espeak": engine_espeak, **CLOUD_ENGINES}
+
+
+def resolve_chain():
+    """Resolve OUVIR_ENGINE numa lista ordenada, sempre com locais como rede final."""
+    raw = os.environ.get("OUVIR_ENGINE", "auto").strip()
+    if raw in ("", "auto"):
+        chain = list(LOCAL_ENGINES)
+    else:
+        chain = [e.strip() for e in raw.split(",") if e.strip()]
+    for loc in LOCAL_ENGINES:           # garante fallback local no fim
+        if loc not in chain:
+            chain.append(loc)
+    return chain
+
+
+def speak(text):
+    for name in resolve_chain():
+        engine = ALL_ENGINES.get(name)
+        if not engine:
+            log(f"engine desconhecido em OUVIR_ENGINE: '{name}' (ignorado).")
+            continue
+        if engine(text):
+            return True
+    return False
+
+
+# --------------------------------------------------------------------------- #
+def main():
+    cwd = os.getcwd()
+    transcript = find_transcript(cwd)
+    if not transcript:
+        log("nenhuma sessão do Claude Code encontrada para este diretório.")
+        return 0
+
+    text = extract_last_reply(transcript)
+    if not text:
+        log("não há resposta de texto pra ler na última mensagem.")
+        return 0
+
+    spoken = strip_markdown(text)
+    if not spoken:
+        log("a resposta só tinha código/markdown — nada pra falar.")
+        return 0
+
+    if "--text-only" in sys.argv or os.environ.get("OUVIR_DRY_RUN"):
+        print(spoken)
+        return 0
+
+    if speak(spoken):
+        return 0
+
+    log("nenhum engine de TTS conseguiu falar. Instale o piper (scripts/README.md)")
+    log("ou rode: sudo apt install espeak-ng")
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

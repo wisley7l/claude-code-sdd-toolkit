@@ -170,6 +170,7 @@ skills/
   memory-keeper/            # Auto-memory: 9 tipos, convenção flat, MEMORY.md como índice
   conciso/                  # Modo de resposta enxuto em pt-BR (lite/full/ultra)
   deprecated/               # Skills antigas — fallback
+scripts/                    # Extras opt-in (ex.: `ouvir` — fala a última resposta via TTS local). Ver scripts/README.md
 ```
 
 **`commands/` vs `skills/`** (convenção Anthropic): commands são invocados manualmente (`/sdd-plan`); skills auto-disparam pela descrição quando o contexto bate. `memory-keeper` é skill porque precisa estar sempre disponível pra ler/escrever memória sem o usuário pedir.
