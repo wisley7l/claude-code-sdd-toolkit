@@ -114,7 +114,6 @@ def extract_last_reply(transcript_path):
     """
     with open(transcript_path, "r", encoding="utf-8") as fh:
         lines = fh.readlines()
-
     for line in reversed(lines):
         line = line.strip()
         if not line:
@@ -392,32 +391,25 @@ def main():
     cwd = os.getcwd()
     session_id = resolve_session_id(sys.argv)
     _PID_FILE = pid_path(session_id)
-
     if "--stop" in sys.argv:
         return stop()
-
     transcript = find_transcript(cwd, session_id)
     if not transcript:
         log("nenhuma sessão do Claude Code encontrada para este diretório.")
         return 0
-
     text = extract_last_reply(transcript)
     if not text:
         log("não há resposta de texto pra ler na última mensagem.")
         return 0
-
     spoken = strip_markdown(text)
     if not spoken:
         log("a resposta só tinha código/markdown — nada pra falar.")
         return 0
-
     if "--text-only" in sys.argv or os.environ.get("OUVIR_DRY_RUN"):
         print(spoken)
         return 0
-
     if speak(spoken):
         return 0
-
     log("nenhum engine de TTS conseguiu falar. Instale o piper (scripts/README.md)")
     log("ou rode: sudo apt install espeak-ng")
     return 1

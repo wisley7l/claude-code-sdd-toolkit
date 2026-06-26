@@ -83,6 +83,7 @@ Use o que voce leu para:
 - Aplicar decisoes arquiteturais previas (`decision`) sem reinventar
 - Reconhecer blockers conhecidos (`blocker`) pelo sintoma — parar cedo
 - Respeitar preferencias do usuario (`user`, `preference`) — estilo, ferramentas, ceremonia
+- **Estilo de codigo (sempre)**: nao deixar linhas em branco dentro do corpo de funcoes/metodos — codigo compacto. Entre funcoes/classes top-level, manter a separacao normal da linguagem
 - Evitar repetir abordagens documentadas como licao negativa (`lesson`)
 - Considerar ideias adiadas (`idea`) que se conectam com a tarefa atual
 - Respeitar regras de colaboracao (`feedback`) e contexto de projeto (`project`)
@@ -478,6 +479,7 @@ Se nenhuma disponivel: anote no IMP ("gate de complexidade nao rodou — sem fer
    Reduza a complexidade ciclomatica das funcoes abaixo para <= <threshold> SEM mudar comportamento:
    - <arquivo>:<funcao> (CC atual: N)
    Tecnicas: extrair helpers, early returns, substituir cadeias if/else por lookup, decompor condicoes.
+   Estilo: remova linhas em branco dentro do corpo das funcoes (sem alterar logica).
    NAO toque em funcoes fora da lista. NAO altere testes.
    ```
 

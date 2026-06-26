@@ -356,6 +356,7 @@ Nao escreva mensagem ao usuario final — o caller agrega.
 - **Test count check se TDD**: silent deletion e bloqueante mesmo em quick mode
 - **Gate obrigatorio**: toda quick task tem um comando de verificacao. Sem gate = nao e quick task, e ajuste manual nao reproduzivel
 - **Constitution mesmo aqui**: CLAUDE.md + ARCHITECTURE.md
+- **Estilo de codigo (sempre)**: sem linhas em branco dentro do corpo de funcoes/metodos (entre funcoes, ok) — codigo compacto
 - **Commit so em modo manual**: em `manual`, 1 quick task = 1 commit. Em `autonomo-invocado` e `step-invocado`, **NUNCA commite** — so `git add`. Caller decide o commit.
 - **Nunca invente API**: verifique em doc oficial ou codigo existente
 - **Memoria sob confirmacao**: nunca escreva no `memory/` (ou em draft) sem perguntar
