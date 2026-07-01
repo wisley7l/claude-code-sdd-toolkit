@@ -2,6 +2,10 @@
 # tipicamente criado quando o repo foi aberto como vault por engano)
 .obsidian/
 
+# Python (bytecode gerado ao rodar scripts/ouvir e afins)
+__pycache__/
+*.pyc
+
 # SO / editor
 .DS_Store
 Thumbs.db
