@@ -1,6 +1,6 @@
 ---
 description: Investigação de bug não-óbvio via protocolo de hipóteses — evidência em subagents paralelos, root cause com fonte, handoff pra /quick-task ou /sdd-plan. Alimenta blockers/lessons na memória.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(git log*), Bash(git diff*), Bash(git show*), Bash(git blame*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(grep *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Extrai aprendizados de IMPs, reviews e comentarios do PR no GitHub — propoe registro no auto-memory. Detecta o ultimo PR da branch ou aceita --pr <N>.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(git branch*), Bash(find *), Bash(stat *), Bash(date*), Bash(gh *)
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills

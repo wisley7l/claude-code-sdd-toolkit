@@ -1,6 +1,6 @@
 ---
 description: Abre PR inicial em draft a partir do plano — branch, empty commit, title/body da SPEC de comportamento, worktree via /git-worktree. `sync` reescreve o body pós-implementação como prévia pro reviewer.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 argument-hint: [nome-da-branch | sync]
 allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git checkout*), Bash(git switch*), Bash(git commit*), Bash(git push*), Bash(git remote show origin*), Bash(git rev-parse*), Bash(git log*), Bash(gh *), Bash(ls *), Bash(find *), Bash(mkdir *), Bash(pwd)
 ---

@@ -1,6 +1,6 @@
 ---
 description: Entrega de PR de ponta a ponta — avalia se o PR segue os padrões do projeto; loop de correção até convergir → commit/push humano → handoff. Se o time já revisou, valida se os fixes endereçam o que foi pedido e re-solicita revisão. Nunca commita/pusha sozinho.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 argument-hint: [N (PR) | branch | vazio = PR da branch atual]
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, AskUserQuestion, Bash(git status*), Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git branch*), Bash(git worktree list*), Bash(git rev-parse*), Bash(git add*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(lizard *), Bash(ls *), Bash(mkdir *)
 ---

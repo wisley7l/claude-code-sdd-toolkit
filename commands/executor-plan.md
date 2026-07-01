@@ -1,6 +1,6 @@
 ---
 description: Executa o plano (PLAN) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. Review interno (seguranca/testes/bugs) antes do handoff. --step ativa pausas + commits atomicos; --sem-review pula o review.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(lizard *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills

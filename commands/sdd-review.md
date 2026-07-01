@@ -1,6 +1,6 @@
 ---
 description: Review autonomo de PR/branch/diff via subagents — relatorio em thoughts/reviews/, considera reviews humanos existentes, oferece fixes via /quick-task.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(mkdir *), Bash(gh *), Bash(npx *), Bash(bunx *), Bash(lizard *)
 ---
 

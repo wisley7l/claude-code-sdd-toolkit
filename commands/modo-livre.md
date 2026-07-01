@@ -1,6 +1,6 @@
 ---
 description: MODO LIVRE — toggle do modo autônomo. `on` instala settings (allow + ask pra commit/push + deny dos perigosos), `off` restaura backup, `update` reescreve com o JSON canônico. NUNCA commita/pusha/rm por iniciativa própria.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 argument-hint: [on|off|update|status]
 ---
 

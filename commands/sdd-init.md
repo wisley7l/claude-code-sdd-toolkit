@@ -1,6 +1,6 @@
 ---
 description: Prepara um projeto pro toolkit SDD — audita pré-requisitos (CLAUDE.md, ARCHITECTURE.md, thoughts/, Context7, references) e cria o que falta sob confirmação por bloco.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, AskUserQuestion, Bash(ls *), Bash(mkdir *), Bash(find *), Bash(test *), Bash(pwd), Bash(cp *), Bash(git status*), Bash(git worktree list*), Bash(git remote*), Bash(grep *)
 ---
 

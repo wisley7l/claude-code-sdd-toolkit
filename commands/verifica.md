@@ -1,6 +1,6 @@
 ---
 description: Verificação comportamental pós-implementação — roda a aplicação e exercita os fluxos tocados, captura evidência real e anexa ao IMP. Nunca aponta pra produção.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Write, Edit, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(docker *), Bash(docker compose *), Bash(curl *), Bash(lsof *), Bash(ps *), Bash(kill *), Bash(git status*), Bash(git diff*), Bash(git log*), Bash(git worktree list*), Bash(gh *), Bash(ls *), Bash(mkdir *)
 ---
 

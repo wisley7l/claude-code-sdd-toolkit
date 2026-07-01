@@ -1,6 +1,6 @@
 ---
 description: Reorganizar auto-memory do projeto — detectar órfãs/duplicatas/links quebrados, propor sub-sumários quando MEMORY.md cresce, aplicar sob confirmação por bloco.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Edit, Write, Glob, Grep, Bash(ls *), Bash(wc *), Bash(head *), Bash(grep *), Bash(find *), Bash(pwd), Bash(date *), Bash(echo *), Bash(test *)
 ---
 

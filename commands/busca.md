@@ -1,6 +1,6 @@
 ---
 description: Busca otimizada via subagent isolado. Default Sonnet, --rapido (Haiku), --profundo (Opus). Inline + opt-in salvar em thoughts/research/. Zero impacto no contexto principal.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 argument-hint: [--rapido|--profundo] [--save] <query>
 allowed-tools: Agent, Read, Write, WebFetch, WebSearch, Bash(git worktree list*), Bash(mkdir *), Bash(date *), mcp__context7__resolve-library-id, mcp__context7__query-docs
 ---
@@ -48,7 +48,7 @@ Exemplos:
 | Modo | Modelo | Quando usar | Custo relativo |
 |---|---|---|---|
 | `--rapido` | `claude-haiku-4-5-20251001` | Lookup factual, comando exato, versao, sintaxe — resposta cabe em 1-3 linhas | $ |
-| **default** | `claude-sonnet-4-6` | Exploracao media, conceito tecnico, best practices, doc oficial — resposta cabe em 1 paragrafo + bullets | $$ |
+| **default** | `claude-sonnet-5` | Exploracao media, conceito tecnico, best practices, doc oficial — resposta cabe em 1 paragrafo + bullets | $$ |
 | `--profundo` | `claude-opus-4-8` | Comparacao com nuance, trade-offs arquiteturais, sintese de 3+ fontes — resposta exige raciocinio | $$$ |
 
 > Se errou o modo (Haiku trouxe resposta rasa demais), refaca com modo superior. Nunca "promova" o modo internamente sem refazer o spawn — Haiku-rodando-com-prompt-de-Opus ainda eh Haiku.

@@ -1,6 +1,6 @@
 ---
 description: Atualiza a branch da feature com a base de forma segura — baseline de testes antes, conflitos resolvidos com confirmação, test count protection depois, rollback garantido. Nunca force-pusha.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 allowed-tools: Read, Edit, Glob, Grep, AskUserQuestion, Bash(git fetch*), Bash(git rebase*), Bash(git merge*), Bash(git status*), Bash(git log*), Bash(git diff*), Bash(git stash*), Bash(git rev-list*), Bash(git rev-parse*), Bash(git branch*), Bash(git worktree list*), Bash(git add*), Bash(git checkout*), Bash(git remote*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *)
 ---
 
