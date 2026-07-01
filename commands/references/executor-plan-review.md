@@ -35,6 +35,8 @@ Emita as 3 chamadas `Agent` numa **única mensagem** (`subagent_type: general-pu
 - Lógica/condições incorretas; acesso a null/undefined sem checagem; off-by-one; race conditions
 - Resource leaks (conexão não fechada, cleanup faltando); tratamento de erro ausente; edge cases não tratados; type mismatch
 - Dead code introduzido (export/import/função sem referência)
+- **Concorrência desperdiçada**: `await` sequencial de operações de I/O independentes que deveriam rodar em paralelo (hoist da promise ou `Promise.all`)
+- **Fan-out de query (round-robin/N+1)**: `Promise.all(items.map(i => db.query(i)))` ou loop com query por iteração — deveria ser batch (`WHERE id IN (...)`, join, dataloader). Também: `Promise.all` ilimitado sobre I/O que pode estourar connection pool/rate limit — deveria limitar concorrência
 
 **Lente Testes**:
 - Código novo sem teste correspondente; cenários ausentes (input vazio/null/erro/limites)

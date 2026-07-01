@@ -208,6 +208,21 @@ Antes de qualquer codigo de producao:
 - Se padrao real diverge do plano, **siga o codebase** (anote desvio para o relatorio)
 - Use subagentes para trabalho paralelo quando fizer sentido (pesquisa de docs, codigo independente)
 
+**Concorrencia de I/O (erro comum — nao serialize a toa)**
+
+Ao escrever codigo assincrono, **nao coloque `await` em sequencia pra operacoes independentes** — e o erro mais frequente. Duas formas de corrigir:
+
+- **Hoist a promise**: dispare a chamada assim que os inputs existem e faca `await` so no ponto onde o resultado e usado. Ex.: `const userP = fetchUser(id)` no topo, `const user = await userP` mais abaixo — o request roda em paralelo com o codigo entre os dois.
+- **`Promise.all`** quando voce precisa de varios resultados antes de seguir: `const [a, b] = await Promise.all([fetchA(), fetchB()])` em vez de `const a = await fetchA(); const b = await fetchB()`.
+
+**MAS — cuidado com query de banco (nao faca round-robin / N+1):**
+
+- **Nunca** faca fan-out de query por item: `Promise.all(items.map(i => db.query(i)))` dispara N queries e vira round-robin no pool — antipattern. **Batch**: `WHERE id IN (...)`, join, ou dataloader. Uma query pra N itens, nao N queries.
+- `Promise.all` **ilimitado** sobre I/O (HTTP/DB) pode estourar connection pool ou rate limit. Se a lista e grande ou nao-confiavel, **limite a concorrencia** (batch em chunks, ou `p-limit`/semaforo do projeto) em vez de disparar tudo de uma vez.
+- Regra pratica: **paralelize chamadas independentes e de aridade fixa** (2-3 requests distintos); **batch/limite** quando a quantidade escala com os dados.
+
+Ao delegar `[P]` a subagentes, **inclua esta diretriz no prompt** — eles tambem tendem a serializar.
+
 **4. Refatorar**
 
 - Se codigo ficou feio, melhore agora (refactor phase)
@@ -354,7 +369,7 @@ Posso executar em paralelo via sub-agents, ou prefere uma por vez?
 
 Para cada `[P]` aprovada, prepare uma chamada `Agent` com:
 - `subagent_type: general-purpose`
-- Prompt contendo: definicao completa da tarefa (What/Where/Depends on/Reuses/Skills/Tests/Gate/Done when), conteudo de CLAUDE.md + ARCHITECTURE.md, conteudo das skills listadas
+- Prompt contendo: definicao completa da tarefa (What/Where/Depends on/Reuses/Skills/Tests/Gate/Done when), conteudo de CLAUDE.md + ARCHITECTURE.md, conteudo das skills listadas, **e a diretriz de Concorrencia de I/O** (paralelizar I/O independente via hoist/Promise.all; NAO fazer fan-out de query por item — batch com `WHERE IN`/join; limitar concorrencia quando escala com os dados)
 - Instrucao explicita: "Voce executa APENAS esta tarefa. Siga TDD. Reporte status, files changed, gate result, test count, e qualquer SPEC_DEVIATION"
 
 Depois de montar todas, **dispare-as juntas num unico turno**.
@@ -687,6 +702,7 @@ Apos escrever, lance subagente para verificar links (instrucoes detalhadas no me
 - **Paradas duras sempre param**: test count drop, gate fail, SPEC_DEVIATION, blocker, encruzilhada, reconciliacao de doc, complexidade > threshold apos 2 refactors. Em qualquer modo
 - **Complexidade so no staged**: o gate de CC mede apenas arquivos staged e considera apenas funcoes tocadas pelo diff. CC pre-existente nao bloqueia. Correcao via code-simplifier com objetivo explicito, maximo 2 tentativas, test count protection se aplica ao refactor
 - **Review interno antes do handoff**: Etapa 3.5 roda 3 lentes Opus independentes (seguranca, testes, bugs) sobre o staged, sempre (autonomo e step), salvo `--sem-review`. must-fix corrigido em loop com test count protection (max 2 rodadas); must-fix aberto = parada dura. Objetivo: review do time minimo
+- **Concorrencia de I/O**: paralelize chamadas assincronas independentes (hoist da promise ou `Promise.all`) em vez de `await` sequencial. MAS nunca fan-out de query por item (round-robin/N+1) — batch com `WHERE IN`/join; limite concorrencia quando escala com os dados. Vale tambem pros subagentes `[P]` (inclua a diretriz no prompt deles)
 - **PushNotification em parada dura e fim autonomo**: toda parada dura dispara push antes do prompt ao user; fim de execucao autonoma tambem dispara push antes do prompt de commit. Sem push em progresso rotineiro
 - **Nunca ignore skills**: skills do plano nao opcionais
 - **Nunca chute API**: verifique em doc oficial (Context7/WebFetch/WebSearch) ou codigo existente
