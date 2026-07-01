@@ -31,7 +31,7 @@ Leia o command base: `.claude/commands/sdd-plan.md` do projeto, senao `~/.claude
    - `subagent_type: general-purpose`
    - `model: opus`
    - `description`: "Quebrar tarefas + 4 checks"
-   - `prompt`: o pacote + instrucao pra produzir as secoes de tarefas do PLAN (formato What/Covers/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit, phases Foundation/Core/Integration, marcacao `[P]`, Parallel Execution Map) e executar os 4 checks (Granularity, Diagram-Definition Cross-Check, Test Co-location, SPEC Coverage — todo RF/AT da SPEC coberto por ≥1 tarefa via `Covers:`) com tabelas. Se algum check falhar, ele mesmo reestrutura e re-roda (ate 2x). Retorno: secoes prontas + status dos checks.
+   - `prompt`: o pacote + instrucao pra produzir as secoes de tarefas do PLAN (formato What/Covers/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit, phases Foundation/Core/Integration, marcacao `[P]`, Parallel Execution Map) e executar os 5 checks (Granularity, Diagram-Definition Cross-Check, Test Co-location, SPEC Coverage — todo RF/AT coberto por ≥1 tarefa via `Covers:` — e PR Size: estimar arquivos distintos do diff, Ideal ≤10 / aceitavel ≤15 / 16-20 caso raro com aviso+split sugerido / >20 recomendar dividir) com tabelas. Checks 1-4 bloqueantes; se falhar, ele mesmo reestrutura e re-roda (ate 2x). Check 5 e advisory. Retorno: secoes prontas + status dos checks + contagem de arquivos.
 
    Se apos 2 tentativas algum check seguir falhando, traga o detalhe pro usuario decidir.
 

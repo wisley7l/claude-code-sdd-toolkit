@@ -275,9 +275,9 @@ Como prefere resolver?
 - **Core**: implementacao principal (geralmente onde `[P]` aparece)
 - **Integration**: wiring, e2e (sequencial)
 
-### Passo 9 — 4 checks de qualidade (bloqueantes)
+### Passo 9 — 5 checks de qualidade
 
-Execute os 4 antes de apresentar. FALHA = reestruture e re-rode.
+Execute antes de apresentar. Checks 1-4 sao **bloqueantes**: FALHA = reestruture e re-rode. Check 5 (PR Size) e **advisory**: nao bloqueia, mas dispara aviso + proposta de split conforme a faixa.
 
 **Check 1: Granularity**
 
@@ -322,6 +322,22 @@ Regras:
 - Todo RF e todo AT da SPEC tem ≥1 tarefa em `Covers:`.
 - RF/AT sem tarefa = plano incompleto: adicione tarefa ou, se for comportamento fora de escopo, confirme com o usuario que sai do PLAN.
 - Tarefa sem `Covers:` = escopo inventado: rastreie a um RF/AT ou remova.
+
+**Check 5: PR Size (reviewability)**
+
+Um PR grande demais cansa o reviewer humano e esconde bug. Estime os **arquivos distintos que entram no diff do PR** = union dos `Where:` de todas as tarefas + testes commitados (integration/e2e). Testes unitarios em `thoughts/tests/` **nao contam** (andaime, nao commitado).
+
+| Arquivos distintos | Faixa | Acao |
+|---|---|---|
+| ≤10 | Ideal | Segue |
+| 11–15 | Aceitavel | Segue; anote a contagem no checkpoint |
+| 16–20 | Grande (caso raro) | **Avise** no checkpoint: PR no limite do review humano. Proponha uma fronteira de split (quais phases/tarefas viram PR 1 vs PR 2). Seguir num PR so exige justificativa explicita do usuario |
+| >20 | Grande demais | **Recomende fortemente dividir** em PRs sequenciais. Apresente a fronteira de split sugerida (por phase ou por RF/AT coeso) e peca confirmacao antes de seguir num PR unico |
+
+Regras:
+- A fronteira de split respeita dependencias: PR 1 nao pode depender de codigo que so existe no PR 2. Corte em limites de phase ou em grupos de RF/AT independentes.
+- **Nao auto-divida** nem reescreva a SPEC: proponha a fronteira e deixe o usuario decidir (um plano com marcador de PRs sequenciais, ou o usuario estreita a SPEC).
+- Contagem e estimativa (arquivos podem se sobrepor entre tarefas) — na duvida, arredonde pra cima e sinalize.
 
 ### Passo 9.5 — Revisao por painel de subagentes
 
@@ -382,6 +398,7 @@ SPEC base: [path da SPEC]
 - Diagram-Definition Cross-Check: OK
 - Test Co-location: OK
 - SPEC Coverage: OK
+- PR Size: [N arquivos distintos — Ideal/Aceitavel/Grande; se >15: fronteira de split sugerida]
 
 ## Revisao por painel (Pro / Fast / Security / Tests)
 Aprovada em [N] rodada(s) — 0 must-fix aberto
@@ -485,6 +502,7 @@ Escreva o doc seguindo o template do reference `sdd-plan-plan-template.md` — p
 - **Decisoes de comportamento sao da SPEC**: aqui so decisoes tecnicas
 - **Reconcilie docs antes**: conflito com design doc existente = bloqueio
 - **4 checks bloqueantes**: FALHA = reestruture
+- **PR size reviewavel**: estime arquivos distintos do diff. Ideal ≤10, aceitavel ≤15, 16-20 e caso raro (avise + proponha split), >20 recomende dividir em PRs sequenciais. Nunca auto-divida nem reescreva a SPEC — proponha a fronteira e deixe o usuario decidir
 - **Revisao por painel (sempre)**: 4 reviewers independentes (Pro, Fast, Security, Tests) antes do checkpoint; achados estruturados, verifique cada `must-fix` antes de aplicar, guarda de convergencia (nao entre em loop)
 - **Test co-location e regra**: defer = anti-pattern
 - **Test count obrigatorio**: toda tarefa com `Gate` declara contagem
