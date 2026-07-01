@@ -1,5 +1,5 @@
 ---
-description: Executa o plano (PLAN) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. --step ativa pausas + commits atomicos.
+description: Executa o plano (PLAN) com TDD autonomo, sem pausa entre tarefas — staging por tarefa, nunca commita. Review interno (seguranca/testes/bugs) antes do handoff. --step ativa pausas + commits atomicos; --sem-review pula o review.
 model: claude-sonnet-4-6
 allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, PushNotification, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git add*), Bash(git commit*), Bash(git reset*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(mkdir *), Bash(cp *), Bash(mv *), Bash(lizard *), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
@@ -134,6 +134,8 @@ Avisos antes de delegar (mencione se aplicavel): subagent so herda permissoes vi
 ### 8. Detectar modo
 
 Verifique se o usuario invocou com `--step` no input. Se sim, ative modo step. Caso contrario, modo autonomo (default).
+
+Verifique tambem `--sem-review`: se presente, pula a Etapa 3.5 (review interno de seguranca/testes/bugs) na Verificacao Final. Default: review interno **liga** nos dois modos.
 
 ### 9. Confirmar Inicio
 
@@ -502,6 +504,20 @@ Opcoes:
 
 **Em `--step`**: o gate roda igual, mas o refactor corretivo pede confirmacao antes de lancar o simplifier (coerente com o resto do modo step).
 
+### 3.5 Review interno (seguranca + testes + bugs) — corrigir antes de avancar
+
+**Objetivo**: auto-revisao antes do handoff, pra que o review do time seja minimo. Pega problema cedo (contexto fresco) em vez de esperar chegar no `/pr-ready`. Complementa o gate de complexidade/simplifier (qualidade) — aqui o foco e **seguranca, testes e bugs**.
+
+**Roda sempre** (autonomo e `--step`), **exceto** com a flag `--sem-review`. Roda **uma vez** aqui: 3 lentes independentes (Opus, subagentes frescos sem o historico da sessao — como o `/sdd-review`) sobre o diff staged, achados estruturados, loop de correcao com **test count protection** e guarda de convergencia.
+
+- **Lente Seguranca** (prioridade): secrets, injection, path traversal, authz ausente, vazamento de dado sensivel; dominio pagamentos (HMAC de webhook, idempotencia, money handling, PCI, race/ordering).
+- **Lente Bugs & Logica**: null/undefined, off-by-one, race, resource leak, erro nao tratado, edge case, dead code.
+- **Lente Testes**: codigo novo sem teste, cenario ausente, teste que nao testa nada, fragil, cobertura falsa.
+
+Protocolo completo (escopo do diff, prompts das lentes, schema de finding, loop de correcao, parada dura): reference `executor-plan-review.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): escopo = `git diff --cached --name-only` (se vazio em `--step`, `git diff <base>...HEAD`); dispare as 3 lentes em paralelo no mesmo turno (`general-purpose`, `model: opus`), pulando a que nao aparece no diff; exija retorno JSON `{findings:[{severidade CRITICAL|MAJOR|MINOR, confidence, arquivo, problema, correcao}]}` com confidence >= 80; must-fix = CRITICAL+MAJOR; verifique cada um antes de aplicar, `git add` das fixes, reexecute o gate (teste quebrar ou contagem cair = PARADA DURA), re-review com subagentes frescos ate zero must-fix (max 2 rodadas ou parar se nao reduzir); must-fix aberto = parada dura com `PushNotification` e opcoes (corrigir manual / aceitar como divida no IMP / discutir design).
+
+Anote no IMP (secao "Review Interno"): must-fix aplicados, descartados com motivo, MINOR observados, rodadas.
+
 ### 4. Validacao independente final (Haiku) — automatica se ML + autonomo
 
 **Trigger**: roda automaticamente quando `modo-livre ATIVO` (marker `thoughts/modo-livre/active` existe) E modo `autonomo` (nao `--step`). Em `--step` ou ML inativo, **pule** esta etapa.
@@ -637,6 +653,7 @@ Feature concluida.
 - [Y] testes integracao/e2e passando
 - Test count: PRESERVADO em todas tarefas
 - Complexidade: [todas funcoes tocadas <= threshold / divida aceita em: lista / gate nao rodou]
+- Review interno: [N must-fix aplicados, 0 aberto (seguranca/testes/bugs) / divida aceita em: lista / pulado (--sem-review)]
 - Memoria persistente: [K entradas adicionadas em $MEM_DIR / nao alterada]
 - Doc do projeto: [atualizado / nao precisava]
 - Commits: [hash(es) ou "staged, aguardando aprovacao"]
@@ -650,7 +667,7 @@ sessao nova (/clear) + /pair-review (re-hidrata do staged + PLAN/IMP).
 
 ## Relatorio
 
-Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md` seguindo o template do reference `executor-plan-imp.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte com as secoes — O que foi feito (por phase), Diagrama (mermaid), Testes (baseline/esperado/final + PRESERVADO), Complexidade (threshold, ferramenta, correcoes, dividas), Paralelismo Utilizado, Desvios do Plano (inclui SPEC_DEVIATION), Memoria persistente (entradas + anotacoes pro /sdd-learning), Reconciliacao com Docs, Observacoes.
+Crie `thoughts/history/IMP-DD-MM-YYYY-[slug].md` seguindo o template do reference `executor-plan-imp.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte com as secoes — O que foi feito (por phase), Diagrama (mermaid), Testes (baseline/esperado/final + PRESERVADO), Complexidade (threshold, ferramenta, correcoes, dividas), Review Interno (must-fix aplicados/descartados/MINOR + rodadas), Paralelismo Utilizado, Desvios do Plano (inclui SPEC_DEVIATION), Memoria persistente (entradas + anotacoes pro /sdd-learning), Reconciliacao com Docs, Observacoes.
 
 ### Verificacao de Links do Relatorio
 
@@ -669,6 +686,7 @@ Apos escrever, lance subagente para verificar links (instrucoes detalhadas no me
 - **Modo padrao e autonomo**: zero pausa entre tarefas. `--step` ativa pausa antiga
 - **Paradas duras sempre param**: test count drop, gate fail, SPEC_DEVIATION, blocker, encruzilhada, reconciliacao de doc, complexidade > threshold apos 2 refactors. Em qualquer modo
 - **Complexidade so no staged**: o gate de CC mede apenas arquivos staged e considera apenas funcoes tocadas pelo diff. CC pre-existente nao bloqueia. Correcao via code-simplifier com objetivo explicito, maximo 2 tentativas, test count protection se aplica ao refactor
+- **Review interno antes do handoff**: Etapa 3.5 roda 3 lentes Opus independentes (seguranca, testes, bugs) sobre o staged, sempre (autonomo e step), salvo `--sem-review`. must-fix corrigido em loop com test count protection (max 2 rodadas); must-fix aberto = parada dura. Objetivo: review do time minimo
 - **PushNotification em parada dura e fim autonomo**: toda parada dura dispara push antes do prompt ao user; fim de execucao autonoma tambem dispara push antes do prompt de commit. Sem push em progresso rotineiro
 - **Nunca ignore skills**: skills do plano nao opcionais
 - **Nunca chute API**: verifique em doc oficial (Context7/WebFetch/WebSearch) ou codigo existente
