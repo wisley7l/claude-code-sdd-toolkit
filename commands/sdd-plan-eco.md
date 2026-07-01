@@ -35,6 +35,8 @@ Leia o command base: `.claude/commands/sdd-plan.md` do projeto, senao `~/.claude
 
    Se apos 2 tentativas algum check seguir falhando, traga o detalhe pro usuario decidir.
 
-4. **Checkpoints com o usuario** (Passos 6, 7 e 10) continuam na main, normalmente — o subagente nunca interage com o usuario.
+4. **Passo 9.5 (revisao por painel) fica OFF por design.** No `/sdd-plan` cheio o painel de reviewers roda sempre; o modo eco e justamente o escape pra Medium com orcamento apertado — varios subagentes Opus por rodada contradiz o proposito. Os 4 checks (rodados pelo subagente Opus unico do item 3) bastam. Se o usuario quiser a revisao por painel, sugira migrar pro `/sdd-plan` cheio.
 
-5. Todo o resto (localizar/ler a SPEC no Passo 2, auto-sizing, Knowledge Verification Chain com Step 0 de memoria, template do PLAN via reference, Passos 11-14, guardrails) segue o base sem alteracao.
+5. **Checkpoints com o usuario** (Passos 6, 7 e 10) continuam na main, normalmente — o subagente nunca interage com o usuario.
+
+6. Todo o resto (localizar/ler a SPEC no Passo 2, auto-sizing, Knowledge Verification Chain com Step 0 de memoria, template do PLAN via reference, Passos 11-14, guardrails) segue o base sem alteracao.

@@ -81,11 +81,23 @@ Pra manter o contexto Opus enxuto, **delegue toda leitura volumosa a subagentes*
 
 **Variante economica**: pra escopo Medium com orcamento apertado existe o `/sdd-plan-eco` — main em Sonnet, com a quebra de tarefas + checks delegadas a um unico subagente Opus de contexto focado.
 
+### Flags
+
+Extraia estas flags de `$ARGUMENTS` antes de tratar o resto como path da SPEC (a flag **nao** e path). Controlam a revisao por painel do Passo 9.5:
+
+| Flag | Efeito |
+|---|---|
+| _(nenhuma)_ | Painel completo — 4 lentes (Pro, Fast, Security, Tests) |
+| `--rapido` | So Pro + Fast (pula Security/Tests) |
+| `--solo` | Pula o Passo 9.5 — fica so nos 4 checks self-run do Passo 9 |
+
+Nao entram no auto-sizing nem no fluxo — so na decisao do Passo 9.5. O que sobrar de `$ARGUMENTS` depois de remover a flag e o path da SPEC (Passo 2).
+
 ### 2. Localizar e ler a SPEC de comportamento
 
 A SPEC e a entrada principal deste skill.
 
-- **Path passado em `$ARGUMENTS`**: use direto (ex.: `thoughts/specs/spec-<ts>-<slug>.md`).
+- **Path passado em `$ARGUMENTS`** (ja sem a flag): use direto (ex.: `thoughts/specs/spec-<ts>-<slug>.md`).
 - **Sem path**: procure a SPEC mais recente:
   ```bash
   ROOT=$(git worktree list 2>/dev/null | head -1 | awk '{print $1}')
@@ -311,6 +323,31 @@ Regras:
 - RF/AT sem tarefa = plano incompleto: adicione tarefa ou, se for comportamento fora de escopo, confirme com o usuario que sai do PLAN.
 - Tarefa sem `Covers:` = escopo inventado: rastreie a um RF/AT ou remova.
 
+### Passo 9.5 — Revisao por painel de subagentes
+
+Os 4 checks do Passo 9 sao **self-run** — o mesmo Opus que escreveu o plano se autoavalia, o que carrega o vies do autor. Este passo traz **olhos frescos e independentes** antes do checkpoint, com lentes diversas (perspectivas diferentes pegam falhas que redundancia nao pega).
+
+**Roda por default em todo escopo** — Medium, Large ou Complex. (Quick nao chega aqui: foi encaminhado pro `/quick-task` no Passo 1.) Flags em `$ARGUMENTS` ajustam o painel (ver "Flags" na Configuracao inicial):
+- **(sem flag)** → painel completo (4 lentes).
+- **`--rapido`** → so **Pro + Fast** (pula Security/Tests). Bom pra plano sem superficie sensivel nem logica de teste complexa.
+- **`--solo`** → pula este passo inteiro; fica so nos 4 checks self-run do Passo 9.
+
+O `/sdd-plan-eco` tambem roda sem painel por design.
+
+**Painel (4 lentes disjuntas)**, cada uma um subagente `Agent` em **paralelo, no mesmo turno** (uma unica resposta com as 4 chamadas — turnos separados serializam), `model: opus`, `subagent_type: general-purpose`. Cada um recebe o **draft completo do PLAN** inline (ainda nao foi escrito — o checkpoint e depois), o path da SPEC e a constitution:
+- **Reviewer Pro** — arquitetura, consistencia com codebase/constitution, decisoes tecnicas embasadas, `Reuses:`, rastreabilidade estrutural (todo RF/AT tem tarefa em `Covers:`), riscos.
+- **Reviewer Fast** — clareza e ausencia de ambiguidade, completude dos detalhes (da pra executar sem chutar?), granularidade das tarefas, diagrama x dependencias.
+- **Reviewer Security** — dominio pagamentos/e-commerce: HMAC de webhook, idempotencia, money handling (nunca float), PCI (nao logar dado sensivel), authz, validacao runtime de input nao-confiavel, race conditions/ordering. **APPROVED rapido se o plano nao toca superficie sensivel** — nao invente risco.
+- **Reviewer Tests** — todo RF/AT tem teste que o *exercita* (nao so tarefa que o entrega), test co-location, gate e test count coerentes, casos de borda/negativos e caminhos de erro, estrategia de mock (sandbox vs unit).
+
+Retorno estruturado (JSON com `verdict` + `findings` por severidade), **nao** "APPROVED" cego.
+
+**Reconciliacao**: verifique cada `must-fix` voce mesmo antes de aplicar (reviewer erra) — aplique so os validos, descarte os invalidos com motivo. Se aplicou algum `must-fix`, rode **nova rodada com subagentes frescos**. Repita ate **todo o painel** retornar `APPROVED` (zero `must-fix`). **Guarda de convergencia**: se uma rodada nao reduz os `must-fix` validos, ou apos 3 rodadas, pare e leve os itens abertos pro checkpoint. (Teto de custo: 4 lentes x ate 3 rodadas; os especialistas Security/Tests curto-circuitam com APPROVED quando seu dominio nao aparece no plano.)
+
+Protocolo completo (prompts literais das 4 lentes, schema de finding, loop): reference `sdd-plan-panel-review.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): monte o prompt com lente base comum (cobertura de RF/AT, precisao tecnica, clareza, testes, rastreabilidade) trocando so o foco declarado por lente (Pro/Fast/Security/Tests acima); exija retorno JSON `{verdict, findings:[{severidade, ancora, problema, correcao}]}` com `APPROVED` so quando zero `must-fix`; verifique cada `must-fix` antes de aplicar; rode ate aprovacao de todo o painel com a guarda de convergencia acima.
+
+Alimente o resultado no checkpoint (Passo 10).
+
 ### Passo 10 — Checkpoint pre-aprovacao
 
 **Antes de escrever o arquivo**, apresente para o usuario:
@@ -345,6 +382,10 @@ SPEC base: [path da SPEC]
 - Diagram-Definition Cross-Check: OK
 - Test Co-location: OK
 - SPEC Coverage: OK
+
+## Revisao por painel (Pro / Fast / Security / Tests)
+Aprovada em [N] rodada(s) — 0 must-fix aberto
+  (ou) Aberta: [X] must-fix nao resolvidos apos [N] rodadas → [lista curta por lente]
 
 Faz sentido? Ajusta algo antes de eu finalizar?
 ```
@@ -444,6 +485,7 @@ Escreva o doc seguindo o template do reference `sdd-plan-plan-template.md` — p
 - **Decisoes de comportamento sao da SPEC**: aqui so decisoes tecnicas
 - **Reconcilie docs antes**: conflito com design doc existente = bloqueio
 - **4 checks bloqueantes**: FALHA = reestruture
+- **Revisao por painel (sempre)**: 4 reviewers independentes (Pro, Fast, Security, Tests) antes do checkpoint; achados estruturados, verifique cada `must-fix` antes de aplicar, guarda de convergencia (nao entre em loop)
 - **Test co-location e regra**: defer = anti-pattern
 - **Test count obrigatorio**: toda tarefa com `Gate` declara contagem
 - **Cobertura da SPEC**: todo RF/AT coberto por ≥1 tarefa
