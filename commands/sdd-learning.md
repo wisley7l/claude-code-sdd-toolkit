@@ -76,6 +76,7 @@ Em duvida: SDD para coisa tecnica especifica; geral para coisa transversal.
 | `--imp` | Filtra so IMPs |
 | `--review` | Filtra so reviews |
 | `--include-insights` | Adiciona `thoughts/insights/*.md` as fontes (opt-in) |
+| `--hotspots` | Adiciona `thoughts/cache/structure/HOTSPOTS.md` as fontes (opt-in): propoe `lesson`/`blocker` para god-nodes/acoplamento do `structure-cache` |
 | `--all` | Processa tudo. **Alerta o user antes**: pode gerar muitos candidatos. Pergunta confirmacao. |
 
 ### 2. Resolver paths
@@ -136,8 +137,11 @@ gh pr list --head "$BRANCH" --state closed --json number,state,mergedAt,closedAt
 | Reviews internos | `thoughts/reviews/*.md`, `thoughts/shared/reviews/*.md` (legacy) |
 | **PR GitHub** | `gh pr view <N>` (body, reviews, comments) + `gh api repos/.../pulls/<N>/comments` (inline + threads) |
 | Insights (opt-in) | `thoughts/insights/*.md` |
+| Hotspots de estrutura (opt-in, `--hotspots`) | `thoughts/cache/structure/HOTSPOTS.md` (god-nodes / acoplamento do `structure-cache`) |
 
 Ordene por data (frontmatter, nome do arquivo, ou data de fechamento do PR).
+
+**Hotspots (`--hotspots`):** quando presente, leia `HOTSPOTS.md` e considere propor `lesson`/`blocker` para um god-node que passe nos 5 filtros duros — ex.: "modulo X e hub de acoplamento (grau N): mexer tende a impactar varios subsistemas". Persista **so a conclusao nao-obvia** (com o "por que"), **nunca** o grafo/index — ele e derivavel e apodrece (fica no cache, nao na memoria). Verifique que o arquivo ainda reflete a realidade antes de propor.
 
 ---
 

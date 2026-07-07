@@ -109,6 +109,8 @@ Leia o codigo real pra entender como o sistema funciona hoje e onde o recurso se
 
 Para varredura ampla (>3 queries, varios diretorios), use subagent `Agent` (`subagent_type: Explore`) — ele localiza e devolve so a sintese com `path:line`, preservando o contexto Opus principal.
 
+**Antes de reler codigo pra perguntas de estrutura/dependencia** (quem importa X, o que Y define, blast radius de mexer num arquivo), consulte o `structure-cache` (skill `structure-cache`): `structure-cache query --importers/--imports/--defs/--hotspots [--json]`. Se responder (exit 0), use — evita reler os fontes. Se `exit 3` (sem cache) ou stale, **fallback gracioso**: siga com Grep/Glob/Read ou Explore como acima. O cache e aceleracao, nunca dependencia; questoes de *logica* (nao estrutura) continuam exigindo leitura do codigo.
+
 Saidas desta etapa: atores reais, fluxos existentes, pontos de integracao, restricoes impostas pelo sistema atual.
 
 ### Passo 4 — Pesquisa tecnica (condicional)

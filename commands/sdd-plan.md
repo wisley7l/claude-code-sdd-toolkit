@@ -180,6 +180,8 @@ Identifique:
 
 Use subagent `Agent` com `subagent_type: Explore` para pesquisas amplas (>3 queries).
 
+**Antes de reler codigo pra perguntas de estrutura/dependencia** (quem importa o arquivo do Contexto Tecnico, o que ele importa, blast radius, modulos mais acoplados), consulte o `structure-cache` (skill `structure-cache`): `structure-cache query --importers/--imports/--defs/--hotspots [--json]`. Exit 0 → use a resposta (nao releia os fontes). `exit 3` (sem cache) ou stale → **fallback gracioso**: Explore/Grep/Read como acima (mesmo padrao do Step 0 do knowledge cache no Passo 4). O cache acelera; nunca bloqueia.
+
 ### Passo 4 — Pesquisa externa (condicional)
 
 **Medium**: pule se nao houver lib/API nova fora do que ja esta no projeto.
