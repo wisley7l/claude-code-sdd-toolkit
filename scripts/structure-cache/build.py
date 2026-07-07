@@ -230,6 +230,54 @@ def detect_root() -> Path | None:
     return Path(top).resolve() if top else None
 
 
+def _is_stale(root: Path) -> bool:
+    """True se o cache não bate mais com os hashes atuais (ou não existe)."""
+    manifest = _load_json(root / CACHE_SUBDIR / MANIFEST_NAME)
+    if not manifest:
+        return True
+    prev = manifest.get("files", {})
+    current = {p.relative_to(root).as_posix(): sha256_file(p) for p in iter_source_files(root)}
+    return prev != current
+
+
+def query(root: Path, kind: str, target: str | None, top: int, as_json: bool) -> int:
+    """Consulta o cache SEM reler código. É o que /sdd-plan e /sdd-spec chamam na
+    pesquisa. exit: 0=respondeu, 3=sem cache (caller deve cair no fallback de reler
+    código). Se o cache está stale, responde mesmo assim mas avisa no stderr — quem
+    decide re-buildar é o caller."""
+    index = _load_json(root / CACHE_SUBDIR / INDEX_NAME)
+    if index is None:
+        print("structure-cache: SEM cache — caller deve reler código (fallback)", file=sys.stderr)
+        return 3
+    if _is_stale(root):
+        print("structure-cache: aviso — cache STALE; rode 'structure-cache build --incremental'", file=sys.stderr)
+    edges = index.get("edges", [])
+    nodes = index.get("nodes", [])
+    if kind == "importers":
+        result = sorted({e["from"] for e in edges if e["to"] == target})
+    elif kind == "imports":
+        result = sorted({e["to"] for e in edges if e["from"] == target})
+    elif kind == "defs":
+        result = [{"id": n["id"], "kind": n["kind"]} for n in nodes if n["file"] == target]
+    elif kind == "hotspots":
+        degree: dict[str, int] = {}
+        for e in edges:
+            for endpoint in (e["from"], e["to"]):
+                if not endpoint.startswith("pkg:"):
+                    degree[endpoint] = degree.get(endpoint, 0) + 1
+        ranked = sorted(degree.items(), key=lambda kv: (-kv[1], kv[0]))[:top]
+        result = [{"file": f, "degree": d} for f, d in ranked]
+    else:
+        print(f"structure-cache: query desconhecida: {kind}", file=sys.stderr)
+        return 2
+    if as_json:
+        print(json.dumps(result, ensure_ascii=False))
+    else:
+        for item in result:
+            print(item if isinstance(item, str) else json.dumps(item, ensure_ascii=False))
+    return 0
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="structure-cache", description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -238,6 +286,14 @@ def main(argv: list[str]) -> int:
     pb.add_argument("--incremental", action="store_true")
     pc = sub.add_parser("check", help="relata fresh/stale")
     pc.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
+    pq = sub.add_parser("query", help="consulta o cache sem reler código")
+    pq.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
+    pq.add_argument("--importers", metavar="FILE", help="arquivos que importam FILE")
+    pq.add_argument("--imports", metavar="FILE", help="o que FILE importa")
+    pq.add_argument("--defs", metavar="FILE", help="definições em FILE")
+    pq.add_argument("--hotspots", action="store_true", help="god-nodes por acoplamento")
+    pq.add_argument("--top", type=int, default=10, help="limite p/ --hotspots (default 10)")
+    pq.add_argument("--json", action="store_true", help="saída JSON (p/ consumo por comando)")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve() if args.root else detect_root()
     if root is None:
@@ -250,6 +306,17 @@ def main(argv: list[str]) -> int:
         return build(root, args.incremental)
     if args.cmd == "check":
         return check(root)
+    if args.cmd == "query":
+        if args.importers:
+            return query(root, "importers", args.importers, args.top, args.json)
+        if args.imports:
+            return query(root, "imports", args.imports, args.top, args.json)
+        if args.defs:
+            return query(root, "defs", args.defs, args.top, args.json)
+        if args.hotspots:
+            return query(root, "hotspots", None, args.top, args.json)
+        print("structure-cache query: escolha --importers/--imports/--defs/--hotspots", file=sys.stderr)
+        return 2
     return 2
 
 
