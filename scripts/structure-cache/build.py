@@ -10,15 +10,16 @@ Determinístico, sem LLM. Worktree-safe: opera SEMPRE relativo a --root (o calle
 passa `git rev-parse --show-toplevel`), e escreve o cache DENTRO daquele worktree
 (thoughts/cache/structure/), nunca num lugar compartilhado.
 
-Uso:
-  build.py build --root <dir> [--incremental]   # constrói/atualiza o cache
-  build.py check --root <dir>                    # relata fresh/stale (exit 0=fresh, 1=stale)
+Uso (rode de QUALQUER lugar dentro do repo/worktree — --root é auto-detectado via git):
+  build.py build [--incremental] [--root <dir>]   # constrói/atualiza o cache
+  build.py check [--root <dir>]                    # relata fresh/stale (exit 0=fresh, 1=stale)
 """
 from __future__ import annotations
 import argparse
 import hashlib
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -212,18 +213,38 @@ def _write_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False, sort_keys=False) + "\n", encoding="utf-8")
 
 
+def detect_root() -> Path | None:
+    """Descobre o topo do worktree ATUAL via git. Rodado de dentro de um worktree
+    linkado, o git devolve o root DAQUELE worktree — é isto que torna o cache
+    worktree-safe sem o usuário passar path nenhum."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, check=False,
+        )
+    except (OSError, ValueError):
+        return None
+    if out.returncode != 0:
+        return None
+    top = out.stdout.strip()
+    return Path(top).resolve() if top else None
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="structure-cache", description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
     pb = sub.add_parser("build", help="constrói/atualiza o cache")
-    pb.add_argument("--root", required=True)
+    pb.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pb.add_argument("--incremental", action="store_true")
     pc = sub.add_parser("check", help="relata fresh/stale")
-    pc.add_argument("--root", required=True)
+    pc.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     args = parser.parse_args(argv)
-    root = Path(args.root).resolve()
+    root = Path(args.root).resolve() if args.root else detect_root()
+    if root is None:
+        print("structure-cache: fora de um repo git — passe --root <dir> explicitamente", file=sys.stderr)
+        return 2
     if not root.is_dir():
-        print(f"structure-cache: --root inválido: {root}", file=sys.stderr)
+        print(f"structure-cache: root inválido: {root}", file=sys.stderr)
         return 2
     if args.cmd == "build":
         return build(root, args.incremental)
