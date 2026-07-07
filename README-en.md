@@ -167,7 +167,9 @@ skills/
   memory-keeper/            # Auto-memory: 9 types, flat convention, MEMORY.md as index
   conciso/                  # Concise response mode in pt-BR (lite/full/ultra)
   deprecated/               # Older skills — fallback
-scripts/                    # Opt-in extras (e.g. `ouvir` — speaks the last reply via local TTS). See scripts/README.md
+scripts/                    # Opt-in extras. See scripts/README.md
+  ouvir                     # Speaks the last reply via local TTS (pt-BR)
+  structure-cache/build.py  # [prototype] Shallow code-structure cache (TS), hash-invalidated — speeds up /sdd-spec and /sdd-plan research without re-reading code. See "Structure cache" below
 ```
 
 **`commands/` vs `skills/`** (Anthropic convention): commands are invoked manually (`/sdd-plan`); skills auto-trigger by description when the context matches. `memory-keeper` is a skill because it must always be available to read/write memory without the user having to ask.
@@ -185,7 +187,19 @@ thoughts/
   reports/prs-YYYY-MM.md             # /pr-report (opt-in)
   quick/NNN-slug/             # /quick-task (TASK.md + SUMMARY.md)
   tests/                      # TDD scaffolding (NOT committed)
+  cache/structure/            # [prototype] index.json + manifest.json + HOTSPOTS.md (regenerable, gitignored)
 ```
+
+### Structure cache (prototype)
+
+A *shallow* index of the code's structure — who imports whom, definitions per file, god-nodes — to speed up the research phase of `/sdd-spec` and `/sdd-plan` **without re-reading code on every query**. It is not memory: it's a **regenerable cache** invalidated by hash (`scripts/structure-cache/build.py`).
+
+- `build [--incremental]` — extracts defs + imports → `index.json`; incremental re-parses only files whose hash changed. Deterministic, no LLM.
+- `check` — compares current hash vs `manifest.json`; it's the **correctness backstop** that catches `rebase`/`checkout`/`stash` the hooks missed (exit `0`=fresh, `1`=stale).
+- **Worktree-safe** and typing-free: `--root` is **auto-detected** via `git rev-parse --show-toplevel` — run `structure-cache build` from any subdir of the repo/worktree. Inside a linked worktree git returns *that* worktree's root, so the cache lands in `<worktree>/thoughts/cache/structure/`, never shared, no thrashing across branches.
+- The derived `HOTSPOTS.md` (coupling by degree) is what `/sdd-learning` would read to propose a durable `lesson`/`blocker` in memory — the graph stays in the cache, only the **non-obvious conclusion** goes to memory.
+
+> Current status: **prototype** validated on a TS fixture (cold build, stale detection, incremental, reverse-impact query). Missing: tree-sitter extraction (regex today), multi-language, a skill wrapper, and `post-commit`/`post-checkout` hooks.
 
 ## Inspiration
 
