@@ -205,9 +205,11 @@ Um índice *shallow* da estrutura do código — quem importa quem, definições
 - `build [--incremental]` — extrai defs + imports → `index.json`; incremental reparseia só os arquivos com hash divergente. Determinístico, sem LLM.
 - `check` — compara hash atual vs `manifest.json`; é o **backstop de correção** que pega `rebase`/`checkout`/`stash` que os hooks perderam (exit `0`=fresco, `1`=stale).
 - **Worktree-safe** e sem digitação: `--root` é **auto-detectado** via `git rev-parse --show-toplevel` — rode `structure-cache build` de qualquer subdir do repo/worktree. De dentro de um worktree linkado o git devolve o root *daquele* worktree, então o cache cai em `<worktree>/thoughts/cache/structure/`, nunca compartilhado, sem thrashing entre branches.
-- O `HOTSPOTS.md` derivado (acoplamento por grau) é o que o `/sdd-learning` leria pra propor `lesson`/`blocker` durável na memória — o grafo fica no cache, só a **conclusão não-óbvia** vai pra memória.
+- `query` — consulta sem reler código: `structure-cache query --importers/--imports/--defs/--hotspots [--json]` (exit `3` = sem cache → o caller cai no fallback de reler código).
+- **Hooks opt-in** (`scripts/structure-cache/install-hooks.sh`) — instala `post-commit`/`post-checkout` no hooks-dir **comum** (uma vez, vale pra todos os worktrees) que mantêm o cache morno via build incremental **destacado** (nunca bloqueia o git). `--uninstall` remove só o bloco.
+- Consumido por `/sdd-plan` e `/sdd-spec` na fase de pesquisa (com fallback gracioso) e por `/sdd-learning` (`--hotspots`): o `HOTSPOTS.md` derivado alimenta propostas de `lesson`/`blocker` — o grafo fica no cache, só a **conclusão não-óbvia** vai pra memória.
 
-> Estado atual: **protótipo** validado em fixture TS (build frio, stale, incremental, query de impacto). Falta: extração via tree-sitter (hoje regex), multi-linguagem, wrapper de skill e hooks `post-commit`/`post-checkout`.
+> Estado atual: motor + `query` + skill wrapper + hooks opt-in + consumo em `/sdd-plan`/`/sdd-spec`/`/sdd-learning`, validados em fixture TS. Falta: extração via **tree-sitter** (hoje regex) e **multi-linguagem** (hoje só TS/JS).
 
 ## Inspirações
 

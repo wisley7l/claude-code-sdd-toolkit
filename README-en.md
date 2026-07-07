@@ -202,9 +202,11 @@ A *shallow* index of the code's structure — who imports whom, definitions per 
 - `build [--incremental]` — extracts defs + imports → `index.json`; incremental re-parses only files whose hash changed. Deterministic, no LLM.
 - `check` — compares current hash vs `manifest.json`; it's the **correctness backstop** that catches `rebase`/`checkout`/`stash` the hooks missed (exit `0`=fresh, `1`=stale).
 - **Worktree-safe** and typing-free: `--root` is **auto-detected** via `git rev-parse --show-toplevel` — run `structure-cache build` from any subdir of the repo/worktree. Inside a linked worktree git returns *that* worktree's root, so the cache lands in `<worktree>/thoughts/cache/structure/`, never shared, no thrashing across branches.
-- The derived `HOTSPOTS.md` (coupling by degree) is what `/sdd-learning` would read to propose a durable `lesson`/`blocker` in memory — the graph stays in the cache, only the **non-obvious conclusion** goes to memory.
+- `query` — query without re-reading code: `structure-cache query --importers/--imports/--defs/--hotspots [--json]` (exit `3` = no cache → the caller falls back to re-reading code).
+- **Opt-in hooks** (`scripts/structure-cache/install-hooks.sh`) — installs `post-commit`/`post-checkout` in the **common** hooks dir (once, applies to all worktrees) that keep the cache warm via a **detached** incremental build (never blocks git). `--uninstall` removes just the block.
+- Consumed by `/sdd-plan` and `/sdd-spec` during research (with graceful fallback) and by `/sdd-learning` (`--hotspots`): the derived `HOTSPOTS.md` feeds `lesson`/`blocker` proposals — the graph stays in the cache, only the **non-obvious conclusion** goes to memory.
 
-> Current status: **prototype** validated on a TS fixture (cold build, stale detection, incremental, reverse-impact query). Missing: tree-sitter extraction (regex today), multi-language, a skill wrapper, and `post-commit`/`post-checkout` hooks.
+> Current status: engine + `query` + skill wrapper + opt-in hooks + consumption in `/sdd-plan`/`/sdd-spec`/`/sdd-learning`, validated on a TS fixture. Missing: **tree-sitter** extraction (regex today) and **multi-language** (TS/JS only today).
 
 ## Inspiration
 
