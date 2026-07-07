@@ -85,11 +85,15 @@ Quando precisar:  /busca · /verifica · /complexidade · /git-rebase-seguro · 
 # Commands globais (todos os projetos)
 cp commands/*.md ~/.claude/commands/
 mkdir -p ~/.claude/sdd-references && cp commands/references/* ~/.claude/sdd-references/
+cp -r skills/*/ ~/.claude/skills/          # skills (memory-keeper, conciso, structure-cache…)
 
 # Ou por projeto
 cp commands/*.md /seu-projeto/.claude/commands/
 mkdir -p /seu-projeto/.claude/sdd-references && cp commands/references/* /seu-projeto/.claude/sdd-references/
+cp -r skills/*/ /seu-projeto/.claude/skills/
 ```
+
+> A skill `structure-cache` chama o script `scripts/structure-cache/build.py`. Para usá-la como comando (`structure-cache …`), deixe-o no PATH — via alias ou instalando em `~/.local/bin` (extra opt-in, ver `scripts/`).
 
 A pasta `references/` é necessária: os commands grandes carregam templates dela sob demanda (progressive disclosure). Sem ela os commands ainda funcionam via fallback inline, mas com templates resumidos.
 
@@ -169,6 +173,7 @@ commands/                   # Slash commands — FONTE CANÔNICA (copiada pra ~/
 skills/
   memory-keeper/            # Auto-memory: 9 tipos, convenção flat, MEMORY.md como índice
   conciso/                  # Modo de resposta enxuto em pt-BR (lite/full/ultra)
+  structure-cache/          # [protótipo] Consulta estrutura do código do cache (importadores/defs/hotspots) sem reler
   deprecated/               # Skills antigas — fallback
 scripts/                    # Extras opt-in. Ver scripts/README.md
   ouvir                     # Fala a última resposta via TTS local (pt-BR)

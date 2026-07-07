@@ -1,0 +1,56 @@
+---
+name: structure-cache
+description: Consulta a estrutura do código (quem importa X, o que Y define, impacto de mexer num arquivo, god-nodes/acoplamento) a partir de um cache regenerável invalidado por hash — SEM reler código a cada consulta. Use quando precisar entender dependências/impacto estrutural de um codebase (fase de pesquisa de /sdd-plan e /sdd-spec, análise de blast radius antes de mudar um arquivo), ou quando o usuário pedir "quem usa/importa isso", "o que quebra se eu mexer aqui", "quais os módulos mais acoplados". Escopo atual: TS/JS. Cache em `<worktree>/thoughts/cache/structure/`, worktree-safe. NÃO é memória — o grafo é derivável e apodrece; só a conclusão não-óbvia vai pra auto-memory via /sdd-learning.
+---
+
+# structure-cache — Estrutura do código sob demanda, sem reler tudo
+
+Um índice *shallow* da estrutura do código (imports + definições por arquivo, hotspots por acoplamento) que responde perguntas de dependência/impacto **sem reler os arquivos fonte**. É um **cache regenerável**, não conhecimento durável: invalidado por hash, jogado fora e reconstruído. O grafo **nunca** vai pra auto-memory — só a conclusão não-óbvia (via `/sdd-learning`).
+
+## Comando
+
+O motor é `scripts/structure-cache/build.py`. Prefira o comando instalado no PATH:
+
+```
+structure-cache <build|check|query> [opções]
+```
+
+Se não estiver no PATH (install opt-in ainda não feito), invoque o script direto:
+`python3 <toolkit>/scripts/structure-cache/build.py <...>` (o toolkit fica onde os commands SDD foram instalados). O `--root` é **auto-detectado** via `git rev-parse --show-toplevel` — rode de qualquer subdir do repo/worktree.
+
+## Protocolo de consulta (consulta → fallback)
+
+É o mesmo molde do Step 0 do Knowledge Verification Chain: **consulta o cache; se não serve, cai na fonte** (reler código). Nunca falha por ausência de cache.
+
+1. **Query direto** — para uma pergunta estrutural, chame:
+   - `structure-cache query --importers <file>` → quem importa o arquivo (blast radius)
+   - `structure-cache query --imports <file>` → o que o arquivo importa
+   - `structure-cache query --defs <file>` → definições no arquivo
+   - `structure-cache query --hotspots [--top N]` → god-nodes por acoplamento
+   - Acrescente `--json` para consumo programático.
+2. **Interprete o exit code**:
+   - `0` → respondeu. Use o resultado. Se veio aviso de STALE no stderr, considere `structure-cache build --incremental` antes de confiar em detalhes finos.
+   - `3` → **sem cache**. Duas opções: (a) `structure-cache build` para criar (barato, sem LLM) e re-consultar; ou (b) **fallback**: reler o código como já se faz hoje (Grep/Glob/Read ou subagente Explore). Escolha (a) quando fizer várias consultas; (b) para uma pergunta pontual.
+3. **Nunca bloqueie** o trabalho por causa do cache — ele é aceleração, não dependência.
+
+## Manter o cache fresco
+
+- `structure-cache build` — build completo (primeira vez).
+- `structure-cache build --incremental` — reparseia só arquivos com hash divergente (barato).
+- `structure-cache check` — exit `0`=fresco, `1`=stale. É o **backstop de correção** que pega `rebase`/`checkout`/`stash` (mudanças de arquivo que não passam por commit).
+- Hooks `post-commit`/`post-checkout` (opt-in) mantêm o cache morno automaticamente. Mesmo com hooks, `check`/query revalidam por hash — a correção não depende do hook.
+
+## Worktree
+
+O cache vive **dentro** do worktree corrente (`<worktree>/thoughts/cache/structure/`) e o `--root` resolve o topo *daquele* worktree. Cada worktree tem cache isolado — sem contaminação entre branches. Nada é escrito fora dessa pasta.
+
+## Limites (escopo atual)
+
+- **TS/JS apenas** (multi-linguagem é evolução futura).
+- **Imports + definições**, sem call-graph / resolução de símbolo cross-arquivo (edges são `imports`, confiança `EXTRACTED`).
+- Extração via tree-sitter quando instalado; senão, fallback regex (mesmo schema, menos preciso em casos complexos).
+- Não substitui leitura de código para entender *lógica* — responde **estrutura/dependência**, não comportamento interno de uma função.
+
+## Elo com a memória
+
+O `HOTSPOTS.md` derivado (god-nodes, acoplamento) é insumo do `/sdd-learning`: ele lê esse arquivo e **propõe** `lesson`/`blocker` durável (ex.: "módulo X é hub de acoplamento — mexer impacta N subsistemas"), sob confirmação, via `memory-keeper`. O índice/grafo em si **não** é persistido na auto-memory.

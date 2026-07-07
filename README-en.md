@@ -82,11 +82,15 @@ When needed:      /busca · /verifica · /complexidade · /git-rebase-seguro · 
 # Global commands (all projects)
 cp commands/*.md ~/.claude/commands/
 mkdir -p ~/.claude/sdd-references && cp commands/references/* ~/.claude/sdd-references/
+cp -r skills/*/ ~/.claude/skills/          # skills (memory-keeper, conciso, structure-cache…)
 
 # Or project-scoped
 cp commands/*.md /your-project/.claude/commands/
 mkdir -p /your-project/.claude/sdd-references && cp commands/references/* /your-project/.claude/sdd-references/
+cp -r skills/*/ /your-project/.claude/skills/
 ```
+
+> The `structure-cache` skill calls the `scripts/structure-cache/build.py` script. To use it as a command (`structure-cache …`), put it on your PATH — via an alias or by installing into `~/.local/bin` (opt-in extra, see `scripts/`).
 
 The `references/` folder is required: large commands load templates from it on demand (progressive disclosure). Without it the commands still work via an inline fallback, but with summarized templates.
 
@@ -166,6 +170,7 @@ commands/                   # Slash commands — CANONICAL SOURCE (copied to ~/.
 skills/
   memory-keeper/            # Auto-memory: 9 types, flat convention, MEMORY.md as index
   conciso/                  # Concise response mode in pt-BR (lite/full/ultra)
+  structure-cache/          # [prototype] Query code structure from the cache (importers/defs/hotspots) without re-reading
   deprecated/               # Older skills — fallback
 scripts/                    # Opt-in extras. See scripts/README.md
   ouvir                     # Speaks the last reply via local TTS (pt-BR)
