@@ -170,7 +170,9 @@ skills/
   memory-keeper/            # Auto-memory: 9 tipos, convenção flat, MEMORY.md como índice
   conciso/                  # Modo de resposta enxuto em pt-BR (lite/full/ultra)
   deprecated/               # Skills antigas — fallback
-scripts/                    # Extras opt-in (ex.: `ouvir` — fala a última resposta via TTS local). Ver scripts/README.md
+scripts/                    # Extras opt-in. Ver scripts/README.md
+  ouvir                     # Fala a última resposta via TTS local (pt-BR)
+  structure-cache/build.py  # [protótipo] Cache shallow de estrutura de código (TS) invalidado por hash — acelera a pesquisa do /sdd-spec e /sdd-plan sem reler código. Ver "Cache de estrutura" abaixo
 ```
 
 **`commands/` vs `skills/`** (convenção Anthropic): commands são invocados manualmente (`/sdd-plan`); skills auto-disparam pela descrição quando o contexto bate. `memory-keeper` é skill porque precisa estar sempre disponível pra ler/escrever memória sem o usuário pedir.
@@ -188,7 +190,19 @@ thoughts/
   reports/prs-YYYY-MM.md             # /pr-report (opt-in)
   quick/NNN-slug/             # /quick-task (TASK.md + SUMMARY.md)
   tests/                      # Andaime TDD (NÃO commitado)
+  cache/structure/            # [protótipo] index.json + manifest.json + HOTSPOTS.md (regenerável, gitignored)
 ```
+
+### Cache de estrutura (protótipo)
+
+Um índice *shallow* da estrutura do código — quem importa quem, definições por arquivo, god-nodes — pra acelerar a fase de pesquisa do `/sdd-spec` e `/sdd-plan` **sem reler código a cada consulta**. Não é memória: é um **cache regenerável** invalidado por hash (`scripts/structure-cache/build.py`).
+
+- `build [--incremental]` — extrai defs + imports → `index.json`; incremental reparseia só os arquivos com hash divergente. Determinístico, sem LLM.
+- `check` — compara hash atual vs `manifest.json`; é o **backstop de correção** que pega `rebase`/`checkout`/`stash` que os hooks perderam (exit `0`=fresco, `1`=stale).
+- **Worktree-safe**: opera relativo a `--root` (`git rev-parse --show-toplevel`) e grava o cache **dentro** daquele worktree — nunca compartilhado, sem thrashing entre branches.
+- O `HOTSPOTS.md` derivado (acoplamento por grau) é o que o `/sdd-learning` leria pra propor `lesson`/`blocker` durável na memória — o grafo fica no cache, só a **conclusão não-óbvia** vai pra memória.
+
+> Estado atual: **protótipo** validado em fixture TS (build frio, stale, incremental, query de impacto). Falta: extração via tree-sitter (hoje regex), multi-linguagem, wrapper de skill e hooks `post-commit`/`post-checkout`.
 
 ## Inspirações
 
