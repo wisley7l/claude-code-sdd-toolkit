@@ -18,6 +18,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import posixpath
 import re
 import subprocess
 import sys
@@ -29,7 +31,8 @@ MANIFEST_NAME = "manifest.json"
 HOTSPOTS_NAME = "HOTSPOTS.md"
 SCHEMA_VERSION = 1
 CODE_SUFFIXES = {".ts", ".tsx"}
-SKIP_DIRS = {"node_modules", ".git", "dist", "build", ".next", "coverage", "thoughts"}
+SKIP_DIRS = {"node_modules", "dist", "build", "coverage", "thoughts", "vendor",
+             "tmp", "out", "target", "__pycache__"}
 
 _IMPORT_RE = re.compile(r"""(?:import\b[^'"]*?from\s*|import\s*|require\s*\(\s*)['"]([^'"]+)['"]""")
 _FUNC_RE = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s+([A-Za-z_$][\w$]*)", re.M)
@@ -44,20 +47,20 @@ def sha256_file(path: Path) -> str:
 
 
 def iter_source_files(root: Path) -> list[Path]:
-    """Lista arquivos de código sob root, pulando dirs de build/deps. Ordenado
-    pra saída byte-estável."""
+    """Lista arquivos de código sob root, PODANDO dirs pesados durante a varredura.
+    Usa os.walk e remove os dirs a ignorar de `dirnames` in-place — assim NUNCA
+    desce em node_modules/.git/vendor/etc. (num projeto real esses têm centenas de
+    milhares de arquivos; filtrar depois faria a varredura parecer travada).
+    Ordenado pra saída byte-estável."""
     out: list[Path] = []
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix not in CODE_SUFFIXES:
-            continue
-        if path.name.endswith(".d.ts"):
-            continue
-        rel_parts = path.relative_to(root).parts
-        if any(part in SKIP_DIRS for part in rel_parts):
-            continue
-        out.append(path)
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
+        for name in filenames:
+            if not name.endswith(tuple(CODE_SUFFIXES)):
+                continue
+            if name.endswith(".d.ts"):
+                continue
+            out.append(Path(dirpath) / name)
     out.sort()
     return out
 
@@ -67,15 +70,13 @@ def _resolve_import(from_rel: str, spec: str, known: set[str]) -> str | None:
     Bare imports (pacotes npm) retornam None — viram nó 'module', não edge de arquivo."""
     if not spec.startswith("."):
         return None
-    base = (Path(from_rel).parent / spec).as_posix()
-    base = re.sub(r"/\./", "/", base)
-    while "/../" in base:
-        base = re.sub(r"/[^/]+/\.\./", "/", base)
+    base = posixpath.normpath(posixpath.join(posixpath.dirname(from_rel), spec))
+    if base.startswith(".."):
+        return None
     candidates = [base, base + ".ts", base + ".tsx", base + "/index.ts", base + "/index.tsx"]
     for cand in candidates:
-        norm = cand.lstrip("./")
-        if norm in known:
-            return norm
+        if cand in known:
+            return cand
     return None
 
 
@@ -98,7 +99,9 @@ def build(root: Path, incremental: bool) -> int:
     cache_dir = root / CACHE_SUBDIR
     manifest_path = cache_dir / MANIFEST_NAME
     index_path = cache_dir / INDEX_NAME
+    print(f"structure-cache: varrendo {root.name}…", flush=True)
     files = iter_source_files(root)
+    print(f"  {len(files)} arquivos de código (TS/TSX). Extraindo…", flush=True)
     current_hashes = {p.relative_to(root).as_posix(): sha256_file(p) for p in files}
     prev_manifest = _load_json(manifest_path) if incremental else None
     prev_index = _load_json(index_path) if incremental else None
