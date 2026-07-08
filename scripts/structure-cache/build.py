@@ -39,6 +39,96 @@ _FUNC_RE = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s
 _CLASS_RE = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)", re.M)
 _CONST_FN_RE = re.compile(r"^\s*(?:export\s+)?(?:const|let)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(?:async\s*)?\(?[^;=]*=>", re.M)
 
+# Viz local self-contained (sem CDN). Dados injetados em /*__DATA__*/.
+_GRAPH_HTML_TEMPLATE = r"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>structure-cache — grafo de estrutura</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b0e14;color:#c9d1d9;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
+  canvas{display:block;cursor:grab}
+  canvas.drag{cursor:grabbing}
+  #hud{position:fixed;top:10px;left:10px;z-index:3;background:rgba(22,27,34,.85);border:1px solid #30363d;border-radius:8px;padding:10px 12px;max-width:260px}
+  #hud b{color:#e6edf3}
+  #hud input{width:100%;margin-top:6px;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;border-radius:5px;padding:4px 6px;box-sizing:border-box}
+  #legend{margin-top:8px;max-height:34vh;overflow:auto}
+  #legend div{display:flex;align-items:center;gap:6px;margin:2px 0;cursor:pointer;opacity:.9}
+  #legend span.sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
+  #legend small{color:#8b949e}
+  .tip{position:fixed;pointer-events:none;background:#161b22;border:1px solid #30363d;padding:5px 9px;border-radius:5px;font-size:12px;display:none;z-index:4;max-width:40vw;word-break:break-all}
+  .muted{color:#8b949e}
+</style></head><body>
+<div id="hud">
+  <b>structure-cache</b> · <span id="counts" class="muted"></span><br>
+  <span class="muted">scroll: zoom · arraste fundo: pan · arraste nó: fixar · hover: detalhe</span>
+  <input id="q" placeholder="filtrar arquivo…" autocomplete="off">
+  <div id="legend"></div>
+</div>
+<div class="tip" id="tip"></div>
+<canvas id="c"></canvas>
+<script>const DATA=/*__DATA__*/;</script>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),tip=document.getElementById('tip');
+let W,H,DPR;
+function resize(){DPR=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;cv.style.width=W+'px';cv.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+// cor por diretório (hash → hue)
+const dirs=[...new Set(DATA.nodes.map(n=>n.dir))].sort();
+function hue(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h%360;}
+const color={};dirs.forEach(d=>color[d]=`hsl(${hue(d)},65%,60%)`);
+// nós e índice
+const idx=new Map();
+const nodes=DATA.nodes.map((n,i)=>{idx.set(n.id,i);const a=Math.random()*6.28,r=Math.min(W,H)*0.35*Math.sqrt(Math.random());return{...n,x:W/2+Math.cos(a)*r,y:H/2+Math.sin(a)*r,vx:0,vy:0,rad:4+Math.sqrt(n.deg)*2.2};});
+const links=DATA.links.map(l=>({s:idx.get(l.s),t:idx.get(l.t)})).filter(l=>l.s!=null&&l.t!=null);
+document.getElementById('counts').textContent=nodes.length+' arquivos · '+links.length+' imports';
+// legenda
+const leg=document.getElementById('legend');const deg=dirs.map(d=>[d,DATA.nodes.filter(n=>n.dir===d).length]).sort((a,b)=>b[1]-a[1]);
+let hideDir=new Set();
+deg.forEach(([d,c])=>{const row=document.createElement('div');row.innerHTML=`<span class="sw" style="background:${color[d]}"></span>${d} <small>(${c})</small>`;row.onclick=()=>{hideDir.has(d)?hideDir.delete(d):hideDir.add(d);row.style.opacity=hideDir.has(d)?.35:.9;heat();};leg.appendChild(row);});
+// view transform
+let tx=0,ty=0,scale=1;
+// força
+let alpha=1;function heat(){alpha=Math.max(alpha,.6);}
+function vis(n){return !hideDir.has(n.dir);}
+function tick(){
+  if(alpha>0.005){
+    const k=alpha;
+    for(let i=0;i<nodes.length;i++){const a=nodes[i];if(!vis(a))continue;
+      for(let j=i+1;j<nodes.length;j++){const b=nodes[j];if(!vis(b))continue;
+        let dx=a.x-b.x,dy=a.y-b.y,d2=dx*dx+dy*dy+0.01;if(d2>90000)continue;
+        let f=1400/d2;dx*=f;dy*=f;a.vx+=dx*k;a.vy+=dy*k;b.vx-=dx*k;b.vy-=dy*k;}}
+    for(const l of links){const a=nodes[l.s],b=nodes[l.t];if(!vis(a)||!vis(b))continue;
+      let dx=b.x-a.x,dy=b.y-a.y,d=Math.sqrt(dx*dx+dy*dy)||1,f=(d-70)*0.02*k;dx=dx/d*f;dy=dy/d*f;a.vx+=dx;a.vy+=dy;b.vx-=dx;b.vy-=dy;}
+    for(const n of nodes){if(!vis(n))continue;n.vx+=(W/2-n.x)*0.0009*k;n.vy+=(H/2-n.y)*0.0009*k;
+      if(n.fx==null){n.x+=n.vx;n.y+=n.vy;}n.vx*=.86;n.vy*=.86;}
+    alpha*=.985;
+  }
+  draw();requestAnimationFrame(tick);
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(tx,ty);ctx.scale(scale,scale);
+  ctx.lineWidth=0.5/scale;ctx.strokeStyle='rgba(139,148,158,.22)';ctx.beginPath();
+  for(const l of links){const a=nodes[l.s],b=nodes[l.t];if(!vis(a)||!vis(b))continue;ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}
+  ctx.stroke();
+  for(const n of nodes){if(!vis(n))continue;ctx.beginPath();ctx.arc(n.x,n.y,n.rad,0,6.2832);ctx.fillStyle=color[n.dir];ctx.globalAlpha=n._hi?1:.9;ctx.fill();
+    if(n._hi){ctx.lineWidth=2/scale;ctx.strokeStyle='#e6edf3';ctx.stroke();}}
+  ctx.globalAlpha=1;ctx.restore();
+}
+// interações
+function toWorld(px,py){return{x:(px-tx)/scale,y:(py-ty)/scale};}
+function pick(px,py){const w=toWorld(px,py);let best=null,bd=1e9;for(const n of nodes){if(!vis(n))continue;const dx=n.x-w.x,dy=n.y-w.y,d=dx*dx+dy*dy;if(d<bd&&d<(n.rad+4)**2){bd=d;best=n;}}return best;}
+let drag=null,pan=null;
+cv.addEventListener('mousedown',e=>{const n=pick(e.clientX,e.clientY);if(n){drag=n;n.fx=n.x;n.fy=n.y;}else{pan={x:e.clientX-tx,y:e.clientY-ty};cv.classList.add('drag');}});
+addEventListener('mousemove',e=>{
+  if(drag){const w=toWorld(e.clientX,e.clientY);drag.x=drag.fx=w.x;drag.y=drag.fy=w.y;heat();}
+  else if(pan){tx=e.clientX-pan.x;ty=e.clientY-pan.y;}
+  else{const n=pick(e.clientX,e.clientY);nodes.forEach(m=>m._hi=false);if(n){n._hi=true;tip.style.display='block';tip.style.left=(e.clientX+12)+'px';tip.style.top=(e.clientY+12)+'px';tip.innerHTML='<b>'+n.id+'</b><br>grau '+n.deg+' · '+n.dir;}else{tip.style.display='none';}}
+});
+addEventListener('mouseup',()=>{if(drag){drag.fx=drag.fy=null;drag=null;}pan=null;cv.classList.remove('drag');});
+cv.addEventListener('wheel',e=>{e.preventDefault();const f=e.deltaY<0?1.1:1/1.1;const wx=(e.clientX-tx)/scale,wy=(e.clientY-ty)/scale;scale*=f;tx=e.clientX-wx*scale;ty=e.clientY-wy*scale;},{passive:false});
+document.getElementById('q').addEventListener('input',e=>{const v=e.target.value.toLowerCase();nodes.forEach(n=>n._hi=v&&n.id.toLowerCase().includes(v));});
+tick();
+</script></body></html>"""
+
 
 def sha256_file(path: Path) -> str:
     h = hashlib.sha256()
@@ -233,6 +323,47 @@ def detect_root() -> Path | None:
     return Path(top).resolve() if top else None
 
 
+def _graph_view_data(index: dict) -> dict:
+    """Reduz o index a um grafo FILE-LEVEL pra visualização: nós = arquivos,
+    edges = imports arquivo→arquivo (edges a pacotes npm são omitidas). Grau =
+    nº de edges tocando o arquivo (dimensiona o nó)."""
+    file_set: set[str] = {n["file"] for n in index.get("nodes", [])}
+    links: list[dict] = []
+    deg: dict[str, int] = {}
+    for e in index.get("edges", []):
+        a, b = e["from"], e["to"]
+        if b.startswith("pkg:"):
+            continue
+        file_set.add(a)
+        file_set.add(b)
+        links.append({"s": a, "t": b})
+        deg[a] = deg.get(a, 0) + 1
+        deg[b] = deg.get(b, 0) + 1
+    nodes = []
+    for f in sorted(file_set):
+        top = "/".join(f.split("/")[:2]) if "/" in f else "(root)"
+        nodes.append({"id": f, "dir": top, "deg": deg.get(f, 0)})
+    return {"nodes": nodes, "links": links}
+
+
+def export_html(root: Path, out: Path | None) -> int:
+    """Gera um graph.html LOCAL e self-contained (força-dirigido em canvas, sem
+    CDN). Abre via file://. Não sobe nada pra lugar nenhum."""
+    index = _load_json(root / CACHE_SUBDIR / INDEX_NAME)
+    if index is None:
+        print("structure-cache: sem cache — rode 'structure-cache build' primeiro", file=sys.stderr)
+        return 3
+    data = _graph_view_data(index)
+    out = out or (root / CACHE_SUBDIR / "graph.html")
+    html = _GRAPH_HTML_TEMPLATE.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(html, encoding="utf-8")
+    print(f"structure-cache: {len(data['nodes'])} nós, {len(data['links'])} edges")
+    print(f"  → {out}")
+    print(f"  abra: file://{out}")
+    return 0
+
+
 def _is_stale(root: Path) -> bool:
     """True se o cache não bate mais com os hashes atuais (ou não existe)."""
     manifest = _load_json(root / CACHE_SUBDIR / MANIFEST_NAME)
@@ -289,6 +420,9 @@ def main(argv: list[str]) -> int:
     pb.add_argument("--incremental", action="store_true")
     pc = sub.add_parser("check", help="relata fresh/stale")
     pc.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
+    pe = sub.add_parser("export", help="gera graph.html local (self-contained)")
+    pe.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
+    pe.add_argument("--html", default=None, metavar="PATH", help="saída (default: thoughts/cache/structure/graph.html)")
     pq = sub.add_parser("query", help="consulta o cache sem reler código")
     pq.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pq.add_argument("--importers", metavar="FILE", help="arquivos que importam FILE")
@@ -309,6 +443,8 @@ def main(argv: list[str]) -> int:
         return build(root, args.incremental)
     if args.cmd == "check":
         return check(root)
+    if args.cmd == "export":
+        return export_html(root, Path(args.html).resolve() if args.html else None)
     if args.cmd == "query":
         if args.importers:
             return query(root, "importers", args.importers, args.top, args.json)

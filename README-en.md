@@ -203,6 +203,7 @@ A *shallow* index of the code's structure — who imports whom, definitions per 
 - `check` — compares current hash vs `manifest.json`; it's the **correctness backstop** that catches `rebase`/`checkout`/`stash` the hooks missed (exit `0`=fresh, `1`=stale).
 - **Worktree-safe** and typing-free: `--root` is **auto-detected** via `git rev-parse --show-toplevel` — run `structure-cache build` from any subdir of the repo/worktree. Inside a linked worktree git returns *that* worktree's root, so the cache lands in `<worktree>/thoughts/cache/structure/`, never shared, no thrashing across branches.
 - `query` — query without re-reading code: `structure-cache query --importers/--imports/--defs/--hotspots [--json]` (exit `3` = no cache → the caller falls back to re-reading code).
+- `export` — writes a **local, self-contained** `graph.html` (force-directed canvas, no CDN; opens via `file://`). Nodes = files colored by directory, sized by coupling; zoom/pan/hover/filter. Nothing leaves your machine.
 - **Opt-in hooks** (`scripts/structure-cache/install-hooks.sh`) — installs `post-commit`/`post-checkout` in the **common** hooks dir (once, applies to all worktrees) that keep the cache warm via a **detached** incremental build (never blocks git). `--uninstall` removes just the block.
 - Consumed by `/sdd-plan` and `/sdd-spec` during research (with graceful fallback) and by `/sdd-learning` (`--hotspots`): the derived `HOTSPOTS.md` feeds `lesson`/`blocker` proposals — the graph stays in the cache, only the **non-obvious conclusion** goes to memory.
 
