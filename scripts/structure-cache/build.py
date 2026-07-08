@@ -23,6 +23,7 @@ import posixpath
 import re
 import subprocess
 import sys
+import webbrowser
 from pathlib import Path
 
 CACHE_SUBDIR = Path("thoughts") / "cache" / "structure"
@@ -346,9 +347,10 @@ def _graph_view_data(index: dict) -> dict:
     return {"nodes": nodes, "links": links}
 
 
-def export_html(root: Path, out: Path | None) -> int:
+def export_html(root: Path, out: Path | None, open_browser: bool = False) -> int:
     """Gera um graph.html LOCAL e self-contained (força-dirigido em canvas, sem
-    CDN). Abre via file://. Não sobe nada pra lugar nenhum."""
+    CDN). Abre via file://. Não sobe nada pra lugar nenhum. Com open_browser,
+    abre no navegador padrão."""
     index = _load_json(root / CACHE_SUBDIR / INDEX_NAME)
     if index is None:
         print("structure-cache: sem cache — rode 'structure-cache build' primeiro", file=sys.stderr)
@@ -358,10 +360,39 @@ def export_html(root: Path, out: Path | None) -> int:
     html = _GRAPH_HTML_TEMPLATE.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
+    url = out.resolve().as_uri()
     print(f"structure-cache: {len(data['nodes'])} nós, {len(data['links'])} edges")
     print(f"  → {out}")
-    print(f"  abra: file://{out}")
+    if open_browser:
+        ok = webbrowser.open(url)
+        print(f"  {'abrindo no navegador…' if ok else 'não achei navegador — abra manualmente:'} {url}")
+    else:
+        print(f"  abra: {url}")
     return 0
+
+
+def print_help() -> None:
+    print("""structure-cache — índice de estrutura de código (TS/JS), sem reler tudo.
+Roda de qualquer subdir do repo/worktree (--root é auto-detectado via git).
+
+  build [--incremental]     constrói/atualiza o cache (index.json, manifest, HOTSPOTS.md)
+  check                     fresco (exit 0) ou stale (exit 1) — revalida por hash
+  query …                   consulta sem reler código:
+      --importers FILE          quem importa FILE (blast radius)
+      --imports FILE            o que FILE importa
+      --defs FILE               definições em FILE
+      --hotspots [--top N]      god-nodes por acoplamento
+      --json                    saída JSON
+  export [--html PATH] [--open]  gera graph.html local (self-contained)
+  open                      gera (se preciso) e ABRE o grafo no navegador padrão
+  help                      esta ajuda
+
+Exemplos:
+  sc build                                  # varre o projeto todo
+  sc query --importers src/auth/session.ts  # o que quebra se eu mexer aqui
+  sc open                                   # ver o grafo no navegador
+
+Hooks opt-in (mantêm o cache morno): scripts/structure-cache/install-hooks.sh""")
 
 
 def _is_stale(root: Path) -> bool:
@@ -413,8 +444,9 @@ def query(root: Path, kind: str, target: str | None, top: int, as_json: bool) ->
 
 
 def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="structure-cache", description=__doc__)
-    sub = parser.add_subparsers(dest="cmd", required=True)
+    parser = argparse.ArgumentParser(prog="structure-cache", description=__doc__, add_help=False)
+    sub = parser.add_subparsers(dest="cmd", required=False)
+    sub.add_parser("help", help="mostra a ajuda")
     pb = sub.add_parser("build", help="constrói/atualiza o cache")
     pb.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pb.add_argument("--incremental", action="store_true")
@@ -423,6 +455,10 @@ def main(argv: list[str]) -> int:
     pe = sub.add_parser("export", help="gera graph.html local (self-contained)")
     pe.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pe.add_argument("--html", default=None, metavar="PATH", help="saída (default: thoughts/cache/structure/graph.html)")
+    pe.add_argument("--open", action="store_true", dest="open_browser", help="abre no navegador padrão")
+    po = sub.add_parser("open", help="gera (se preciso) e abre o grafo no navegador")
+    po.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
+    po.add_argument("--html", default=None, metavar="PATH", help="saída (default: thoughts/cache/structure/graph.html)")
     pq = sub.add_parser("query", help="consulta o cache sem reler código")
     pq.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pq.add_argument("--importers", metavar="FILE", help="arquivos que importam FILE")
@@ -432,6 +468,9 @@ def main(argv: list[str]) -> int:
     pq.add_argument("--top", type=int, default=10, help="limite p/ --hotspots (default 10)")
     pq.add_argument("--json", action="store_true", help="saída JSON (p/ consumo por comando)")
     args = parser.parse_args(argv)
+    if args.cmd is None or args.cmd == "help":
+        print_help()
+        return 0
     root = Path(args.root).resolve() if args.root else detect_root()
     if root is None:
         print("structure-cache: fora de um repo git — passe --root <dir> explicitamente", file=sys.stderr)
@@ -444,7 +483,9 @@ def main(argv: list[str]) -> int:
     if args.cmd == "check":
         return check(root)
     if args.cmd == "export":
-        return export_html(root, Path(args.html).resolve() if args.html else None)
+        return export_html(root, Path(args.html).resolve() if args.html else None, args.open_browser)
+    if args.cmd == "open":
+        return export_html(root, Path(args.html).resolve() if args.html else None, open_browser=True)
     if args.cmd == "query":
         if args.importers:
             return query(root, "importers", args.importers, args.top, args.json)

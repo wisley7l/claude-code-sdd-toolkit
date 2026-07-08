@@ -38,7 +38,9 @@ Se não estiver no PATH (install opt-in ainda não feito), invoque o script dire
 - `structure-cache build` — build completo (primeira vez).
 - `structure-cache build --incremental` — reparseia só arquivos com hash divergente (barato).
 - `structure-cache check` — exit `0`=fresco, `1`=stale. É o **backstop de correção** que pega `rebase`/`checkout`/`stash` (mudanças de arquivo que não passam por commit).
-- `structure-cache export [--html PATH]` — gera um `graph.html` **local e self-contained** (força-dirigido, sem CDN) pra visualizar dependências/acoplamento. Abre via `file://`; nada sobe pra fora. Use quando o usuário quiser *ver* o grafo, não só consultar.
+- `structure-cache export [--html PATH] [--open]` — gera um `graph.html` **local e self-contained** (força-dirigido, sem CDN) pra visualizar dependências/acoplamento. Abre via `file://`; nada sobe pra fora. Use quando o usuário quiser *ver* o grafo, não só consultar.
+- `structure-cache open` — gera (se preciso) e **abre o grafo no navegador padrão**. É o atalho pra "quero ver o grafo".
+- `structure-cache help` (ou sem subcomando) — lista todos os subcomandos.
 - Hooks `post-commit`/`post-checkout` (opt-in) mantêm o cache morno automaticamente. Mesmo com hooks, `check`/query revalidam por hash — a correção não depende do hook.
 
 ## Worktree
