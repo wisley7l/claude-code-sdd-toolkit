@@ -186,20 +186,27 @@ def extract_ts(rel: str, text: str) -> dict:
     return {"nodes": nodes, "imports": imports}
 
 
-def build(root: Path, incremental: bool) -> int:
+def build(root: Path, full: bool = False) -> int:
+    """Constrói o cache. Por padrão é INCREMENTAL automático: se já existe cache
+    válido, reaproveita os arquivos sem hash divergente (não precisa de flag). Só
+    faz build completo na 1ª vez, com --full, ou se o schema do cache mudou."""
     cache_dir = root / CACHE_SUBDIR
     manifest_path = cache_dir / MANIFEST_NAME
     index_path = cache_dir / INDEX_NAME
     print(f"structure-cache: varrendo {root.name}…", flush=True)
     files = iter_source_files(root)
-    print(f"  {len(files)} arquivos de código (TS/TSX). Extraindo…", flush=True)
+    prev_manifest = None if full else _load_json(manifest_path)
+    prev_index = None if full else _load_json(index_path)
+    can_reuse = bool(prev_manifest and prev_index
+                     and prev_index.get("schema_version") == SCHEMA_VERSION
+                     and "per_file" in prev_index)
+    mode = "incremental" if can_reuse else ("completo (forçado)" if full else "completo (1ª vez)")
+    print(f"  {len(files)} arquivos de código (TS/TSX). Extraindo [{mode}]…", flush=True)
     current_hashes = {p.relative_to(root).as_posix(): sha256_file(p) for p in files}
-    prev_manifest = _load_json(manifest_path) if incremental else None
-    prev_index = _load_json(index_path) if incremental else None
     per_file: dict[str, dict] = {}
     reused = 0
     parsed = 0
-    if incremental and prev_manifest and prev_index and "per_file" in prev_index:
+    if can_reuse:
         prev_hashes = prev_manifest.get("files", {})
         prev_per_file = prev_index["per_file"]
         for rel, digest in current_hashes.items():
@@ -229,7 +236,7 @@ def build(root: Path, incremental: bool) -> int:
     _write_json(manifest_path, manifest)
     _write_hotspots(cache_dir / HOTSPOTS_NAME, nodes, edges, known)
     removed = 0
-    if incremental and prev_manifest:
+    if prev_manifest:
         removed = len(set(prev_manifest.get("files", {})) - known)
     print(f"structure-cache: {len(known)} arquivos | parseados={parsed} reaproveitados={reused} removidos={removed}")
     print(f"  → {index_path.relative_to(root)} ({len(nodes)} nós, {len(edges)} edges)")
@@ -375,7 +382,8 @@ def print_help() -> None:
     print("""structure-cache — índice de estrutura de código (TS/JS), sem reler tudo.
 Roda de qualquer subdir do repo/worktree (--root é auto-detectado via git).
 
-  build [--incremental]     constrói/atualiza o cache (index.json, manifest, HOTSPOTS.md)
+  build [--full]            constrói/atualiza o cache — INCREMENTAL automático (não
+                            precisa de flag; --full força rebuild completo)
   check                     fresco (exit 0) ou stale (exit 1) — revalida por hash
   query …                   consulta sem reler código:
       --importers FILE          quem importa FILE (blast radius)
@@ -447,9 +455,10 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(prog="structure-cache", description=__doc__, add_help=False)
     sub = parser.add_subparsers(dest="cmd", required=False)
     sub.add_parser("help", help="mostra a ajuda")
-    pb = sub.add_parser("build", help="constrói/atualiza o cache")
+    pb = sub.add_parser("build", help="constrói/atualiza o cache (incremental automático)")
     pb.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
-    pb.add_argument("--incremental", action="store_true")
+    pb.add_argument("--full", action="store_true", help="força rebuild completo (ignora cache existente)")
+    pb.add_argument("--incremental", action="store_true", help=argparse.SUPPRESS)  # no-op: já é o default
     pc = sub.add_parser("check", help="relata fresh/stale")
     pc.add_argument("--root", default=None, help="raiz do projeto (default: git toplevel do dir atual)")
     pe = sub.add_parser("export", help="gera graph.html local (self-contained)")
@@ -479,7 +488,7 @@ def main(argv: list[str]) -> int:
         print(f"structure-cache: root inválido: {root}", file=sys.stderr)
         return 2
     if args.cmd == "build":
-        return build(root, args.incremental)
+        return build(root, full=args.full)
     if args.cmd == "check":
         return check(root)
     if args.cmd == "export":

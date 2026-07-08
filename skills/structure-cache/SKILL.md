@@ -35,8 +35,7 @@ Se não estiver no PATH (install opt-in ainda não feito), invoque o script dire
 
 ## Manter o cache fresco
 
-- `structure-cache build` — build completo (primeira vez).
-- `structure-cache build --incremental` — reparseia só arquivos com hash divergente (barato).
+- `structure-cache build` — constrói/atualiza. **Incremental automático**: se já há cache, reaproveita os arquivos sem hash divergente (não precisa de flag). `--full` força rebuild completo.
 - `structure-cache check` — exit `0`=fresco, `1`=stale. É o **backstop de correção** que pega `rebase`/`checkout`/`stash` (mudanças de arquivo que não passam por commit).
 - `structure-cache export [--html PATH] [--open]` — gera um `graph.html` **local e self-contained** (força-dirigido, sem CDN) pra visualizar dependências/acoplamento. Abre via `file://`; nada sobe pra fora. Use quando o usuário quiser *ver* o grafo, não só consultar.
 - `structure-cache open` — gera (se preciso) e **abre o grafo no navegador padrão**. É o atalho pra "quero ver o grafo".

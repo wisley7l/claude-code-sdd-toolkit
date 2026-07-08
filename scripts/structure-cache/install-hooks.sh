@@ -66,9 +66,9 @@ install_hook() {
     echo "else _sc=\"python3 $BUILD_PY\"; fi"
     echo '# destacado: nunca bloqueia o git; saída descartada'
     echo 'if command -v setsid >/dev/null 2>&1; then'
-    echo '  ( setsid $_sc build --incremental >/dev/null 2>&1 & ) >/dev/null 2>&1 || true'
+    echo '  ( setsid $_sc build >/dev/null 2>&1 & ) >/dev/null 2>&1 || true'
     echo 'else'
-    echo '  ( nohup $_sc build --incremental >/dev/null 2>&1 & ) >/dev/null 2>&1 || true'
+    echo '  ( nohup $_sc build >/dev/null 2>&1 & ) >/dev/null 2>&1 || true'
     echo 'fi'
     echo "$MARK_END"
   } >> "$target"

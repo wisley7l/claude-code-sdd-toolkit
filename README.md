@@ -202,7 +202,7 @@ thoughts/
 
 Um índice *shallow* da estrutura do código — quem importa quem, definições por arquivo, god-nodes — pra acelerar a fase de pesquisa do `/sdd-spec` e `/sdd-plan` **sem reler código a cada consulta**. Não é memória: é um **cache regenerável** invalidado por hash (`scripts/structure-cache/build.py`).
 
-- `build [--incremental]` — extrai defs + imports → `index.json`; incremental reparseia só os arquivos com hash divergente. Determinístico, sem LLM.
+- `build [--full]` — extrai defs + imports → `index.json`. **Incremental automático** (reaproveita os arquivos sem hash divergente — sem flag pra lembrar); `--full` força rebuild completo. Determinístico, sem LLM.
 - `check` — compara hash atual vs `manifest.json`; é o **backstop de correção** que pega `rebase`/`checkout`/`stash` que os hooks perderam (exit `0`=fresco, `1`=stale).
 - **Worktree-safe** e sem digitação: `--root` é **auto-detectado** via `git rev-parse --show-toplevel` — rode `structure-cache build` de qualquer subdir do repo/worktree. De dentro de um worktree linkado o git devolve o root *daquele* worktree, então o cache cai em `<worktree>/thoughts/cache/structure/`, nunca compartilhado, sem thrashing entre branches.
 - `query` — consulta sem reler código: `structure-cache query --importers/--imports/--defs/--hotspots [--json]` (exit `3` = sem cache → o caller cai no fallback de reler código).
