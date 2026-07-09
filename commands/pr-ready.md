@@ -1,8 +1,8 @@
 ---
-description: Entrega de PR de ponta a ponta — avalia se o PR segue os padrões do projeto; loop de correção até convergir → commit/push humano → handoff. Se o time já revisou, valida se os fixes endereçam o que foi pedido e re-solicita revisão. Nunca commita/pusha sozinho.
+description: Entrega de PR de ponta a ponta — avalia se o PR segue os padrões do projeto; loop de correção até convergir → gate de verde (CI passou, ou suíte local completa) → commit/push humano → handoff. Se o time já revisou, valida se os fixes endereçam o que foi pedido e re-solicita revisão. Nunca commita/pusha sozinho.
 model: claude-sonnet-5
 argument-hint: [N (PR) | branch | vazio = PR da branch atual]
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, AskUserQuestion, Bash(git status*), Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git branch*), Bash(git worktree list*), Bash(git rev-parse*), Bash(git add*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(lizard *), Bash(ls *), Bash(mkdir *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, AskUserQuestion, Bash(git status*), Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git branch*), Bash(git worktree list*), Bash(git rev-parse*), Bash(git add*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(yarn *), Bash(node *), Bash(go *), Bash(make *), Bash(docker *), Bash(docker-compose *), Bash(lizard *), Bash(ls *), Bash(mkdir *)
 ---
 
 # PR Ready — Entrega de PR (avaliar → corrigir → handoff)
@@ -36,6 +36,7 @@ Você fecha o ciclo de um PR já implementado: **avalia** se ele está bom e seg
 - **Padrões do projeto são o critério**: "bom PR" = conformidade com `CLAUDE.md`/`ARCHITECTURE.md` + zero bug/segurança/teste must-fix. MINOR (nomenclatura, style) não bloqueia.
 - **Mesma página do review do time**: quando há review humano, cada fix só conta se **endereça o que o comentário pediu**. Mudar algo por perto não basta; divergir do pedido (ou endereçar pela metade) é must-fix. O comentário humano é o contrato.
 - **Loop até convergir, freado por progresso (não por contador)**: corrige e re-avalia **até zero must-fix** — sem teto fixo de rodadas. O que para o loop antes disso é **falta de progresso** (uma rodada que não reduz os must-fix) ou **decisão arquitetural** (fix que estoura o safety valve do quick-task), não um número arbitrário. Insistir num must-fix que não cede é loop improdutivo → para e escala pra `/sdd-plan`.
+- **Verde é pré-requisito do handoff**: nunca entregar um PR sem estar verde. "Verde" = o **CI passou** (se houver, **incluindo o CI de deploy**) ou — sem CI — a **suíte local completa** passa. Verde cobre **regressão**: roda **todas** as camadas de teste (unit + integração + e2e) e **todos** os testes, não só os do PR — o objetivo é garantir que nada anterior quebrou. Comandos de teste e como subir o server local vêm do `CLAUDE.md`/`ARCHITECTURE.md` e da **memória do projeto**; se não estiverem documentados, pergunta — nunca inventa comando de teste.
 - **Commit/push é sempre humano**: o loop só faz `git add`. Quando tudo passa, você PARA, entrega os comandos exatos de commit+push e **espera o usuário concluir o push** antes de qualquer coisa remota.
 - **Saída de draft e reviewer são gates seus**: tirar de draft (`gh pr ready`) e marcar reviewer são **sempre perguntados** (`AskUserQuestion`), nunca automáticos — cada um com a opção de "agora não". O handle do reviewer nunca é chumbado no command. Você pode aprovar o PR, atualizar o body e mesmo assim deixá-lo em draft / sem reviewer: a decisão de expor pro time é humana.
 - **Saída só com base pronta**: `gh pr ready` só é oferecido depois de (PR aprovado) **E** (código commitado + pushado). Nunca antes da avaliação passar.
@@ -95,7 +96,7 @@ Alinhamento com o review do time (@<reviewer>):
 - **MINOR** = informativo, **não** entra no loop
 
 **Veredito:**
-- **0 must-fix** (e, no modo pós-review, **todos** os comentários do time endereçados) → PR aprovado. Vá pro Passo 5 (Handoff).
+- **0 must-fix** (e, no modo pós-review, **todos** os comentários do time endereçados) → PR aprovado. Vá pro Passo 4 (gate de verde + commit/push).
 - **≥1 must-fix** → PR bloqueado. Vá pro Passo 3 (loop).
 
 ### Passo 3 — Loop de correção (até convergir)
@@ -134,9 +135,27 @@ A cada rodada `k` (1, 2, 3, …):
    ```
    Encerre aqui — o handoff só acontece com PR aprovado.
 
-### Passo 4 — Commit + push (sempre humano)
+### Passo 4 — Gate de verde + commit/push (bloqueante antes do handoff)
 
-Chegou aqui = PR aprovado **com** fixes aplicadas (há mudanças staged pelo `git add` dos quick-tasks). Verifique:
+PR aprovado no review (Passo 2) **não** é suficiente pro handoff: ele precisa estar **verde**. Este passo garante isso e intercala com o commit/push (sempre humano). **Nunca** avance pro Passo 5 sem verde confirmado.
+
+**4a — Detectar CI.** Verifique se o projeto tem CI:
+
+```bash
+ls .github/workflows/ 2>/dev/null
+gh pr checks <número> 2>/dev/null || gh run list --branch <branch> --limit 5
+```
+
+Registre se há workflows e quais são obrigatórios — em especial um de **deploy** (quando existe, é o mais importante que passe).
+
+**4b — Sem CI → suíte local completa (antes do push).**
+- Descubra, no `CLAUDE.md`/`ARCHITECTURE.md` e na **memória do projeto** (skill `memory-keeper` — notas `reference`/`project` sobre testes e sobre **subir o server local**): (a) como subir o server local, se integração/e2e exigirem; (b) os comandos de **cada camada** — unitário, integração, e2e.
+- Se não achar como rodar (comando ou server), **PARE e pergunte** — não invente comando de teste.
+- Suba o server se necessário e rode **todas** as camadas, **todos** os testes (não só os do PR — é gate de regressão).
+  - **Tudo verde** → siga pro 4c.
+  - **Qualquer vermelho** → é must-fix. Se for falha de código/teste que o loop resolve, **volte pro Passo 3** com o teste quebrado como pendência (origem = o teste, não uma issue inventada). Se não for corrigível no loop (flaky, infra, decisão maior), **PARE e reporte**. Nunca faça handoff com teste vermelho.
+
+**4c — Commit + push (sempre humano).** Se há mudanças staged (fixes do loop):
 
 ```bash
 git status --short
@@ -145,17 +164,29 @@ git status --short
 **Há mudanças não commitadas** → PARE e entregue os comandos exatos (já preenchidos, sem placeholders), pra rodar com o prefixo `!` na sessão ou no terminal:
 
 ```
-✅ PR aprovado — 0 must-fix. As correções estão staged (não commitadas).
+✅ PR aprovado — 0 must-fix, testes locais verdes. As correções estão staged (não commitadas).
 
 Commit e push são seus. Rode:
 
   !git commit -m "<mensagem conventional commit derivada das fixes>"
   !git push
 
-Me avise quando o push concluir que eu sigo pro handoff (sync do body + ready + reviewer).
+Me avise quando o push concluir que eu confirmo o CI e sigo pro handoff.
 ```
 
-**Aguarde o usuário confirmar o push.** Não prossiga sem isso. (Working tree já limpo e branch já pushada — caso do PR aprovado sem fixes no Passo 2 — pule direto pro Passo 5.)
+**Aguarde o usuário confirmar o push.** Não prossiga sem isso. (Working tree já limpo e branch já pushada — PR aprovado sem fixes — pule o commit/push e vá direto pro 4d.)
+
+**4d — Com CI → confirmar o verde pós-push.** O CI roda no push; então, após o push confirmado (ou se já estava pushado):
+
+```bash
+gh pr checks <número> --watch 2>/dev/null || gh run list --branch <branch> --limit 5
+```
+
+- **Ainda rodando** → avise e **aguarde** (re-cheque); não faça handoff no escuro.
+- **Falhou** (qualquer check obrigatório, **sobretudo o de deploy**) → BLOQUEIE. Reporte qual check falhou e o link (`gh run view <run-id> --log-failed`). Se for código/teste que o loop resolve, volte pro Passo 3; senão PARE pro humano decidir. **Nunca** handoff com CI vermelho.
+- **Passou** (deploy incluído) → siga pro Passo 5.
+
+Só avance pro Passo 5 com **verde confirmado** — CI (4d) ou suíte local (4b).
 
 ### Passo 5 — Handoff pro review (sob confirmação)
 
@@ -193,6 +224,7 @@ Reflita o que **de fato** aconteceu — `Status` e `Reviewer` dependem das suas 
 
 PR: <url>  (<base> ← <branch>)
 Avaliação: ✅ aprovado (<k> rodada(s) de correção, <M> fixes aplicadas)
+Verde: ✅ CI passou (deploy incluído)   ← ou: ✅ suíte local completa passou (unit+integração+e2e) / sem CI
 Alinhamento com o review do time: <N>/<N> comentários endereçados   ← só no modo pós-review
 Body: atualizado via /pr-draft sync
 Status: ready for review (saiu de draft)   ← ou: 🚧 segue em draft (a seu pedido) / já estava ready
@@ -206,6 +238,7 @@ Se ficou em draft ou sem reviewer, lembre os comandos pra completar depois: `gh 
 ## Guardrails
 
 - **Nunca commita nem pusha sozinho** — o loop só faz `git add`. Commit e push são do usuário, com comandos prontos e espera explícita pelo push. Não há `git commit`/`git push` no `allowed-tools` deste command.
+- **Nunca handoff sem verde** — Passo 4 é bloqueante: CI passou (deploy incluído) **ou** suíte local completa (todas as camadas, todos os testes = regressão) passou. CI vermelho/pendente ou teste local quebrado impede o Passo 5. Comandos de teste e server local vêm do `CLAUDE.md`/memória do projeto; sem isso documentado, pergunta — nunca inventa comando de teste.
 - **Tirar de draft e marcar reviewer só sob confirmação** — ambos via `AskUserQuestion`, nunca automáticos, cada um com opção de "agora não". O handle do reviewer jamais é chumbado no command; sem reviewer escolhido, não marca ninguém; "não tirar de draft" mantém o PR em draft. O body (sync) pode ser atualizado mesmo assim.
 - **Saída só com base pronta** — `gh pr ready` só é oferecido com PR aprovado (0 must-fix) **E** código pushado. Nunca antes da avaliação passar.
 - **Loop até convergir, freado por progresso** — sem teto fixo de rodadas: vai até zero must-fix. Para só quando uma rodada não reduz os must-fix (sem progresso) ou um fix estoura o safety valve do quick-task → escala pro humano (`/sdd-plan`). O circuit-breaker de progresso é o que impede loop infinito, não um contador.
