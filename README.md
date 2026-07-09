@@ -52,6 +52,8 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/worktree-detect`** — detecta oportunidades de isolar branches/PRs em worktrees.
 
+**`/status-deps`** — checa o status das dependências externas (Cloudflare, GitHub, PlanetScale/Vitess, AWS) via status pages oficiais. Read-only; resumo com nível por serviço + veredito geral. AWS filtrado por recência (eventos >7d não contam). Pra monitorar em intervalo: `/loop <intervalo> /status-deps`.
+
 **`/modo-livre`** — toggle do modo autônomo em três camadas: allow amplo (flui), **`ask` pra `git commit`/`git push`** (humano no loop garantido pelo harness — prompta em **qualquer** permission mode, inclusive `auto`) e deny dos perigosos (force push, `reset --hard`, `rm -rf`, publishes — bloqueados sempre). Compatível com o permission mode `auto`. Requer reload da sessão.
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — utilitários de git e worktree.
@@ -166,7 +168,7 @@ commands/                   # Slash commands — FONTE CANÔNICA (copiada pra ~/
   sdd-spec.md · sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
   quick-task.md · pr-ready.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
   sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md
-  complexidade.md · worktree-detect.md · modo-livre.md · git-worktree.md
+  complexidade.md · worktree-detect.md · status-deps.md · modo-livre.md · git-worktree.md
   git-remove-worktree.md · git-rebase-seguro.md · sync-tests.md · git-prune-branches.md
   references/               # Templates carregados sob demanda (progressive disclosure)
   deprecated/               # Versões antigas — fallback (sufixo .vN.md). Não deletar
