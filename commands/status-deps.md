@@ -1,5 +1,5 @@
 ---
-description: Checa o status das dependências externas — Cloudflare, GitHub, PlanetScale (Vitess) e AWS — via status pages oficiais. Read-only, sem side effects. Reporta um resumo com nível por serviço e um veredito geral.
+description: Checa o status das dependências externas — Cloudflare, GitHub, PlanetScale (Vitess) e AWS — via status pages oficiais. Mostra os PRODUTOS/REGIÕES com falha (não só o nível geral), pra você julgar se afeta sua stack. Read-only, sem side effects.
 model: claude-sonnet-5
 argument-hint: (vazio — checa tudo)
 allowed-tools: Bash(python3 *)
@@ -7,16 +7,16 @@ allowed-tools: Bash(python3 *)
 
 # Status das dependências externas
 
-Checa, em uma passada, o status público de: **Cloudflare**, **GitHub**, **PlanetScale (Vitess)** e **AWS**. Puramente read-only (só HTTP GET nos status pages oficiais) — não toca em nada.
+Checa, numa passada, o status público de: **Cloudflare**, **GitHub**, **PlanetScale (Vitess)** e **AWS**. Além do nível geral por serviço, lista **o que exatamente está com falha** — incidentes ativos (com produto afetado), áreas/produtos e localidades — pra você decidir se toca na sua stack (algo fora do seu uso pode estar degradado sem te impactar). Puramente read-only.
 
 ## Fontes (verificadas)
 
-- Cloudflare / GitHub / PlanetScale → Statuspage.io `.../api/v2/status.json` (`indicator`: `none|minor|major|critical`).
-- AWS → `health.aws.amazon.com/public/currentevents` (JSON **UTF-16**, lista de eventos). **Só eventos dos últimos 7 dias** contam como ativos — entradas antigas persistem no feed e não devem ser reportadas como incidente atual.
+- Cloudflare / GitHub / PlanetScale → Statuspage.io `.../api/v2/summary.json` — traz `status.indicator` (`none|minor|major|critical`), **incidentes ativos** (nome + impacto + componentes afetados) e **componentes** (produtos/regiões/datacenters com seu status).
+- AWS → `health.aws.amazon.com/public/currentevents` (JSON **UTF-16**, lista de eventos com região + serviço + resumo). **Só eventos dos últimos 7 dias** contam como ativos — entradas antigas persistem no feed e não são incidente atual.
 
 ## Protocolo
 
-1. Rode o checker abaixo (tem retry contra timeout transiente; degrada pra `❔` se um serviço não responder, sem quebrar):
+1. Rode o checker abaixo (retry contra timeout transiente; degrada pra `❔` se um serviço não responder, sem quebrar):
 
 ```bash
 python3 - <<'PY'
@@ -24,15 +24,16 @@ import json, sys, urllib.request
 from datetime import datetime, timezone
 
 STATUSPAGE = [
-    ("Cloudflare", "https://www.cloudflarestatus.com/api/v2/status.json"),
-    ("GitHub", "https://www.githubstatus.com/api/v2/status.json"),
-    ("PlanetScale (Vitess)", "https://www.planetscalestatus.com/api/v2/status.json"),
+    ("Cloudflare", "https://www.cloudflarestatus.com"),
+    ("GitHub", "https://www.githubstatus.com"),
+    ("PlanetScale (Vitess)", "https://www.planetscalestatus.com"),
 ]
 AWS_URL = "https://health.aws.amazon.com/public/currentevents"
 EMOJI = {"none": "✅", "minor": "🟡", "major": "🟠", "critical": "🔴", "unknown": "❔"}
 RANK = {"none": 0, "minor": 1, "major": 2, "critical": 3, "unknown": 1}
+OUTAGE = {"degraded_performance", "partial_outage", "major_outage"}
 
-def _get(url, timeout=12, tries=2):
+def _get(url, timeout=12, tries=3):
     last = None
     for _ in range(tries):
         try:
@@ -43,10 +44,26 @@ def _get(url, timeout=12, tries=2):
             last = e
     raise last
 
-def check_statuspage(name, url):
+def check_statuspage(name, base):
     try:
-        d = json.loads(_get(url))
-        return {"name": name, "level": d["status"]["indicator"], "desc": d["status"]["description"], "detail": []}
+        s = json.loads(_get(base + "/api/v2/summary.json"))
+        detail = []
+        for inc in s.get("incidents", []):
+            aff = ", ".join(c.get("name", "?") for c in inc.get("components", [])) or "—"
+            detail.append(f"⚠ [{inc.get('impact')}] {inc.get('name')} → afeta: {aff}")
+        comps = s.get("components", [])
+        areas = [c["name"] for c in comps if c.get("status") in OUTAGE and c.get("group")]
+        indiv = [c for c in comps if c.get("status") in OUTAGE and not c.get("group")]
+        maint = sum(1 for c in comps if c.get("status") == "under_maintenance")
+        if areas:
+            detail.append("áreas/produtos afetados: " + ", ".join(areas))
+        if indiv:
+            sample = ", ".join(c["name"] for c in indiv[:5])
+            extra = f" (+{len(indiv) - 5})" if len(indiv) > 5 else ""
+            detail.append(f"localidades/componentes específicos: {len(indiv)} — {sample}{extra}")
+        if maint:
+            detail.append(f"em manutenção: {maint}")
+        return {"name": name, "level": s["status"]["indicator"], "desc": s["status"]["description"], "detail": detail}
     except Exception as e:
         return {"name": name, "level": "unknown", "desc": f"não consegui checar ({e})", "detail": []}
 
@@ -91,11 +108,12 @@ if __name__ == "__main__":
 PY
 ```
 
-2. **Apresente a saída** ao usuário como está (ela já vem formatada). Se **algo não estiver `✅`**, destaque o serviço e o que aparece de detalhe (região/serviço/resumo no caso do AWS) — e, se for uma dependência crítica do trabalho em curso, avise do possível impacto. Se tudo `✅`, uma linha curta basta.
+2. **Apresente a saída** como está (já vem formatada). Se algo não estiver `✅`, foque no que **de fato pode te afetar**: o produto do incidente (ex.: "Workers AI"), as áreas/produtos e — no AWS — a região·serviço. Diga explicitamente se o que está degradado **parece fora da stack do usuário** (então provável não-impacto) ou dentro dela. Se tudo `✅`, uma linha basta.
 
 ## Guardrails
 
 - **Read-only**: só GET em status pages públicos. Nunca autentica, nunca muda nada.
-- **Não invente status**: se um serviço vier `❔` (timeout/erro), reporte como "não consegui checar" — não afirme que está ok nem que está fora.
+- **Mostra o QUÊ, não só o nível**: sempre liste os produtos/regiões degradados quando houver — é o que permite julgar impacto. Nunca reduza a só "🟡 minor".
+- **Não invente status**: serviço `❔` (timeout/erro) = "não consegui checar" — não afirme ok nem fora.
 - **AWS por recência**: eventos com mais de 7 dias no feed **não** são incidente atual; não os reporte como ativos.
-- **Sem polling automático**: é um check pontual. Pra monitorar em intervalo, o usuário pode usar `/loop <intervalo> /status-deps`.
+- **Sem polling automático**: check pontual. Pra monitorar em intervalo: `/loop <intervalo> /status-deps`.
