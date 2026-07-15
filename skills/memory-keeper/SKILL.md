@@ -104,14 +104,22 @@ O harness adiciona automaticamente `metadata.node_type: memory` e `metadata.orig
 
 ## 5. Corpo da nota
 
+**Regra de ouro do conteúdo — princípio + gatilho, não instância.** Memória é reforço de comportamento: cada nota existe pra fazer o agente **agir diferente da próxima vez** (evitar um erro, repetir um acerto). Escreva a **regra generalizada ancorada num gatilho reconhecível** — não o caso pontual que a originou.
+
+- ❌ Instância (morre com a feature): "no checkout desta feature faltou tratar carrinho vazio"
+- ❌ Platitude (óbvia, inútil): "trate edge cases"
+- ✅ Princípio + gatilho: "ao iterar coleção vinda de input externo, cobrir o caso-vazio antes — o time rejeita isso em review"
+
+Se não dá pra formular a regra sem cair num dos dois extremos, provavelmente não vale memória. O `**How to apply:**` é o **gatilho** — a situação futura em que a regra reaparece; sem ele a nota não é acionável.
+
 **Para `feedback`, `project`, `decision`, `blocker`, `lesson`, `preference`** — incluir:
 
 ```markdown
-<descrição da regra / decisão / contexto>
+<a regra / decisão / contexto — generalizada como princípio, não instância>
 
-**Why:** <a razão — incidente passado, constraint, preferência forte>
+**Why:** <a razão — incidente passado, constraint, correção do time em review, preferência forte>
 
-**How to apply:** <quando/onde aplicar — gatilhos concretos>
+**How to apply:** <o gatilho concreto: quando/onde essa regra reaparece numa próxima tarefa>
 ```
 
 **Para `user`** — descrição livre + `**Why:**` opcional (geralmente "preferência confirmada").

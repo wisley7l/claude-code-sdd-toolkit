@@ -1,14 +1,14 @@
 ---
-description: Reorganizar auto-memory do projeto — detectar órfãs/duplicatas/links quebrados, propor sub-sumários quando MEMORY.md cresce, aplicar sob confirmação por bloco.
+description: Reorganizar auto-memory do projeto — detectar órfãs/duplicatas/links quebrados, propor sub-sumários quando MEMORY.md cresce, aplicar sob confirmação por bloco. Modo `revisar` reescreve o CONTEÚDO de notas existentes de instância-específica pra princípio+gatilho.
 model: claude-sonnet-5
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash(ls *), Bash(wc *), Bash(head *), Bash(grep *), Bash(find *), Bash(pwd), Bash(date *), Bash(echo *), Bash(test *)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Bash(ls *), Bash(wc *), Bash(head *), Bash(grep *), Bash(find *), Bash(pwd), Bash(date *), Bash(echo *), Bash(test *)
 ---
 
 # /memory-organize — Manutenção do auto-memory
 
 Comando de manutenção sob-demanda do auto-memory deste projeto (`~/.claude/projects/<projeto>/memory/`). Funciona **em par com a skill `memory-keeper`** — a skill mantém o índice atualizado a cada escrita, e este comando faz a faxina/reorganização periódica.
 
-**Quando rodar**: quando `MEMORY.md` cresce muito (perto de 150 linhas), quando você suspeita de notas órfãs/duplicadas, ou ao trocar de fase do projeto pra arrumar a casa.
+**Quando rodar**: quando `MEMORY.md` cresce muito (perto de 150 linhas), quando você suspeita de notas órfãs/duplicadas, ou ao trocar de fase do projeto pra arrumar a casa. Pro **conteúdo** das notas (não a estrutura do índice), ver `revisar` mais abaixo.
 
 ## Princípio
 
@@ -370,6 +370,113 @@ Próximo /memory-organize sugerido quando MEMORY.md voltar a >150 linhas.
 
 ---
 
+## Modo revisar — reescrever notas existentes pra princípio+gatilho
+
+Todos os modos acima mexem na **estrutura** do auto-memory (índice, symlinks, tipo/nome do arquivo). `/memory-organize revisar` é o único que mexe no **conteúdo** — o corpo da nota em si. Existe pra atualizar memórias antigas, escritas antes da skill `memory-keeper` e o `/sdd-learning` adotarem o padrão **princípio + gatilho** (regra generalizada e acionável, ancorada numa situação reconhecível — ver `memory-keeper` seção 5). Sem esse modo, nota antiga escrita como fato pontual da feature ("nesta feature X aconteceu Y") fica presa nesse formato pra sempre — o dedupe do `/sdd-learning` só a toca se um tema parecido aparecer de novo.
+
+**Quando rodar**: uma vez por projeto ao adotar esse padrão; depois disso, esporadicamente se notas manuais ou de fontes antigas (pré-v9, migração de outro sistema) voltarem a acumular.
+
+### Args
+
+| Forma | Comportamento |
+|---|---|
+| Sem args | Revisa todas as notas do projeto, exceto as em `## GUARDRAILs` (ver por quê abaixo) |
+| `--tipo=<tipo>` | Filtra por `metadata.type` (ex: `--tipo=lesson`) |
+| `<slug>` | Revisa 1 nota específica (aceita match parcial do nome do arquivo) |
+| `--incluir-guardrails` | Inclui notas de `## GUARDRAILs` na revisão (normalmente puladas) |
+
+**Por que pular GUARDRAILs por default**: são regras invioláveis, já escritas de forma direta e imperativa ("nunca commite sem OK"). O ganho de reescrever é baixo e o risco de diluir a urgência da regra ao "generalizar" é real. Só inclua com `--incluir-guardrails` se suspeitar que uma guardrail específica também caiu no problema.
+
+### Fluxo
+
+**1. Resolver `MEM_DIR`** — mesmo procedimento do fluxo base (Passo 1).
+
+**2. Listar notas elegíveis** — todos os `.md` exceto `MEMORY.md` e `_summary_*.md`; aplica o filtro dos args; exclui as que só têm linha em `## GUARDRAILs` (a menos que `--incluir-guardrails`).
+
+**3. Ler cada nota completa** (frontmatter + corpo).
+
+**4. Classificar cada nota — a etapa de raciocínio.** Pra cada nota, julgar em qual balde ela cai:
+
+- **OK como está**: já é princípio + gatilho — regra generalizada, `**Why:**` com motivo real, `**How to apply:**` com gatilho concreto e reconhecível. Nada a propor.
+- **Precisa reescrita**: é uma instância presa ao caso que a originou ("nesta feature X", sem generalizar), OU o `Why`/`How to apply` está vago/ausente, OU descreve o incidente sem virar regra acionável pra próxima vez.
+- **Ambígua**: não dá pra generalizar com segurança sem inventar contexto que a nota não tem (ex: sem "por quê" registrado, sem indício de quando reaplicar). **Nunca invente o motivo** — marque como pergunta ao usuário em vez de propor uma reescrita especulativa.
+
+Use os mesmos critérios do `/sdd-learning` (filtros 1-3: é reforço / é transferível / não é óbvio nem platitude) e o mesmo alvo de formato: "quando `<gatilho>`, faça/evite `<ação>` porque `<motivo>`".
+
+**Delegação de raciocínio**: esta classificação + a reescrita (Passo 5) é trabalho pesado quando há muitas notas. Com **mais de 5 notas elegíveis**, delegue a um subagente `Agent` com `model: opus` (`subagent_type: general-purpose`): passe o conteúdo de todas as notas elegíveis, os 3 baldes acima e o formato-alvo; o subagente devolve a lista já classificada com a reescrita proposta pra cada "precisa reescrita" e a pergunta pendente pra cada "ambígua". Com **5 ou menos**, pode destilar inline na main (Sonnet) sem subagente. Nunca troque de modelo via `/model` na main — invalida o cache de prompt.
+
+**5. Para cada nota em "precisa reescrita"**, o resultado (subagente ou inline) deve trazer:
+- Corpo atual (verbatim)
+- Corpo proposto: a mesma regra, generalizada — segue o template da skill `memory-keeper` (regra no topo + `**Why:**` + `**How to apply:**`), preservando toda referência (path:linha, PR #, IMP de origem) já presente na nota
+- Se a nota também tem hook não-acionável no `MEMORY.md` (linha que só nomeia o tema, não a regra — ver Passo 4(i) do fluxo base), inclua a proposta de hook novo junto
+
+**6. Apresentação — 1 nota por vez:**
+
+```
+Nota N/T — <arquivo>  [tipo: <metadata.type>]
+
+Atual:
+"""
+<corpo atual>
+"""
+
+Problema detectado: <instância presa ao caso / why vago / sem gatilho / hook não-acionável>
+
+Proposta:
+"""
+<corpo reescrito: princípio + Why + How to apply>
+"""
+
+Hook no MEMORY.md (se mudar):
+  Antes: <hook atual>
+  Depois: <hook novo>
+
+Aceitar? (s = salvar, p = pular, e = editar antes)
+```
+
+Pra notas "ambíguas", em vez de proposta, pergunte o que falta:
+
+```
+Nota N/T — <arquivo>  [ambígua]
+
+Corpo atual:
+"""
+<corpo atual>
+"""
+
+Falta pra generalizar: <"por quê" não registrado / não fica claro quando essa regra reaparece>
+Você lembra o motivo/gatilho? (texto livre, ou "pular" pra deixar como está)
+```
+
+**7. Aplicação** — pra cada nota aprovada:
+- Reescreve **só o corpo** do arquivo (`Edit`/`Write`), preserva frontmatter integralmente, atualiza `metadata.updated: <hoje>`.
+- Se o hook do `MEMORY.md` também mudou, atualiza a linha correspondente (mesma lógica do Passo 4(i)/7 do fluxo base — nunca reescreve o índice além dessa linha).
+- Nunca aplica sem confirmação individual — sem bulk approval neste modo (diferente dos blocos do fluxo base, aqui cada nota pode ter nuance própria).
+
+**8. Resumo final:**
+
+```
+=== /memory-organize revisar concluído ===
+Notas elegíveis: T (GUARDRAILs pulados: G)
+- OK como está: A
+- Reescritas (aceitas): B
+- Puladas: C
+- Ambíguas (pendente de info sua): D
+
+Arquivos atualizados:
+- lesson_<slug>.md (reescrito)
+- feedback_<slug>.md (reescrito)
+...
+```
+
+### Casos especiais
+
+- **Nota já é curta e genérica o bastante** (ex: guardrails, preferências de 1 linha): se já está no formato alvo, não propor reescrita só por reescrever — balde "OK como está".
+- **Reescrever mudaria o sentido da regra**: se ao generalizar a nota você notar que o princípio proposto é mais amplo do que a evidência sustenta (ex: 1 incidente isolado virando regra "sempre"), avise no campo "Problema detectado" e ofereça a versão mais conservadora também.
+- **Slug não encontrado** (`<slug>` explícito): reporta e sai, não cria nada.
+
+---
+
 ## O que este comando NÃO faz
 
 - **Não cria notas novas** — só reorganiza as existentes. Pra criar, use a skill `memory-keeper` (escrita sob pedido do usuário).
@@ -377,3 +484,5 @@ Próximo /memory-organize sugerido quando MEMORY.md voltar a >150 linhas.
 - **Não normaliza convenção de nome** retroativamente — se uma nota antiga tem nome fora do padrão `<tipo>_<slug>.md`, deixar (a menos que o usuário peça).
 - **Não migra do vault Obsidian** — esse trabalho é one-shot, não cabe aqui.
 - **Modo relink nao apaga `<worktree-encoded>/`** — so gerencia o `memory/` dentro. Outros artefatos do harness ficam intactos.
+- **Modo revisar não infere motivo que a nota não registrou** — se o "por quê" ou o gatilho não estão na nota, pergunta ao usuário em vez de inventar (balde "ambígua").
+- **Modo revisar não faz bulk approval** — cada nota reescrita é confirmada individualmente, mesmo que várias caiam no mesmo padrão de problema.

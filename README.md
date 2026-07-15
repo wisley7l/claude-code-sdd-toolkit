@@ -28,9 +28,9 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/pair-review`** — companheiro interativo do review manual. Roda em **sessão nova** (`/clear`): re-hidrata do staged + PLAN/IMP (~3-4k tokens, sem o ruído da execução), responde perguntas factuais direto e delega julgamento a subagentes Opus escopados nos arquivos da pergunta, aplica ajustes pequenos com gate + test count protection. Com PR sob review do time, o modo `(r)` valida cada fix **contra o comentário humano que o originou** (detecta não-endereçados, escopa o diff à rodada de fixes, gera rascunhos de resposta pras threads). Walkthrough por tarefa e hotspots opcionais. Nunca commita sem escolha, nunca posta no PR.
 
-**`/sdd-learning`** — após o PR fechar, extrai aprendizado não-óbvio de IMPs, reviews e do PR no GitHub e propõe registro na memória, caso a caso.
+**`/sdd-learning`** — após o PR fechar, extrai **reforço comportamental** de IMPs, reviews e do PR no GitHub: onde o time corrigiu o agente é um **erro evitável** que vira regra genérica pra não repetir (reforço negativo); o que passou limpo/foi elogiado vira regra pra repetir (reforço positivo). Sempre generaliza a instância em **princípio + gatilho** (não o caso pontual da feature) e propõe registro na memória, caso a caso. O propósito é o agente ir melhorando — parar de cometer os mesmos erros.
 
-**`/memory-organize`** — reorganiza o auto-memory: órfãs, links quebrados, duplicatas e sub-sumários quando `MEMORY.md` cresce.
+**`/memory-organize`** — reorganiza o auto-memory: órfãs, links quebrados, duplicatas e sub-sumários quando `MEMORY.md` cresce. Modo `revisar` reescreve o **conteúdo** de notas antigas presas ao caso pontual pra **princípio + gatilho** (mesmo padrão que `/sdd-learning` já aplica nas novas), caso a caso, sem inventar motivo que a nota não registrou.
 
 **`/roadmap`** — gerencia `thoughts/ROADMAP.md`: entradas, import de issues do GitHub, sync de seções por status de PR (Próximos / Backlog / Em progresso / Concluído).
 

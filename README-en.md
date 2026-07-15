@@ -26,9 +26,9 @@ Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd
 
 **`/pair-review`** — interactive companion for the human's manual review after `/executor-plan`. Runs in a **fresh session** (`/clear`): re-hydrates from the staged diff + PLAN/IMP (~3-4k tokens, none of the execution noise), answers factual questions directly and delegates judgment questions to Opus subagents scoped to the files in question, applies small fixes with gate + test count protection. With a PR under team review, the `(r)` mode validates each fix **against the human comment that originated it** (detects unaddressed comments, scopes the diff to the post-review fix round, generates reply drafts for the threads for the user to paste). Optional per-task walkthrough and hotspots. Never commits without explicit choice, never posts to the PR.
 
-**`/sdd-learning`** — after the PR closes, extracts non-obvious learnings from IMPs, reviews, and the GitHub PR and proposes recording them in memory, case by case.
+**`/sdd-learning`** — after the PR closes, extracts **behavioral reinforcement** from IMPs, reviews, and the GitHub PR: wherever the team corrected the agent is an **avoidable mistake** that becomes a generic rule not to repeat (negative reinforcement); whatever landed clean or was praised becomes a rule to repeat (positive reinforcement). It always generalizes the instance into a **principle + trigger** (not the feature's one-off case) and proposes recording it in memory, case by case. The point is for the agent to keep improving — to stop making the same mistakes.
 
-**`/memory-organize`** — reorganizes the auto-memory: orphans, broken links, duplicates, and sub-summaries when `MEMORY.md` grows.
+**`/memory-organize`** — reorganizes the auto-memory: orphans, broken links, duplicates, and sub-summaries when `MEMORY.md` grows. The `revisar` mode rewrites the **content** of old notes stuck on a one-off case into **principle + trigger** (the same pattern `/sdd-learning` already applies to new notes), one note at a time, never inventing a reason the note didn't record.
 
 **`/roadmap`** — manages `thoughts/ROADMAP.md`: entries, GitHub issue imports, sync sections by PR status (Up next / Backlog / In progress / Done).
 
