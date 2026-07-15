@@ -25,9 +25,26 @@ Qual sessão é lida (importante com várias abas no mesmo projeto):
   (sem essa env) cai pro .jsonl mais recente do diretório. Override: `--session <id>`
   ou OUVIR_SESSION_ID.
 
+Qual parte da conversa é lida:
+  ouvir                -> MENU interativo (↑/↓ escolhe, Enter ouve, q cancela) num
+                          terminal real. Via `!ouvir` (sem TTY) vira lista numerada.
+  ouvir -l             -> fala a última resposta (last)
+  ouvir <N>            -> a N-ésima de trás pra frente (1 = última, 2 = penúltima…)
+  ouvir --grep <termo> -> fala a resposta mais recente que menciona <termo>
+                          (ex.: `ouvir --grep métricas`)
+  ouvir --list [N]     -> lista numerada, sem menu (N = quantas mostrar; default 12)
+
 Parar o áudio:
-  `ouvir --stop` mata o que está tocando NESTA sessão (pidfile por sessão, então
-  com várias abas cada uma para só o seu). Em foreground, Ctrl+C também para.
+  Em terminal real (foreground), enquanto fala: Esc, q ou Ctrl+C interrompem.
+  De outra aba / sem foreground: `ouvir --stop` mata o que está tocando NESTA
+  sessão (pidfile por sessão, então com várias abas cada uma para só o seu).
+
+Pronúncia de termos em inglês (respelling):
+  Engines pt-BR leem "deploy"/"cache"/"merge" com fonética portuguesa. Antes de
+  falar, o `ouvir` reescreve termos técnicos EN numa grafia falável em pt-BR
+  (dicionário embutido). Ajuste ouvindo, em ~/.config/ouvir/pronuncias.tsv
+  (linha `termo<TAB>grafia`; `#` comenta; `termo` sozinho remove um default).
+  Desliga com OUVIR_RESPELL=off. Override do arquivo: OUVIR_PRON_FILE.
 
 Privacidade: engines cloud ENVIAM o texto da resposta pro provedor. Por isso o
 default é local. Cloud só é usado quando você pede explicitamente em OUVIR_ENGINE.
@@ -106,15 +123,17 @@ def find_transcript(cwd, session_id=None):
     return transcript_latest_for_cwd(cwd)
 
 
-def extract_last_reply(transcript_path):
+def extract_replies(transcript_path):
     """
-    Última resposta do assistente principal:
+    Todas as respostas do assistente principal, em ordem cronológica (antiga → nova):
       type=="assistant", isSidechain falso/ausente, com bloco de texto real.
-    Itera de trás pra frente e retorna a primeira que casa.
+    Cada item: {"text": <str>, "ts": <timestamp ISO ou None>}.
+    A última resposta é replies[-1]; a N-ésima de trás pra frente é replies[-N].
     """
     with open(transcript_path, "r", encoding="utf-8") as fh:
         lines = fh.readlines()
-    for line in reversed(lines):
+    replies = []
+    for line in lines:
         line = line.strip()
         if not line:
             continue
@@ -132,8 +151,154 @@ def extract_last_reply(transcript_path):
         ]
         joined = "\n".join(t for t in texts if t).strip()
         if joined:
-            return joined
-    return ""
+            replies.append({"text": joined, "ts": obj.get("timestamp")})
+    return replies
+
+
+def extract_last_reply(transcript_path):
+    """Compat: só a última resposta com texto (string vazia se não houver)."""
+    replies = extract_replies(transcript_path)
+    return replies[-1]["text"] if replies else ""
+
+
+def _fmt_ts(ts):
+    """Timestamp ISO → 'HH:MM' (ou '' se ausente/ilegível). Sem depender de tz."""
+    if not ts or not isinstance(ts, str):
+        return ""
+    m = re.search(r"T(\d{2}:\d{2})", ts)
+    return m.group(1) if m else ""
+
+
+def _preview(text, width=72):
+    """Primeira linha falável da resposta, truncada — pra listar sem tocar áudio."""
+    stripped = strip_markdown(text)
+    first = next((ln.strip() for ln in stripped.splitlines() if ln.strip()), "")
+    if len(first) > width:
+        first = first[: width - 1].rstrip() + "…"
+    return first
+
+
+def list_replies(replies, limit):
+    """Imprime as últimas `limit` respostas numeradas (1 = mais recente). Não toca áudio."""
+    if not replies:
+        log("nenhuma resposta do assistente neste transcript.")
+        return 0
+    shown = replies[-limit:] if limit else replies
+    total = len(replies)
+    print(f"ouvir: {len(shown)} de {total} respostas (1 = mais recente).")
+    print("       ouvir -l = a última  ·  ouvir <N> = a N-ésima  ·  ouvir --grep <termo>")
+    for i, r in enumerate(reversed(shown), start=1):
+        ts = _fmt_ts(r["ts"])
+        stamp = f"[{ts}] " if ts else ""
+        print(f"  {i:>2}. {stamp}{_preview(r['text'])}")
+    return 0
+
+
+def select_reply(replies, index=1, grep=None):
+    """
+    Escolhe UMA resposta:
+      grep → a mais recente cujo texto casa o termo (case-insensitive);
+      senão → a N-ésima de trás pra frente (1 = última).
+    Retorna (texto, mensagem_de_erro). Um dos dois é None.
+    """
+    if not replies:
+        return None, "não há resposta de texto pra ler neste transcript."
+    if grep:
+        needle = grep.lower()
+        matches = [r for r in replies if needle in r["text"].lower()]
+        if not matches:
+            return None, f"nenhuma resposta contém '{grep}'. Veja as disponíveis com: ouvir --list"
+        if len(matches) > 1:
+            log(f"{len(matches)} respostas casam '{grep}' — lendo a mais recente (use --list + número pra outra).")
+        return matches[-1]["text"], None
+    if index < 1 or index > len(replies):
+        return None, f"índice {index} fora do intervalo (1..{len(replies)}). Veja com: ouvir --list"
+    return replies[-index]["text"], None
+
+
+def _read_key(fd):
+    """Lê uma tecla em raw mode. Retorna 'up'/'down'/'enter'/'quit'/'other'."""
+    import select
+    ch = os.read(fd, 1)
+    if ch == b"\x1b":  # ESC — pode ser início de sequência de seta
+        ready, _, _ = select.select([fd], [], [], 0.06)
+        seq = os.read(fd, 2) if ready else b""
+        if seq == b"[A":
+            return "up"
+        if seq == b"[B":
+            return "down"
+        return "quit"  # ESC sozinho
+    if ch in (b"\r", b"\n"):
+        return "enter"
+    if ch in (b"\x03", b"q", b"Q"):  # Ctrl+C ou q
+        return "quit"
+    if ch == b"k":
+        return "up"
+    if ch == b"j":
+        return "down"
+    return "other"
+
+
+def interactive_pick(replies, limit):
+    """
+    Menu com ↑/↓ + Enter num terminal real. Retorna o texto escolhido, ou None se
+    cancelou. Requer TTY + termios (Unix); levanta em ambiente sem — o chamador
+    faz fallback pra list_replies. Não é usado via `!ouvir` (stdin não é TTY lá).
+    """
+    import termios
+    import tty
+    shown = replies[-limit:] if limit else replies
+    items = list(reversed(shown))  # 1 = mais recente no topo
+    n = len(items)
+    fd = sys.stdin.fileno()
+    out = sys.stdout
+    cols = shutil.get_terminal_size((80, 24)).columns
+    header = "ouvir — ↑/↓ escolhe · Enter ouve · q cancela"
+
+    def w(s):
+        out.write(s)
+        out.flush()
+
+    def line_for(i):
+        it = items[i]
+        ts = _fmt_ts(it["ts"])
+        stamp = f"[{ts}] " if ts else ""
+        raw = f"{i + 1:>2}. {stamp}{_preview(it['text'], width=cols - 8)}"
+        return raw[: cols - 3]
+
+    def draw(sel, first):
+        if not first:
+            w(f"\x1b[{n + 1}A")  # sobe pro header (header + n itens)
+        w("\r\x1b[2K\x1b[2m" + header[: cols - 1] + "\x1b[0m\r\n")
+        for i in range(n):
+            body = line_for(i)
+            if i == sel:
+                w("\r\x1b[2K\x1b[7m> " + body + "\x1b[0m\r\n")
+            else:
+                w("\r\x1b[2K  " + body + "\r\n")
+
+    old = termios.tcgetattr(fd)
+    sel = 0
+    try:
+        tty.setraw(fd)
+        draw(sel, first=True)
+        while True:
+            key = _read_key(fd)
+            if key == "up":
+                sel = (sel - 1) % n
+                draw(sel, first=False)
+            elif key == "down":
+                sel = (sel + 1) % n
+                draw(sel, first=False)
+            elif key == "enter":
+                break
+            elif key == "quit":
+                sel = None
+                break
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        w("\r\n")
+    return None if sel is None else items[sel]["text"]
 
 
 def strip_markdown(text):
@@ -151,6 +316,103 @@ def strip_markdown(text):
     text = re.sub(r"\n{2,}", "\n", text)
     text = re.sub(r"[ \t]{2,}", " ", text)
     return text.strip()
+
+
+# --------------------------------------------------------------------------- #
+# 1b. Respelling de termos técnicos EN                                        #
+#     Os engines pt-BR (piper/minimax) leem "deploy", "cache", "merge" com    #
+#     fonetica portuguesa ("dê-plói", "cachê"). Aqui reescrevemos os termos   #
+#     numa grafia que o modelo pt-BR fala como o dev BR pronuncia. Aplicado   #
+#     ANTES do engine, entao vale pra piper, espeak e minimax igual.          #
+#                                                                             #
+#     Calibravel: as grafias abaixo sao um ponto de partida — voce ajusta     #
+#     ouvindo, no arquivo ~/.config/ouvir/pronuncias.tsv (uma linha           #
+#     `termo<TAB>grafia`; `#` comenta; `termo` sozinho remove um default).    #
+#     Desliga tudo com OUVIR_RESPELL=off.                                     #
+# --------------------------------------------------------------------------- #
+_TECH_PRON_DEFAULT = {
+    # fluxo git / PR
+    "deploy": "deplói", "deploys": "deplóis", "deployment": "deploimento",
+    "commit": "cômmit", "commits": "cômmits",
+    "merge": "mérrj", "merges": "mérrjis",
+    "branch": "brântch", "branches": "brântchis",
+    "push": "púxi", "pull": "pul",
+    "pull request": "pul rikuésti", "pull requests": "pul rikuéstis",
+    "request": "rikuésti", "requests": "rikuéstis", "response": "rispôns",
+    "review": "rivíu", "rollback": "rôlibéki",
+    "build": "bíld", "builds": "bíldis",
+    "release": "rilíis", "releases": "rilíisis",
+    # arquitetura / código
+    "endpoint": "êndipoint", "endpoints": "êndipoints",
+    "cache": "kéishi", "queue": "quíu",
+    "backend": "békend", "frontend": "frôntend",
+    "framework": "freimuârk", "middleware": "mídou uér",
+    "feature": "fítcher", "features": "fítchers",
+    "bug": "bâg", "bugs": "bâgs", "fix": "fiks",
+    "token": "tôuken", "tokens": "tôukens", "payload": "peilôd",
+    "pipeline": "paipláin", "pipelines": "paipláins",
+    "webhook": "uébuk", "webhooks": "uébuks",
+    "default": "difôlt", "schema": "skíma", "boolean": "buliân",
+    "array": "arrêi", "string": "istríng", "hash": "réche",
+    "timeout": "táimaut", "thread": "trédi", "threads": "trédis",
+    "mock": "móki", "mocks": "mókis", "dashboard": "déchibord",
+    "layout": "leiáut", "design": "dizáin",
+    # produtos / e-commerce / pagamentos
+    "shopify": "chópifái", "checkout": "chekáut", "gateway": "guêituêi",
+    # siglas (soletradas em pt-BR)
+    "pr": "pê érre", "prs": "pê érres",
+    "api": "á pê í", "apis": "á pê ís",
+    "url": "úrl", "sdk": "ésse dê cá",
+    "json": "djêizon", "sql": "síkuel",
+    "ci/cd": "cê í cê dê",
+}
+
+
+def _load_pron():
+    """Default embutido + overrides do arquivo do usuario (linha `termo<TAB>grafia`)."""
+    pron = dict(_TECH_PRON_DEFAULT)
+    path = os.environ.get("OUVIR_PRON_FILE", os.path.join(HOME, ".config/ouvir/pronuncias.tsv"))
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                for line in fh:
+                    line = line.rstrip("\n")
+                    if not line.strip() or line.lstrip().startswith("#"):
+                        continue
+                    term, sep, spell = line.partition("\t")
+                    if not sep:  # sem TAB: tolera "termo = grafia" ou "termo -> grafia"
+                        m = re.match(r"^(.*?)\s*(?:=|->)\s*(.*)$", line)
+                        if m:
+                            term, spell = m.group(1), m.group(2)
+                    term, spell = term.strip().lower(), spell.strip()
+                    if term:
+                        if spell:
+                            pron[term] = spell
+                        else:
+                            pron.pop(term, None)  # `termo` sozinho remove o default
+        except OSError:
+            pass
+    return pron
+
+
+_RESPELL_RE = None
+_RESPELL_MAP = None
+
+
+def respell_tech(text):
+    """Reescreve termos tecnicos EN pra grafia falavel em pt-BR. OUVIR_RESPELL=off desliga."""
+    if os.environ.get("OUVIR_RESPELL", "on").strip().lower() in ("0", "off", "false", "no"):
+        return text
+    global _RESPELL_RE, _RESPELL_MAP
+    if _RESPELL_RE is None:
+        _RESPELL_MAP = _load_pron()
+        if not _RESPELL_MAP:
+            return text
+        # multi-palavra e mais longos primeiro (pull request antes de pull)
+        terms = sorted(_RESPELL_MAP, key=len, reverse=True)
+        alt = "|".join(re.escape(t) for t in terms)
+        _RESPELL_RE = re.compile(r"(?<!\w)(" + alt + r")(?!\w)", re.IGNORECASE)
+    return _RESPELL_RE.sub(lambda m: _RESPELL_MAP[m.group(0).lower()], text)
 
 
 # --------------------------------------------------------------------------- #
@@ -186,16 +448,44 @@ def _clear_pid():
             pass
 
 
+def _wait_or_interrupt(proc):
+    """Espera o player terminar; num terminal real, Esc/q também interrompem
+    (além do Ctrl+C). Sem TTY (via !ouvir/pipe), só espera. True = tocou ou parou."""
+    if not sys.stdin.isatty():
+        return proc.wait() == 0
+    try:
+        import select
+        import termios
+        import tty
+    except ImportError:
+        return proc.wait() == 0
+    fd = sys.stdin.fileno()
+    log("tocando — Esc, q ou Ctrl+C pra parar.")
+    old = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd)
+        while proc.poll() is None:
+            ready, _, _ = select.select([fd], [], [], 0.1)
+            if ready:
+                ch = os.read(fd, 1)
+                if ch in (b"\x1b", b"q", b"Q", b"\x03"):  # Esc / q / Ctrl+C
+                    proc.terminate()
+                    return True
+        return proc.returncode == 0
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+
+
 def _run_player(args):
     """Toca via Popen, registra o pid (pra `ouvir --stop`), espera terminar.
-    Ctrl+C interrompe e mata o player. True se tocou (ou foi interrompido)."""
+    Esc/q/Ctrl+C interrompem (Esc/q só em terminal real). True se tocou ou parou."""
     try:
         proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         return False
     _write_pid(proc.pid)
     try:
-        return proc.wait() == 0
+        return _wait_or_interrupt(proc)
     except KeyboardInterrupt:
         proc.terminate()
         return True
@@ -386,26 +676,94 @@ def stop():
     return 0
 
 
+def parse_args(argv):
+    """
+    Parsing manual (mantém o estilo do script). Modos:
+      (sem args)          -> MENU interativo (↑/↓ + Enter) num terminal real;
+                             fora de TTY (ex.: via !ouvir) cai pra lista numerada
+      -l | --last         -> fala a última resposta
+      <N> | -n <N>        -> fala a N-ésima de trás pra frente (1 = última)
+      --grep <termo...>   -> fala a resposta mais recente que casa o termo
+      --list [N]          -> lista numerada (sempre texto, sem menu)
+    Flags que já existiam: --stop, --text-only, --session <id>.
+    `--text-only` sem seleção assume a última (retrocompat do modo debug).
+    """
+    opts = {"mode": "menu", "index": 1, "list_limit": 12, "grep": None,
+            "text_only": False, "stop": False}
+    rest = argv[1:]
+    i = 0
+    while i < len(rest):
+        a = rest[i]
+        if a == "--stop":
+            opts["stop"] = True
+        elif a in ("--text-only", "--dry-run"):
+            opts["text_only"] = True
+        elif a == "--session":
+            i += 1  # o valor é lido por resolve_session_id; aqui só pulamos
+        elif a in ("-l", "--last"):
+            opts["mode"] = "speak"; opts["index"] = 1
+        elif a == "--list":
+            opts["mode"] = "list"
+            if i + 1 < len(rest) and rest[i + 1].isdigit():
+                opts["list_limit"] = int(rest[i + 1]); i += 1
+        elif a in ("--grep", "-g", "--find", "--buscar"):
+            opts["mode"] = "speak"
+            opts["grep"] = " ".join(rest[i + 1:]).strip()
+            break
+        elif a in ("-n", "--index"):
+            if i + 1 < len(rest) and rest[i + 1].lstrip("-").isdigit():
+                opts["mode"] = "speak"; opts["index"] = abs(int(rest[i + 1])); i += 1
+        elif a.isdigit():
+            opts["mode"] = "speak"; opts["index"] = int(a)
+        # argumento desconhecido: ignorado (compat / tolerância a flags de hook)
+        i += 1
+    # --text-only sozinho (sem -l/<N>/--grep) fala a última: preserva o debug antigo
+    if opts["text_only"] and opts["mode"] == "menu" and opts["grep"] is None:
+        opts["mode"] = "speak"
+    return opts
+
+
 def main():
     global _PID_FILE
     cwd = os.getcwd()
     session_id = resolve_session_id(sys.argv)
     _PID_FILE = pid_path(session_id)
-    if "--stop" in sys.argv:
+    opts = parse_args(sys.argv)
+    if opts["stop"]:
         return stop()
     transcript = find_transcript(cwd, session_id)
     if not transcript:
         log("nenhuma sessão do Claude Code encontrada para este diretório.")
         return 0
-    text = extract_last_reply(transcript)
-    if not text:
-        log("não há resposta de texto pra ler na última mensagem.")
-        return 0
+    replies = extract_replies(transcript)
+    if opts["mode"] == "list":
+        return list_replies(replies, opts["list_limit"])
+    if opts["mode"] == "menu":
+        if not replies:
+            log("nenhuma resposta do assistente neste transcript.")
+            return 0
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            try:
+                text = interactive_pick(replies, opts["list_limit"])
+            except Exception as exc:  # terminal sem suporte → cai pra lista
+                log(f"menu interativo indisponível ({exc}); listando.")
+                return list_replies(replies, opts["list_limit"])
+            if text is None:  # cancelou (q/ESC)
+                return 0
+        else:
+            # sem TTY (via !ouvir, pipe): não dá pra navegar — lista e sai
+            return list_replies(replies, opts["list_limit"])
+    else:  # speak (-l / <N> / --grep)
+        text, err = select_reply(replies, index=opts["index"], grep=opts["grep"])
+        if err:
+            log(err)
+            return 0
     spoken = strip_markdown(text)
     if not spoken:
-        log("a resposta só tinha código/markdown — nada pra falar.")
+        log("a resposta escolhida só tinha código/markdown — nada pra falar.")
         return 0
-    if "--text-only" in sys.argv or os.environ.get("OUVIR_DRY_RUN"):
+    spoken = respell_tech(spoken)
+    if opts["text_only"] or os.environ.get("OUVIR_DRY_RUN"):
         print(spoken)
         return 0
     if speak(spoken):

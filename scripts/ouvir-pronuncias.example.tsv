@@ -1,0 +1,36 @@
+# ouvir — dicionário de pronúncia (respelling de termos técnicos EN)
+#
+# Copie pra ~/.config/ouvir/pronuncias.tsv e ajuste OUVINDO — a grafia certa é a
+# que soa bem NO SEU engine/voz (piper faber, minimax, etc), não a "correta".
+#
+# Formato: uma entrada por linha, TAB entre termo e grafia:
+#     termo<TAB>grafia
+# Também aceita  `termo = grafia`  ou  `termo -> grafia`.
+# Linha começando com #  = comentário.
+# `termo` sozinho (sem grafia) REMOVE um default embutido (volta a falar literal).
+#
+# O matching é por palavra inteira, case-insensitive. Termos multi-palavra
+# ("pull request") têm prioridade sobre os simples. Plurais são entradas
+# separadas (adicione "commits" além de "commit" se precisar).
+#
+# Desligar tudo de uma vez:  export OUVIR_RESPELL=off
+# Ver o texto que SERÁ falado (sem tocar áudio):  ouvir --text-only
+
+# ---- seus ajustes (exemplos; edite à vontade) ----
+shopify	chópifái
+checkout	chekáut
+gateway	guêituêi
+
+# nomes de ferramentas/produtos que você usa e o engine erra:
+# mercadopago	mércado págo
+# stripe	istráipi
+# kubernetes	kubernétis
+# nginx	énginics
+# postgres	póstigres
+# redis	rédis
+
+# corrigindo um default que não te agradou (só re-declare):
+# merge	mérdgi
+
+# removendo um default (fala literal de novo) — termo sem grafia:
+# fix

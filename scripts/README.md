@@ -27,7 +27,7 @@ Se você tem **várias abas abertas no mesmo projeto**, cada uma é uma sessão 
 - **Crava a sessão da aba** quando é rodado de dentro dela — ele herda a variável `CLAUDE_CODE_SESSION_ID` (que o Claude Code exporta) e lê exatamente aquele transcript. **Por isso, com múltiplas abas, dispare com `!ouvir`** (dentro da sessão): assim ele pega a sessão certa.
 - **Cai pro mais recente** do diretório só quando roda em terminal puro (sem sessão associada).
 - **Override manual**: `ouvir --session <id>` ou `OUVIR_SESSION_ID=<id> ouvir` força uma sessão específica.
-- **Parar o áudio**: `ouvir --stop` mata só o áudio **desta** sessão (cada aba para o seu, via pidfile por sessão). Em foreground, `Ctrl+C` também para.
+- **Parar o áudio**: num terminal real, enquanto a fala toca, **`Esc`, `q` ou `Ctrl+C`** interrompem. De outra aba (ou quando não está em foreground), `ouvir --stop` mata só o áudio **desta** sessão (cada aba para o seu, via pidfile por sessão).
 
 ## Engines e fallback
 
@@ -98,11 +98,36 @@ export PATH="$HOME/.local/bin:$PATH"
 Depois, dentro de **qualquer projeto com sessão ativa do Claude Code**:
 
 ```bash
-ouvir              # lê em voz alta a última resposta
+ouvir              # menu interativo (↑/↓ + Enter) pra escolher qual resposta ouvir
+ouvir -l           # fala a última resposta (last)
+ouvir 3            # fala a 3ª resposta de trás pra frente (1 = última)
+ouvir --grep métricas   # fala a resposta mais recente que menciona "métricas"
 ouvir --stop       # para o áudio que está tocando nesta sessão (Ctrl+C também para)
 ouvir --text-only  # só imprime o texto que seria falado (debug, sem áudio)
 !ouvir             # de dentro de uma sessão do Claude Code (o prefixo ! roda shell)
 ```
+
+---
+
+## Escolher qual parte da conversa ouvir
+
+Rodando `ouvir` **num terminal real**, você cai num **menu interativo**: `↑`/`↓`
+(ou `j`/`k`) navegam, `Enter` toca a resposta selecionada, `q` (ou `Esc`) cancela.
+A lista mostra 1 = mais recente, com hora + um trecho de cada resposta.
+
+```bash
+ouvir               # menu interativo (default)
+ouvir -l            # atalho: fala a última, sem abrir o menu
+ouvir 5             # fala a 5ª de trás pra frente
+ouvir --grep weave  # fala a mais recente que fala de "weave"
+ouvir --list 30     # imprime a lista numerada (sem menu), olhando mais fundo
+```
+
+**Via `!ouvir` dentro do Claude Code não há terminal interativo** (o stdin não é
+um TTY), então o menu **cai automaticamente pra lista numerada** — aí você escolhe
+com `!ouvir <N>`. O `--grep` é o caminho quando você lembra **do assunto** mas não
+do número. Só respostas do assistente principal entram na lista (sub-agentes são
+ignorados).
 
 ---
 
@@ -156,6 +181,8 @@ Baixe o `.onnx` + `.onnx.json` pra `~/.local/share/piper/` e aponte com `OUVIR_P
 | `OUVIR_SESSION_ID` | `$CLAUDE_CODE_SESSION_ID` | Força a sessão a ler (senão usa a da aba; ou `--session <id>`) |
 | `OUVIR_PIPER_MODEL` | `~/.local/share/piper/pt_BR-faber-medium.onnx` | Modelo do piper |
 | `OUVIR_ESPEAK_VOICE` | `pt-br` | Voz do espeak-ng |
+| `OUVIR_RESPELL` | `on` | Reescrita de termos EN pra grafia falável em pt-BR. `off` desliga |
+| `OUVIR_PRON_FILE` | `~/.config/ouvir/pronuncias.tsv` | Dicionário de pronúncia do usuário (override/extensão dos defaults) |
 | `OUVIR_DRY_RUN` | — | Se setada, só imprime o texto (igual `--text-only`) |
 | `MINIMAX_API_KEY` | — | Ativa o engine `minimax` |
 | `OUVIR_MINIMAX_VOICE` | — | `voice_id` da sua conta MiniMax (obrigatório p/ minimax) |
@@ -165,6 +192,33 @@ Baixe o `.onnx` + `.onnx.json` pra `~/.local/share/piper/` e aponte com `OUVIR_P
 | `GROQ_API_KEY` | — | Ativa o engine `groq` |
 | `OUVIR_GROQ_VOICE` | `Fritz-PlayAI` | Voz do Groq |
 | `OUVIR_GROQ_MODEL` | `playai-tts` | Modelo do Groq |
+
+---
+
+## Pronúncia de termos em inglês (respelling)
+
+Os engines pt-BR (piper/minimax) leem termos técnicos em inglês com fonética
+portuguesa — "deploy" vira "dê-plói", "cache" vira "cachê", "merge" vira "mergе",
+"shopify" vira "shopifí". Antes de falar, o `ouvir` reescreve esses termos numa
+grafia que o modelo pt-BR fala como o dev BR pronuncia. Vale pra **todos** os
+engines (piper, espeak, minimax), porque acontece no texto, antes do TTS.
+
+Já vem com um dicionário embutido (deploy, commit, merge, branch, pull request,
+cache, endpoint, backend, PR, API, CI/CD, shopify, checkout, gateway, …). Pra
+**calibrar ou estender** sem tocar no script, crie seu arquivo:
+
+```bash
+mkdir -p ~/.config/ouvir
+cp scripts/ouvir-pronuncias.example.tsv ~/.config/ouvir/pronuncias.tsv
+# edite ouvindo — a grafia certa é a que soa bem na SUA voz
+```
+
+Formato: uma linha `termo<TAB>grafia` (também aceita `termo = grafia` / `termo -> grafia`).
+`#` comenta. Um `termo` sozinho (sem grafia) **remove** um default embutido. Termos
+multi-palavra têm prioridade; plurais são entradas separadas.
+
+Pra conferir o que **será falado** sem tocar áudio, use `ouvir --text-only`.
+Pra desligar tudo: `export OUVIR_RESPELL=off`.
 
 ---
 
