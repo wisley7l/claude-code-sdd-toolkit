@@ -34,6 +34,8 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/roadmap`** — gerencia `thoughts/ROADMAP.md`: entradas, import de issues do GitHub, sync de seções por status de PR (Próximos / Backlog / Em progresso / Concluído).
 
+**`/sdd-close`** — arquiva o par **SPEC+PLAN concluído** (PR **mergeado**): move os docs de `thoughts/specs/` e `thoughts/plans/` pra `closed/` em cada pasta e marca a entrada no ROADMAP como Concluído. Só age sob PR MERGED, confirmação individual, par junto (detecta o PLAN→SPEC pela linha `SPEC:` do topo). Distinto de `old/` (specs/planos **descartados**, geridos à mão). Nunca commita (`thoughts/` é gitignored).
+
 ### Utilitários
 
 **`/sdd-review`** — review de PR, branch ou diff via subagents isolados; oferece gerar fixes via `/quick-task`.
@@ -54,7 +56,7 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/status-deps`** — checa o status das dependências externas (Cloudflare, GitHub, PlanetScale/Vitess, AWS) via status pages oficiais. Read-only; resumo com nível por serviço + veredito geral. AWS filtrado por recência (eventos >7d não contam). Pra monitorar em intervalo: `/loop <intervalo> /status-deps`.
 
-**`/modo-livre`** — toggle do modo autônomo em três camadas: allow amplo (flui), **`ask` pra `git commit`/`git push`** (humano no loop garantido pelo harness — prompta em **qualquer** permission mode, inclusive `auto`) e deny dos perigosos (force push, `reset --hard`, `rm -rf`, publishes — bloqueados sempre). Compatível com o permission mode `auto`. Requer reload da sessão.
+**`/modo-livre`** — toggle do modo autônomo em três camadas: allow amplo (flui), **`ask` pra `git commit`/`git push`** (humano no loop garantido pelo harness — prompta em **qualquer** permission mode, inclusive `auto`) e deny dos perigosos (force push, `reset --hard`, `rm -rf`, publishes — bloqueados sempre). Compatível com o permission mode `auto`. Requer reload da sessão. O `/git-worktree` **ativa este modo por default** na worktree que cria (a sessão nova aberta lá já nasce autônoma, sem reload) — use `/git-worktree <branch> --ml-off` pra criar sem.
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — utilitários de git e worktree.
 
@@ -72,7 +74,7 @@ Entregar um PR:   /pr-ready   (avalia, corrige, sync do body; tira de draft e ma
 Review manual:    /clear → /pair-review   (companheiro interativo sobre o staged, sem ruído da execução)
 Mudança pequena:  /quick-task
 Bug misterioso:   /investiga → root cause com fonte → /quick-task ou /sdd-plan
-Após PR fechar:   /sdd-learning
+Após PR fechar:   /sdd-learning → /sdd-close (arquiva SPEC+PLAN + marca ROADMAP)
 Projeto novo:     /sdd-init (uma vez)
 Quando precisar:  /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```

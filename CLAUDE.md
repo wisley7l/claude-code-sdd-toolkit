@@ -51,6 +51,7 @@ LICENSE
 - `/sdd-review` → review de PR/branch/diff, oferece gerar fixes via `/quick-task`
 - `/sdd-learning` → extrai aprendizados não-óbvios de IMPs/reviews e propõe registro em memória
 - `/sdd-confirm` → move drafts de `thoughts/decisions-draft/` pra memória após merge do PR
+- `/sdd-close` → arquiva o par **SPEC+PLAN concluído** (PR **mergeado**): move de `thoughts/specs/` e `thoughts/plans/` pra `closed/` em cada pasta + marca a entrada no ROADMAP como Concluído (mesma transição do `/roadmap` sync). Só age sob PR MERGED, confirmação individual, par junto (detecta PLAN→SPEC pela linha `SPEC:` do topo). Distinto de `old/` (descartadas, à mão). Nunca commita (`thoughts/` gitignored)
 - `/memory-organize` → reorganiza auto-memory: detecta órfãs/links quebrados, propõe sub-sumários quando MEMORY.md cresce
 - `/verifica` → verificação comportamental: roda o app, exercita os fluxos tocados, registra evidência no IMP. Nunca produção; side effects só com confirmação
 - `/investiga` → root cause de bug não-óbvio: hipóteses com mecanismo causal → evidência em subagents paralelos → causa com fonte → handoff. Alimenta blockers/lessons

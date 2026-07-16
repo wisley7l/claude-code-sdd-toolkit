@@ -32,6 +32,8 @@ Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd
 
 **`/roadmap`** — manages `thoughts/ROADMAP.md`: entries, GitHub issue imports, sync sections by PR status (Up next / Backlog / In progress / Done).
 
+**`/sdd-close`** — archives a **completed SPEC+PLAN pair** (PR **merged**): moves the docs from `thoughts/specs/` and `thoughts/plans/` into `closed/` under each folder and marks the ROADMAP entry as Done. Acts only on MERGED PRs, individual confirmation, pair kept together (detects PLAN→SPEC via the top `SPEC:` line). Distinct from `old/` (**discarded** specs/plans, managed by hand). Never commits (`thoughts/` is gitignored).
+
 ### Utilities
 
 **`/sdd-review`** — reviews a PR, branch, or diff via isolated subagents; offers to generate fixes via `/quick-task`.
@@ -50,7 +52,7 @@ Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd
 
 **`/worktree-detect`** — detects opportunities to isolate branches/PRs into worktrees.
 
-**`/modo-livre`** — autonomous mode toggle with three layers: broad allow (flows), **`ask` for `git commit`/`git push`** (human in the loop enforced by the harness — prompts in **any** permission mode, including `auto`) and deny for the dangerous ops (force push, `reset --hard`, `rm -rf`, publishes — always blocked). Compatible with the `auto` permission mode. Requires a session reload.
+**`/modo-livre`** — autonomous mode toggle with three layers: broad allow (flows), **`ask` for `git commit`/`git push`** (human in the loop enforced by the harness — prompts in **any** permission mode, including `auto`) and deny for the dangerous ops (force push, `reset --hard`, `rm -rf`, publishes — always blocked). Compatible with the `auto` permission mode. Requires a session reload. `/git-worktree` **enables this mode by default** in the worktree it creates (the new session opened there is born autonomous, no reload) — use `/git-worktree <branch> --ml-off` to create without it.
 
 **`/git-worktree`, `/git-remove-worktree`, `/sync-tests`, `/git-prune-branches`** — git and worktree utilities.
 
@@ -67,7 +69,7 @@ Normal feature:   /sdd-spec → /sdd-plan → /pr-draft → (cd <worktree> && cl
 Manual review:    /clear → /pair-review   (interactive companion over the staged diff, no execution noise)
 Small change:     /quick-task
 Mysterious bug:   /investiga → root cause with source → /quick-task or /sdd-plan
-After PR closes:  /sdd-learning
+After PR closes:  /sdd-learning → /sdd-close (archives SPEC+PLAN + marks ROADMAP)
 New project:      /sdd-init (once)
 When needed:      /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```

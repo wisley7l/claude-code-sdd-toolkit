@@ -150,7 +150,7 @@ Invoque a skill **git-worktree** com o nome da branch:
 /git-worktree <branch>
 ```
 
-A branch ja existe (acabamos de cria-la e pushar), entao o `/git-worktree` adiciona a worktree sobre ela sem recriar. Ele cuida de: copiar `thoughts/tests/`, centralizar o auto-memory via symlink, garantir `.worktrees/` no `.gitignore`, e reportar o caminho.
+A branch ja existe (acabamos de cria-la e pushar), entao o `/git-worktree` adiciona a worktree sobre ela sem recriar. Ele cuida de: copiar `thoughts/tests/`, centralizar o auto-memory via symlink, garantir `.worktrees/` no `.gitignore`, **ativar modo-livre na worktree por default** (a sessao nova aberta la ja nasce autonoma, pronta pro `/executor-plan` — sem reload) e reportar o caminho. Pra abrir a worktree sem modo-livre, invoque `/git-worktree <branch> --ml-off`.
 
 ### Passo 8 — Handoff final
 
