@@ -1,7 +1,7 @@
 ---
 description: Cria a especificação de comportamento (o QUÊ) — pesquisa o codebase e escreve a SPEC sem código/plano/tarefas. Antecede o /sdd-plan. Quick delega pra /quick-task.
 model: claude-opus-4-8
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(date *), Bash(pwd), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(date *), Bash(pwd), Bash(structure-cache *), Bash(structure-cache), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado na gist "Formação da especificação" por @parruda
 # https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3
 # Adaptado ao toolkit SDD: Constitution-first, Zero Inferencia ([Fonte]), Knowledge Verification Chain,
@@ -109,7 +109,9 @@ Leia o codigo real pra entender como o sistema funciona hoje e onde o recurso se
 
 Para varredura ampla (>3 queries, varios diretorios), use subagent `Agent` (`subagent_type: Explore`) — ele localiza e devolve so a sintese com `path:line`, preservando o contexto Opus principal.
 
-**Antes de reler codigo pra perguntas de estrutura/dependencia** (quem importa X, o que Y define, blast radius de mexer num arquivo), consulte o `structure-cache` (skill `structure-cache`): `structure-cache query --importers/--imports/--defs/--hotspots [--json]`. Se responder (exit 0), use — evita reler os fontes. Se `exit 3` (sem cache) ou stale, **fallback gracioso**: siga com Grep/Glob/Read ou Explore como acima. O cache e aceleracao, nunca dependencia; questoes de *logica* (nao estrutura) continuam exigindo leitura do codigo.
+**Estrutura/dependencia primeiro pelo `structure-cache`, nao pelo Grep.** Para "quem importa X, o que Y define, blast radius de mexer num arquivo", a PRIMEIRA acao e `structure-cache query --importers/--imports/--defs/--hotspots [--json]` — antes de reler os fontes. Exit 0 → use. `exit 3` (sem cache) → `structure-cache build` e reconsulte; stale → `structure-cache build --incremental`. Se ainda nao servir, **fallback gracioso**: Grep/Glob/Read ou Explore. Aceleracao, nunca dependencia; questoes de *logica* (nao estrutura) continuam exigindo leitura do codigo. (Ja no allowlist deste command — nao prompta.)
+
+**Ao delegar a pesquisa a um subagente `Explore`, repita essa diretiva NO PROMPT do subagente** — ele nao herda o corpo deste command; sem isso vai direto ao Grep e ignora o cache. Ex.: *"Para pergunta de dependencia/impacto, rode `structure-cache query …` ANTES de grepar; Grep/Read so no fallback."*
 
 Saidas desta etapa: atores reais, fluxos existentes, pontos de integracao, restricoes impostas pelo sistema atual.
 

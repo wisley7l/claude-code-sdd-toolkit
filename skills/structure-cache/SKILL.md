@@ -9,14 +9,15 @@ Um índice *shallow* da estrutura do código (imports + definições por arquivo
 
 ## Comando
 
-O motor é `scripts/structure-cache/build.py`. Prefira o comando instalado no PATH:
+O motor é `scripts/structure-cache/build.py`, exposto no PATH como `structure-cache` (atalho `sc`):
 
 ```
 structure-cache <build|check|query> [opções]
 ```
 
-Se não estiver no PATH (install opt-in ainda não feito), invoque o script direto:
-`python3 <toolkit>/scripts/structure-cache/build.py <...>` (o toolkit fica onde os commands SDD foram instalados). O `--root` é **auto-detectado** via `git rev-parse --show-toplevel` — rode de qualquer subdir do repo/worktree.
+Instale o comando com `scripts/install-structure-cache.sh` (cria wrappers em `~/.local/bin` apontando pro motor no repo; sem sudo, idempotente). Os commands SDD que usam o cache (`/sdd-plan`, `/sdd-spec`, `/pair-review`, `/sdd-learning`) já trazem `Bash(structure-cache *)` no allowlist — **não prompta**. Se o comando não estiver instalado, o fallback é `python3 <toolkit>/scripts/structure-cache/build.py <...>`. O `--root` é **auto-detectado** via `git rev-parse --show-toplevel` — rode de qualquer subdir do repo/worktree.
+
+> **Subagentes precisam ser instruídos explicitamente.** Um subagente `Explore`/`general-purpose` não herda o corpo do command que o lançou — se o prompt dele não mandar consultar o `structure-cache` antes de grepar, ele vai direto ao Grep e ignora o cache. Ao delegar pesquisa de estrutura/dependência, repita a diretiva no prompt do subagente (os commands `/sdd-plan` e `/sdd-spec` já fazem isso).
 
 ## Protocolo de consulta (consulta → fallback)
 

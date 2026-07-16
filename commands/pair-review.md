@@ -1,7 +1,7 @@
 ---
 description: Companheiro interativo de review manual — re-hidrata do staged + PLAN/IMP, valida fixes contra comentários humanos do PR, responde via subagentes Opus focados, aplica ajustes. Nunca commita sem escolha.
 model: claude-sonnet-5
-allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(git reset*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(lizard *)
+allowed-tools: Read, Edit, Write, Glob, Grep, Agent, Skill, AskUserQuestion, Bash(git diff*), Bash(git log*), Bash(git show*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git add*), Bash(git reset*), Bash(git commit*), Bash(gh *), Bash(npm *), Bash(npx *), Bash(bun *), Bash(bunx *), Bash(pnpm *), Bash(node *), Bash(go *), Bash(ls *), Bash(lizard *), Bash(structure-cache *), Bash(structure-cache)
 ---
 
 # Pair Review — companheiro do review manual

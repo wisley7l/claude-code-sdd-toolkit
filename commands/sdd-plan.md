@@ -1,7 +1,7 @@
 ---
 description: Consome a SPEC de comportamento (/sdd-spec) e gera o plano tecnico — pesquisa + tarefas TDD num doc auto-sized (Medium/Large/Complex). Quick delega pra /quick-task.
 model: claude-opus-4-8
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), Bash(structure-cache *), Bash(structure-cache), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Conceitos adaptados: doc auto-sized, Knowledge Verification Chain, memoria persistente,
@@ -180,7 +180,9 @@ Identifique:
 
 Use subagent `Agent` com `subagent_type: Explore` para pesquisas amplas (>3 queries).
 
-**Antes de reler codigo pra perguntas de estrutura/dependencia** (quem importa o arquivo do Contexto Tecnico, o que ele importa, blast radius, modulos mais acoplados), consulte o `structure-cache` (skill `structure-cache`): `structure-cache query --importers/--imports/--defs/--hotspots [--json]`. Exit 0 → use a resposta (nao releia os fontes). `exit 3` (sem cache) ou stale → **fallback gracioso**: Explore/Grep/Read como acima (mesmo padrao do Step 0 do knowledge cache no Passo 4). O cache acelera; nunca bloqueia.
+**Estrutura/dependencia primeiro pelo `structure-cache`, nao pelo Grep.** Para "quem importa o arquivo do Contexto Tecnico, o que ele importa, blast radius, modulos mais acoplados", a PRIMEIRA acao e `structure-cache query --importers/--imports/--defs/--hotspots [--json]` — antes de grepar/reler os fontes. Exit 0 → use a resposta (nao releia). `exit 3` (sem cache) → `structure-cache build` (barato, sem LLM) e reconsulte; stale → `structure-cache build --incremental`. Se ainda nao servir, **fallback gracioso**: Explore/Grep/Read. O cache acelera; nunca bloqueia. (Ja no allowlist deste command — nao prompta.)
+
+**Ao delegar a pesquisa a um subagente `Explore`, repita essa diretiva NO PROMPT do subagente** — ele nao herda o corpo deste command, entao sem isso vai direto ao Grep e ignora o cache. Ex.: *"Para qualquer pergunta de dependencia/impacto, rode `structure-cache query …` ANTES de grepar; use Grep/Read so no fallback (exit 3/stale)."*
 
 ### Passo 4 — Pesquisa externa (condicional)
 

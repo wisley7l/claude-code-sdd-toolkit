@@ -1,7 +1,7 @@
 ---
 description: Extrai reforco comportamental de IMPs, reviews e comentarios do PR — erro evitavel (o time corrigiu o agente) vira regra generica pra nao repetir; padrao que funcionou vira regra pra repetir. Generaliza a instancia em principio+gatilho. Propoe registro no auto-memory. Detecta o ultimo PR da branch ou aceita --pr <N>.
 model: claude-sonnet-5
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(git branch*), Bash(find *), Bash(stat *), Bash(date*), Bash(gh *)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(test*), Bash(ls *), Bash(mkdir *), Bash(realpath*), Bash(pwd), Bash(git worktree list*), Bash(git branch*), Bash(find *), Bash(stat *), Bash(date*), Bash(gh *), Bash(structure-cache *), Bash(structure-cache)
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Fecha o loop: implementacao + review humano -> aprendizado nao-obvio -> memoria persistente
