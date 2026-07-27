@@ -1,5 +1,5 @@
 ---
-description: Arquiva SPEC+PLAN concluídos (PR mergeado) — move o par pra thoughts/specs/closed/ e thoughts/plans/closed/ e marca a entrada no ROADMAP como Concluído. Distinto de `old/` (descartadas). Só age sob PR MERGED; confirmação individual; nunca commita.
+description: Arquiva SPEC+PLAN concluídos (PR mergeado) — move o par pra thoughts/specs/closed/ e thoughts/plans/closed/ e move o item do roadmap pra concluido/. Distinto de `old/` (descartadas). Só age sob PR MERGED; confirmação individual; nunca commita.
 model: claude-sonnet-5
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Bash(mkdir *), Bash(mv *), Bash(git worktree list*), Bash(git status*), Bash(gh *), Bash(realpath *), Bash(pwd), Bash(find *), Bash(basename *), Bash(dirname *), Bash(grep *), Bash(head *), Bash(cat *)
 ---
@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash(ls *), Bash(mkdir *), Bash(mv
 
 Você move o **par SPEC+PLAN de um trabalho concluído** (PR mergeado) das pastas vivas
 `thoughts/specs/` e `thoughts/plans/` para `thoughts/specs/closed/` e `thoughts/plans/closed/`,
-e **marca a entrada correspondente no ROADMAP como Concluído (merged)**.
+e **move o item correspondente do roadmap pra `concluido/`** (+ mostra o que isso desbloqueou).
 
 **Filosofia**: `thoughts/specs/` e `thoughts/plans/` guardam os docs **vivos** (em fila,
 em progresso). Quando o PR entra na main, o par vira histórico — sai da raiz pra `closed/`,
@@ -27,7 +27,7 @@ arquiva em `closed/` — ele sinaliza e sugere `old/`, mas deixa a mudança pro 
 - **Confirmação individual, nunca batch.** Um par por vez, mostrando SPEC + PLAN + PR antes.
 - **Par junto.** Não arquive a SPEC sem o(s) PLAN(s) dela nem vice-versa (salvo caso de borda explícito).
 - **Nunca commita nem pusha.** `thoughts/` é gitignored por convenção — `mv` simples basta.
-- **ROADMAP: migração sem perda.** Ao marcar Concluído, preserve NNN e título; só ajusta status/link (idêntico ao `/roadmap` sync).
+- **ROADMAP: migração sem perda.** Ao concluir, `mv` o item pra `concluido/` preservando o arquivo inteiro (NNN, título, `Depende de:`, `Docs:`); o wikilink não quebra. Depois regenere o hub e recalcule os 🔓 Desbloqueados.
 - **Em dúvida, preserve.** Não mover é reversível; mover errado gera confusão. Rode de novo depois.
 
 ## Pré-cheques
@@ -76,7 +76,7 @@ Se argumento foi passado, restrinja a coleta ao par correspondente antes de segu
 
 Ordem de resolução (pare no primeiro que resolver):
 
-1. **ROADMAP** (`thoughts/ROADMAP.md`, se existir): ache a entrada com o mesmo **NNN** (ou slug) e leia o `#<PR>` dela.
+1. **ROADMAP** (vault `thoughts/roadmap/`, se existir): ache o item com o mesmo **NNN** (ou slug/`plan:`) e leia o `pr:` dele. Se só existir o `thoughts/ROADMAP.md` antigo, avise que precisa migrar (`/roadmap migrar`) e siga pela busca no GitHub.
 2. **Busca no GitHub** pelo slug:
    ```bash
    gh pr list --search "<slug em palavras>" --state all --json number,title,state,mergedAt,headRefName --limit 5
@@ -100,12 +100,12 @@ Par concluído:
   SPEC:  thoughts/specs/spec-<TS>-<slug>.md
   PLAN:  thoughts/plans/PLAN-<...>-<slug>.md   (+ outros PLANs do mesmo grupo, se houver)
   PR:    #N "<título>" — MERGED em <data>
-  ROADMAP: entrada NNN <"encontrada em <seção>" | "não encontrada">
+  ROADMAP: item NNN <"encontrado em <pasta>" | "não encontrado">
 
 Ao confirmar:
   1. move SPEC → thoughts/specs/closed/
   2. move PLAN(s) → thoughts/plans/closed/
-  3. marca a entrada NNN como Concluído (merged) no ROADMAP  [se existir]
+  3. move o item NNN → thoughts/roadmap/concluido/  [se existir]
 
   (s) Arquivar    (k) Skip    (a) Abortar tudo
 ```
@@ -121,11 +121,13 @@ Se `(s)`:
    mv "$ROOT/thoughts/plans/PLAN-<...>.md"  "$ROOT/thoughts/plans/closed/"   # cada PLAN do grupo
    ```
    Se um destino já tiver arquivo de mesmo nome, PARE nesse par e avise (não sobrescreva).
-3. **ROADMAP** (se a entrada existe): aplique a mesma transição do `/roadmap` sync — mova a linha
-   pra `## Concluído (merged)`, marque `[x]`, normalize o link pra `→ [PR #N](url)`, **preservando
-   NNN e título**. Se a entrada já estava em Concluído, apenas confirme que está `[x]` e com o link.
-   Se **não há** entrada no ROADMAP, não invente uma — apenas registre no sumário.
-4. Sumarize: "✅ Arquivado: `<slug>` (SPEC + N PLAN(s)) → closed/ · ROADMAP: `<atualizado | sem entrada>`".
+3. **ROADMAP** (se o item existe): `mv` o arquivo do item pra `thoughts/roadmap/concluido/`, **preservando
+   o arquivo inteiro** (NNN, título, `Depende de:`, `Docs:`) — o wikilink não quebra. Se o item já estava
+   em `concluido/`, apenas confirme. Se **não há** item no roadmap, não invente um — apenas registre no sumário.
+   Depois **regenere o hub** `thoughts/roadmap/ROADMAP.md` e **recalcule os 🔓 Desbloqueados agora** — itens de
+   `backlog/` cujas dependências ficaram todas em `concluido/` com este merge (reference `roadmap-item.md`, algoritmo).
+   O grafo do Obsidian se atualiza sozinho a partir dos links — não há mermaid a regenerar.
+4. Sumarize: "✅ Arquivado: `<slug>` (SPEC + N PLAN(s)) → closed/ · ROADMAP: `<item → concluido/ | sem item>` · 🔓 Desbloqueou: `<NNN[, MMM] | nada>`".
 
 Se `(k)`: preserve, siga pro próximo. Se `(a)`: pare a varredura, vá pro sumário.
 
@@ -134,7 +136,8 @@ Se `(k)`: preserve, siga pro próximo. Se `(a)`: pare a varredura, vá pro sumá
 ```
 /sdd-close concluído:
   ✅ Arquivados (SPEC+PLAN → closed/):   N
-  📋 ROADMAP atualizado:                 M entradas
+  📋 ROADMAP (itens → concluido/):       M
+  🔓 Desbloqueados agora:                D
   ⏸️ Skip (PR aberto):                   K
   ⚠️ PR fechado sem merge (sugerir old/): J
   ❓ Sem PR resolvido:                    P
@@ -148,13 +151,13 @@ Pares vivos remanescentes em thoughts/{specs,plans}/: <count>
 - **Multi-PR na mesma SPEC**: a SPEC só vai pra `closed/` quando **todos** os PLANs dela estiverem mergeados. Se um ainda está aberto, arquive só os PLANs já mergeados e deixe a SPEC na raiz; avise no sumário.
 - **Colisão de nome em `closed/`**: não sobrescreva. Pare nesse par e avise (provavelmente já foi arquivado).
 - **PR `reopened` após `merged`**: trate como MERGED (o código entrou na main).
-- **Múltiplos PRs MERGED pro mesmo slug**: liste e peça pro usuário escolher qual referenciar no ROADMAP.
+- **Múltiplos PRs MERGED pro mesmo slug**: liste e peça pro usuário escolher qual item do roadmap referenciar.
 - **`gh` falha (rede/rate limit)**: não mova nada. Peça pra rodar de novo mais tarde.
-- **Sem `thoughts/ROADMAP.md`**: arquive os arquivos normalmente; só pule a etapa de ROADMAP e diga isso no sumário.
+- **Sem vault `thoughts/roadmap/`**: arquive os arquivos normalmente; só pule a etapa de ROADMAP e diga isso no sumário. Se houver o `thoughts/ROADMAP.md` antigo, sugira `/roadmap migrar`.
 
 ## Relação com outros commands
 
 - `/sdd-spec` / `/sdd-plan` **criam** os docs vivos em `thoughts/specs/` e `thoughts/plans/`.
-- `/roadmap` (sync) **move a entrada** pra Concluído por PR merged — `/sdd-close` aplica a mesma transição e **adiciona** o arquivamento dos arquivos. Rodar `/roadmap` depois é idempotente.
+- `/roadmap` (sync) **move o item** pra `concluido/` por PR merged — `/sdd-close` aplica a mesma transição e **adiciona** o arquivamento dos docs SPEC/PLAN. Rodar `/roadmap` depois é idempotente.
 - `/sdd-learning` **extrai aprendizado** do PR mergeado (input complementar; não move arquivos).
 - `old/` (descartadas) é gerenciado manualmente — `/sdd-close` só **sinaliza** candidatos, nunca move pra lá.

@@ -1,58 +1,79 @@
 ---
-description: Gerenciar ROADMAP.md — adicionar entradas, importar de issues GH, mostrar estado
+description: Gerenciar o roadmap (vault Obsidian) — adicionar itens, ligar dependências, sincronizar por PR, migrar do formato antigo
 model: claude-haiku-4-5-20251001
-allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git log*), Bash(git status*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *)
+allowed-tools: Read, Edit, Write, Glob, Grep, Bash(git worktree list*), Bash(git log*), Bash(git status*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(mv *), Bash(find *), Bash(basename *)
 ---
 
-# Roadmap — Visao Multi-Feature
+# Roadmap — Visao Multi-Feature (vault Obsidian)
 
-Voce gerencia `thoughts/ROADMAP.md` — a visao de cima dos problemas/features do projeto.
+Voce gerencia o roadmap do projeto em `thoughts/roadmap/` — a visao de cima dos problemas/features.
 
-O eixo das secoes e o **estado real do trabalho (o PR)**, NAO a presenca de PLAN. Quatro secoes:
+O roadmap e um **vault Obsidian**: cada item e um arquivo `.md`, cada dependencia e um wikilink `[[...]]`, e o **grafo e nativo** (o Obsidian desenha as arestas a partir dos links — nao se gera mermaid). O contrato completo do arquivo de item, dos algoritmos e da migracao esta na reference `roadmap-item.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): item = `thoughts/roadmap/<status>/NNN-slug.md` com frontmatter (`id`, `titulo`, `pr`, `criado`, `plan`, `next`) + corpo com `**Depende de:** [[MMM-slug]]` e `**Docs:** [[SPEC]] · [[PLAN]]`; status = a pasta (`backlog/` · `em-progresso/` · `concluido/`); dependencia = wikilink; sem ciclos; NNN sequencial nunca reusado.
 
-| Secao | Significado |
+O eixo do status e o **estado real do trabalho (o PR)**, NAO a presenca de PLAN. Tres pastas de status + duas visoes derivadas no hub:
+
+| Onde | Significado |
 |---|---|
-| `## 🔴 Próximos (fila priorizada)` | Fila curta, curada manualmente — o que fazer a seguir. O sync NAO mexe aqui automaticamente. |
-| `## Backlog (resto)` | Tudo identificado mas sem PR aberto. Sem ordem. Pode ter PLAN ou nao. |
-| `## Em progresso (PR aberto)` | Tem PR aberto e ativo. |
-| `## Concluído (merged)` | PR merged. |
+| `backlog/` | Tudo identificado mas sem PR aberto. Pode ter PLAN ou nao. |
+| `em-progresso/` | Tem PR aberto e ativo. |
+| `concluido/` | PR merged. |
+| Hub: `## 🔴 Próximos` | Itens com `next: true` — fila curta curada **manualmente**. O sync NAO liga isso sozinho. |
+| Hub: `## 🔓 Desbloqueados agora` | **Derivado** — itens de `backlog/` cujas dependencias estao todas em `concluido/`. E daqui que sai "o proximo passo apos um merge". |
 
-**Filosofia**: minimo de ceremonia. Cada entrada tem 1 linha. O detalhe vive no PLAN/IMP/PR correspondente.
+**Filosofia**: minimo de ceremonia. Cada item e um arquivo enxuto (frontmatter + 2-3 linhas). O detalhe vive no PLAN/IMP/PR linkado.
+
+**Dependencia entre PRs (`Depende de:`)**: quando a ordem importa (item-B so comeca depois do item-A mergear), o corpo de B carrega `**Depende de:** [[A-slug]]`. E dai que o grafo do Obsidian desenha a seta, e e dai que o `## 🔓 Desbloqueados agora` se calcula. Contrato completo: reference `roadmap-item.md`.
+
+**Quem alimenta o roadmap** (alem do `add` manual/issue deste command):
+- `/sdd-plan` (e `/sdd-plan-eco`) cria **1 item por PR previsto** em `backlog/` ao escrever um PLAN (PLAN multi-PR = N itens com `Depende de:` entre slices sequenciais).
+- `/pr-draft` **move** o item do slice de `backlog/` pra `em-progresso/` (+ preenche `pr:`) ao abrir o draft.
+- `/roadmap` sync e `/sdd-close` movem pra `concluido/` no merge.
+Ou seja: o sync deste command reconcilia por status de PR, mas os itens ja chegam populados pelo fluxo SDD.
 
 **Escopo**: ver memoria de feedback do projeto sobre o que entra no roadmap (ex: backend-only) — respeitar a regra vigente. Em duvida, perguntar.
 
 ## Resolucao do diretorio root
 
 ```bash
-git worktree list | head -1 | awk '{print $1}'
+ROOT=$(git worktree list | head -1 | awk '{print $1}')
+ROADMAP_DIR="$ROOT/thoughts/roadmap"
+HUB="$ROADMAP_DIR/ROADMAP.md"
 ```
 
-Use esse caminho como base para `thoughts/ROADMAP.md`.
+Use `$ROADMAP_DIR` como base do vault.
+
+## Deteccao de formato (rode SEMPRE antes de operar)
+
+- Existe `$ROADMAP_DIR/` com itens (`backlog/`, `em-progresso/` ou `concluido/`) → **formato novo**, siga o modo pedido.
+- Existe `$ROOT/thoughts/ROADMAP.md` (arquivo unico antigo) e **nao** existe `$ROADMAP_DIR/` → **formato antigo**: avise e ofereca **migrar** (`/roadmap migrar`) antes de qualquer outra operacao. Nao opere no arquivo antigo.
+- Nao existe nenhum → primeiro `add`/`sdd-plan` cria o vault do zero (template do hub na reference).
 
 ## Modos de uso
 
 | Invocacao | O que faz |
 |---|---|
-| `/roadmap` (sem args) | Mostra estado atual + sincroniza secoes por status de PR + sugere proximos passos |
-| `/roadmap add "<descricao>"` | Adiciona entrada nova ao Backlog (resto) |
-| `/roadmap add #123` | Busca issue do GH via `gh` e adiciona ao Backlog (resto) com link, titulo e corpo |
+| `/roadmap` (sem args) | Sincroniza status por PR (move itens entre pastas) + recalcula 🔓 Desbloqueados + regenera o hub + mostra estado |
+| `/roadmap add "<descricao>"` | Cria item novo em `backlog/`. Aceita ` dep: NNN[, MMM]` no fim pra ja ligar dependencia |
+| `/roadmap add #123` | Busca issue do GH via `gh` e cria item em `backlog/` com link, titulo e corpo |
+| `/roadmap dep NNN <- MMM[, PPP]` | Liga/atualiza a(s) dependencia(s) do item NNN (passa a depender de MMM, PPP) |
+| `/roadmap dep NNN clear` | Remove todas as dependencias de NNN |
+| `/roadmap migrar` | Converte o `thoughts/ROADMAP.md` antigo (arquivo unico) pro vault `thoughts/roadmap/` |
 
 ## Configuracao Inicial
 
-### 1. Resolver caminho
+Se `$ROADMAP_DIR/` nao existir, crie a estrutura ao primeiro item:
 ```bash
-ROOT=$(git worktree list | head -1 | awk '{print $1}')
-ROADMAP="$ROOT/thoughts/ROADMAP.md"
+mkdir -p "$ROADMAP_DIR/backlog" "$ROADMAP_DIR/em-progresso" "$ROADMAP_DIR/concluido"
 ```
+E gere o hub `ROADMAP.md` com o template da reference.
 
-### 2. Garantir que existe
-Se nao existir, crie usando o template (final deste documento).
-
-### 3. Identificar o modo
-- Argumentos vazios → modo "sync"
-- Comeca com `add "..."` → modo "add manual"
-- Comeca com `add #...` → modo "add issue"
-- Outro padrao → mostre help e saia
+Identificar o modo:
+- Argumentos vazios → **sync**
+- Comeca com `add "..."` → **add manual**
+- Comeca com `add #...` → **add issue**
+- Comeca com `dep ` → **dependencia**
+- `migrar` → **migracao**
+- Outro → mostre help e saia
 
 ---
 
@@ -62,14 +83,12 @@ Se nao existir, crie usando o template (final deste documento).
 
 ### Passos
 
-1. Le o ROADMAP atual
-2. Decide o proximo numero (NNN) baseado em todas as entradas existentes (max + 1, com 3 digitos)
-3. Adiciona ao **Backlog (resto)**:
-```markdown
-- [ ] NNN — <descricao> — [criado: DD-MM-YYYY]
-```
-4. Salva
-5. Informa: `Adicionado ao Backlog: NNN — <descricao>`
+1. Le todos os itens existentes (varre as 3 pastas) pra achar o proximo NNN.
+2. Decide o NNN: `max(NNN de todas as pastas) + 1`, 3 digitos. Gera o `slug` (3-6 palavras kebab-case do titulo).
+3. Se a descricao termina com ` dep: MMM[, PPP]`, separe: o resto e o titulo; cada NNN vira dependencia (valide que existe como item — ignore+sinalize os inexistentes).
+4. Cria `$ROADMAP_DIR/backlog/NNN-slug.md` com o frontmatter + corpo (reference `roadmap-item.md`). Inclui `**Depende de:** [[MMM-slug]]` so se houver dependencia.
+5. **Regenera o hub** (`ROADMAP.md`) e salva.
+6. Informa: `Adicionado ao Backlog: NNN — <titulo>` (+ `· depende de MMM` se houver).
 
 ---
 
@@ -83,102 +102,117 @@ Se nao existir, crie usando o template (final deste documento).
 ```bash
 gh issue view 123 --json title,body,url,labels,number
 ```
+2. Verifica se ja existe item que referencia `#123` (varre as pastas). Se sim, informe e saia.
+3. Decide o proximo NNN, gera o slug do titulo da issue.
+4. Cria `$ROADMAP_DIR/backlog/NNN-slug.md`. No corpo, linke a issue: `**Issue:** [#123](<url>)`. Se o body da issue tem contexto relevante (>1 linha), pergunte se deve incluir 1 linha de resumo.
+5. **Regenera o hub** e salva. Informa.
 
-2. Verifica se ja esta no roadmap (busca por `#123` ou pelo numero da issue). Se sim, informe e saia.
+---
 
-3. Le o ROADMAP atual, decide o proximo NNN
+## Modo: Dependencia
 
-4. Adiciona ao **Backlog (resto)** com link e resumo:
-```markdown
-- [ ] NNN — [<titulo da issue>](<url da issue>) [#123] — [criado: DD-MM-YYYY]
-```
+`/roadmap dep NNN <- MMM[, PPP]` (ligar) ou `/roadmap dep NNN clear` (desligar).
 
-5. Se a issue tem body relevante (>1 linha de contexto), pergunte se deve adicionar um resumo de 1 linha.
+Define **a ordem entre PRs**: NNN so comeca depois que MMM (e PPP) mergearem. E dai que o grafo desenha as setas e o 🔓 Desbloqueados se calcula.
 
-6. Salva e informa.
+### Passos
+
+1. Localize o item NNN (varra as pastas). Se nao existir, informe e saia.
+2. **`clear`**: remova a linha `**Depende de:** ...` do corpo de NNN, se houver.
+   **`<- MMM[, PPP]`**: valide que cada MMM/PPP existe (os inexistentes sao ignorados+sinalizados). Rejeite auto-dependencia (`NNN <- NNN`). Escreva/substitua a linha `**Depende de:** [[MMM-slug]], [[PPP-slug]]` no corpo de NNN.
+3. **Guarda de ciclo**: seguindo os `Depende de:` a partir de NNN, se alcancar NNN de volta, a nova aresta fecha um ciclo — **nao aplique** e avise (ordem impossivel).
+4. **Regenera o hub** e salva.
+5. Informe: `NNN agora depende de: MMM, PPP` (ou `NNN sem dependencias`).
 
 ---
 
 ## Modo: Sync (sem args)
 
-O sync e **PR-driven**: o que dita a secao de cada item e o status do(s) PR(s) que ele referencia, nao a existencia de arquivo PLAN/IMP.
+O sync e **PR-driven**: o que dita a pasta de cada item e o status do(s) PR(s) que ele referencia (`pr:` no frontmatter), nao a existencia de PLAN/IMP.
 
 ### Passos
 
-1. Le o ROADMAP atual e extrai cada entrada com seu NNN e qualquer `#<PR>` referenciado.
+1. Varre as 3 pastas e extrai cada item (NNN, `pr:`, `Depende de:`).
 
-2. Para cada entrada que referencia um PR, consulta o status:
+2. Para cada item com `pr:` preenchido, consulta o status:
 ```bash
 gh pr view <N> --json state,mergedAt,updatedAt,title
 ```
-   Aplica as transicoes:
-   - **merged** → mover para **Concluído (merged)**, marcar `[x]`, normalizar o link para `→ [PR #N](url)`.
-   - **open com atividade recente** (updatedAt < ~4 semanas) → **Em progresso (PR aberto)**.
-   - **open mas parado** (updatedAt > ~4 semanas) → NAO move sozinho: sinaliza ao usuario sugerindo rebaixar para Backlog com nota `WIP parado desde DD-MM`.
-   - **closed sem merge** → sinaliza (PR morto); sugere voltar ao **Backlog (resto)** preservando o contexto.
+   Aplica as transicoes (movendo o **arquivo** entre pastas com `mv`):
+   - **merged** → `mv` pra `concluido/`.
+   - **open com atividade recente** (updatedAt < ~4 semanas) → garantir em `em-progresso/`.
+   - **open mas parado** (updatedAt > ~4 semanas) → NAO move sozinho: sinaliza sugerindo voltar pra `backlog/` (com nota `WIP parado desde DD-MM`).
+   - **closed sem merge** → sinaliza (PR morto); sugere voltar pra `backlog/` preservando contexto.
 
-3. **🔴 Próximos** e **Backlog (resto)** sao curados manualmente — o sync nao promove/rebaixa entre eles automaticamente. Apenas: se um item de Próximos/Backlog ganhou PR aberto, move para Em progresso; se foi concluido, para Concluído.
+   Mover entre pastas nao quebra wikilink (Obsidian resolve por nome). Nao e `git mv` (`thoughts/` e gitignored).
 
-4. Detecta PRs abertos do autor que NAO tem entrada no roadmap:
+3. **🔴 Próximos** (`next: true`) e o conteudo de `backlog/` sao curados manualmente — o sync nao liga `next:` sozinho.
+
+4. Detecta PRs abertos do autor que NAO tem item no roadmap:
 ```bash
 gh pr list --author "@me" --state open --json number,title,headRefName
 ```
-   Para cada, mostre ao usuario e pergunte se quer adicionar (respeitando o escopo vigente do roadmap — ex: backend-only).
+   Para cada, mostre e pergunte se quer adicionar (respeitando o escopo vigente — ex: backend-only).
 
-5. Apresente resumo:
+5. **Recalcula 🔓 Desbloqueados agora**: item de `backlog/` com `Depende de:` cujas deps estao **todas** em `concluido/` (reference `roadmap-item.md`, algoritmo). E o "proximo passo" apos os merges desta rodada.
+
+6. **Regenera o hub** `ROADMAP.md` (linka todos, agrupa por pasta, lista 🔴 Próximos e 🔓 Desbloqueados). Sinalize links orfaos (`[[...]]` apontando pra item inexistente) e ciclos.
+
+7. Apresente resumo:
 ```
 Roadmap sincronizado (PR-driven):
 
 - 🔴 Próximos: [N]
+- 🔓 Desbloqueados agora: [D]
 - Backlog: [M]
 - Em progresso: [P] (PRs abertos)
 - Concluído: [R] (moveu S por merge)
 
-Sinais: [T] PRs parados (>4 sem) · [U] PRs fechados sem merge · [V] PRs abertos sem entrada
+Sinais: [T] PRs parados (>4 sem) · [U] PRs fechados sem merge · [V] PRs abertos sem item · [W] links órfãos
 ```
 
-6. Salva o ROADMAP atualizado.
+8. Salva.
 
 ---
 
-## Template ROADMAP.md
+## Modo: Migracao
 
-Quando criar pela primeira vez:
+`/roadmap migrar` — converte o `thoughts/ROADMAP.md` antigo (arquivo unico) pro vault `thoughts/roadmap/`.
 
-```markdown
-# Roadmap
+### Passos
 
-> Visao multi-feature do projeto. O eixo das secoes e o **estado real do trabalho (o PR)**, nao a presenca de PLAN.
-> 🔴 Próximos = fila priorizada · Backlog = resto (sem ordem) · Em progresso = PR aberto ativo · Concluído = merged.
-> `/roadmap add "<descricao>"` ou `/roadmap add #issue` para adicionar · `/roadmap` sincroniza status via PR.
-
-## 🔴 Próximos (fila priorizada)
-
-[Fila curta do que fazer a seguir — curada manualmente]
-
-## Backlog (resto)
-
-[Tudo identificado mas sem PR aberto]
-
-## Em progresso (PR aberto)
-
-[Itens com PR aberto e ativo]
-
-## Concluído (merged)
-
-[Itens entregues — ver PR/IMP para detalhes]
+1. **Confirme o gatilho**: existe `$ROOT/thoughts/ROADMAP.md` e **nao** existe `$ROADMAP_DIR/` com itens. Se `$ROADMAP_DIR/` ja tem itens → avise "ja migrado" e saia (idempotente).
+2. Siga o **algoritmo de migracao** da reference `roadmap-item.md` (parse das entradas → pasta por secao → 1 arquivo por entrada com frontmatter → `dep:` vira `**Depende de:** [[...]]` → `PLAN:` vira `**Docs:** [[...]]` → descarta o bloco mermaid → gera hub → backup do antigo).
+3. **Mostre o de-para ANTES de escrever** e peca confirmacao:
 ```
+Migração do ROADMAP (antigo → vault Obsidian):
+
+  Backlog:      [M] itens → backlog/
+  Em progresso: [P] itens → em-progresso/
+  Concluído:    [R] itens → concluido/
+  🔴 Próximos:  [N] itens marcados next: true
+  Dependências: [D] arestas [[...]] preservadas
+
+  Antigo ROADMAP.md → backup em roadmap/_migrado-de-ROADMAP.md.bak
+
+  (s) Migrar    (n) Cancelar
+```
+4. Se `(s)`: cria as pastas, escreve os itens, gera o hub, move o antigo pro `.bak`. Sinalize links orfaos/ciclos encontrados.
+5. Sumarize: "✅ Migrado: [K] itens → `thoughts/roadmap/` · hub regenerado · antigo em `.bak`".
 
 ---
 
 ## Guardrails
 
-- **NNN sequencial**: nunca reuse numero. Sempre `max(numeros existentes) + 1`
-- **Nunca duplique entradas**: antes de adicionar issue, verifique se ja existe (por numero #)
-- **Migracao sem perda**: ao mover entre secoes, preserve NNN e titulo. So ajusta o link/status
-- **Sync e PR-driven**: a secao segue o status do PR (merged/open/closed), nao a presenca de PLAN/IMP
-- **Próximos e manual**: o sync nunca promove itens para 🔴 Próximos sozinho — isso e priorizacao humana
-- **PRs parados/fechados**: o sync sinaliza mas nao rebaixa sozinho — pede confirmacao
-- **GitHub via `gh` CLI**: nunca tokens manuais
-- **1 linha por entrada**: detalhes vivem no PLAN/IMP/PR, nao no roadmap
-- **Escopo do roadmap**: respeitar a regra vigente (ex: backend-only, via memoria de feedback do projeto)
+- **NNN sequencial**: nunca reuse numero. Sempre `max(NNN de todas as pastas) + 1`. E o id estavel do no no grafo.
+- **Nunca duplique itens**: antes de adicionar issue, verifique se ja existe (por `#N`).
+- **Migracao sem perda**: ao mover item entre pastas, preserve o arquivo inteiro (NNN, titulo, `Depende de:`, `Docs:`); so muda a pasta (status) e o `pr:` quando aplicavel.
+- **Sync e PR-driven**: a pasta segue o status do PR (merged/open/closed), nao a presenca de PLAN/IMP.
+- **🔴 Próximos e manual**: o sync nunca liga `next: true` sozinho — isso e priorizacao humana.
+- **PRs parados/fechados**: o sync sinaliza mas nao rebaixa sozinho — pede confirmacao.
+- **GitHub via `gh` CLI**: nunca tokens manuais.
+- **1 item = 1 arquivo enxuto**: detalhes vivem no PLAN/IMP/PR linkado, nao no item.
+- **Escopo do roadmap**: respeitar a regra vigente (ex: backend-only, via memoria de feedback do projeto).
+- **O grafo e nativo, nunca se edita a mao**: as arestas saem dos `[[links]]` do `Depende de:`/`Docs:`. Pra mudar o desenho, mude o `Depende de:` (via `/roadmap dep`). Nao existe mais bloco mermaid.
+- **`Depende de:` = ordem entre PRs**: NNN depende de MMM significa "NNN nao comeca antes de MMM mergear". Sem ciclos; NNN referenciado tem que existir (senao vira no fantasma no grafo — sinalize).
+- **Vault sob `thoughts/` (gitignored)**: `mv`/`Write` simples, nunca `git mv`, nunca commit/push.

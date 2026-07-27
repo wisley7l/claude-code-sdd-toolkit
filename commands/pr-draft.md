@@ -2,7 +2,7 @@
 description: Abre PR inicial em draft a partir do plano — branch, empty commit, title/body da SPEC de comportamento, worktree via /git-worktree. `sync` reescreve o body pós-implementação como prévia pro reviewer.
 model: claude-sonnet-5
 argument-hint: [nome-da-branch | sync]
-allowed-tools: Read, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git checkout*), Bash(git switch*), Bash(git commit*), Bash(git push*), Bash(git remote show origin*), Bash(git rev-parse*), Bash(git log*), Bash(gh *), Bash(ls *), Bash(find *), Bash(mkdir *), Bash(pwd)
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, AskUserQuestion, Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(git checkout*), Bash(git switch*), Bash(git commit*), Bash(git push*), Bash(git remote show origin*), Bash(git rev-parse*), Bash(git log*), Bash(gh *), Bash(ls *), Bash(find *), Bash(mkdir *), Bash(pwd)
 ---
 
 # PR Draft — Kickoff de feature
@@ -27,6 +27,7 @@ Voce abre o **pull request inicial em draft** pra uma feature que ja foi planeja
 - **Draft sempre**: o PR nasce `--draft`. Sair de draft e acao humana, depois da implementacao
 - **Empty commit e andaime**: o unico proposito do commit vazio e dar ao PR um diff inicial. O codigo real vem no worktree
 - **Branch default intocada**: ao final, o root **volta pra branch default**. Todo trabalho acontece na worktree
+- **Promove o ROADMAP**: ao abrir o draft, o item do slice em `thoughts/roadmap/backlog/` (criado pelo `/sdd-plan`) e movido pra `em-progresso/` com o `#PR`. Isso mexe no **vault local** (gitignored), NUNCA no body do PR (o body jamais cita ROADMAP)
 - **Nunca force**: sem `--force`, sem reescrever historico, sem deletar branch
 - **Fallback manual quando bloqueado**: se `git push` ou `gh pr create` for negado por permissao (ou `gh` nao autenticado), nao desista nem invente — passe a sequencia exata de comandos pro usuario rodar e **espere ele concluir** antes de seguir pro worktree
 
@@ -132,7 +133,24 @@ git push -u origin "<branch>"
 gh pr create --draft --base "$DEFAULT" --head "<branch>" --title "<title>" --body-file "$BODY_FILE"
 ```
 
-Capture a URL do PR retornada pelo `gh pr create`.
+Capture a URL **e o numero** do PR retornados pelo `gh pr create`.
+
+### Passo 5.5 — Promover o item no ROADMAP (backlog/ → em-progresso/)
+
+Mexe no vault **local** `$ROOT/thoughts/roadmap/` (gitignored) — **nunca no body do PR**. Objetivo: o PR aberto sai de `backlog/` e vira visivel em `em-progresso/`, com o `#N`. Contrato do item: reference `roadmap-item.md`.
+
+**1. Localizar o vault**: `$ROOT/thoughts/roadmap/`. Se so existir o `thoughts/ROADMAP.md` antigo (arquivo unico), avise que precisa migrar (`/roadmap migrar`) e crie o item ja no vault novo. Se nao existir nada, este PR nasceu fora do fluxo `/sdd-plan` — crie a estrutura do vault e adicione **1 item novo** direto em `em-progresso/` (NNN = max+1) com `pr: #N`. Siga pro Passo 6.
+
+**2. Achar o item do slice**: procure em `backlog/` o item cujo `plan:` (frontmatter) casa com o PLAN detectado no Passo 2, ou com o slug da branch.
+- **1 item** → e esse.
+- **>1 itens** (PLAN multi-PR): case pelo slug/titulo do slice que esta branch cobre; se ambiguo, liste os itens e **pergunte** (AskUserQuestion) qual slice este PR fecha.
+- **0 itens** (PLAN antigo, sem rastro, ou branch passada em `$ARGUMENTS`): crie 1 item novo direto em `em-progresso/` (NNN = max+1) — nao volte pro `/sdd-plan` so por isso.
+
+**3. Promover**: `mv` o arquivo do item de `backlog/` pra `em-progresso/` (preserva NNN/titulo/`Depende de:`/`Docs:` — o wikilink nao quebra) e preencha `pr: #N` no frontmatter + adicione o link `[PR #N](url)` no corpo. Os demais itens do mesmo PLAN (PRs futuros) ficam em `backlog/` — e o ponto: nenhum esquecido.
+
+**4. Regenera o hub** `thoughts/roadmap/ROADMAP.md` (o item agora aparece em Em progresso; reference `roadmap-item.md`). O grafo do Obsidian se atualiza sozinho a partir dos links — nao ha mermaid a regenerar.
+
+**5.** Se `gh`/PR foi pro Modo Manual (PR ainda nao criado), faca esta promocao (+ regeneracao do hub) **depois** que o usuario confirmar a URL/numero do PR (ver Modo Manual, passo final).
 
 ### Passo 6 — Devolver o root pra branch default
 
@@ -161,6 +179,7 @@ PR draft aberto: <url-do-pr>
 Branch: <branch>  (base: <DEFAULT>)
 Worktree: <caminho-absoluto-da-worktree>
 Root devolvido pra: <DEFAULT>
+Roadmap: item NNN movido pra em-progresso/ (#N)  <!-- ou "sem item — criado novo" / "vault ausente" / "formato antigo — migrar" -->
 
 Pra continuar a implementacao isolada:
 
@@ -231,7 +250,7 @@ Issue: <link, se houver>
 **Guardrail — body é público, não vaze artefato interno**: o body do PR é lido por gente que NÃO tem acesso ao seu ambiente. NUNCA inclua no body:
 - **Link de sessão do Claude** (`https://claude.ai/code/session_...`, IDs de sessão/conversa) — privado, sem valor pro reviewer. O rodapé `🤖 Generated with [Claude Code](https://claude.com/claude-code)` é o único marcador permitido.
 - **Caminhos internos** de `thoughts/` (SPEC `thoughts/specs/...`, PLAN `thoughts/plans/...`, IMP `thoughts/history/...`) — são locais/não-versionados, o reviewer não os abre. A rastreabilidade SPEC/PLAN/IMP é insumo SEU pra escrever o body, não conteúdo dele.
-- **Número/posição no ROADMAP** (`ROADMAP: 106`) e qualquer numeração de planejamento interno.
+- **Número/posição no ROADMAP** (`id: 106`, `NNN-slug`) e qualquer numeração de planejamento interno.
 
 Só sobrevive no body o que o reviewer consegue abrir: link da Issue/PR. Na dúvida sobre um item, omita.
 
@@ -264,7 +283,7 @@ gh pr create --draft --base main --head feat/slug \
 gh auth login
 ```
 
-4. Quando o usuario confirmar que o PR foi criado (peca a URL), prossiga normalmente pro **Passo 6** (devolver root pra default) e **Passo 7** (worktree). Esses passos sao locais — voce mesmo executa.
+4. Quando o usuario confirmar que o PR foi criado (peca a URL **e o numero**), prossiga normalmente pro **Passo 5.5** (promover o item no ROADMAP), **Passo 6** (devolver root pra default) e **Passo 7** (worktree). Esses passos sao locais — voce mesmo executa.
 
 ---
 
@@ -281,6 +300,7 @@ gh auth login
 - **PR sempre em `--draft`** — sair de draft e decisao humana (vale tambem no modo sync: `gh pr ready` e do usuario)
 - **Sync nao inventa narrativa** — toda afirmacao do body rastreavel a SPEC/PLAN/IMP/diff; desvios do plano nunca omitidos; `gh pr edit` so com confirmacao
 - **Body e publico, sem artefato interno** — NUNCA inclua link de sessao do Claude (`claude.ai/code/session_...`), caminhos de `thoughts/` (SPEC/PLAN/IMP) nem numero de ROADMAP no body. Sobrevive so o que o reviewer abre: link da Issue/PR
+- **Promove o ROADMAP no vault local** — ao abrir o draft, o item do slice e movido de `backlog/` pra `em-progresso/` com o `#N` e o hub e regenerado (Passo 5.5); PRs futuros do mesmo PLAN ficam em `backlog/` (nenhum esquecido). Isso e no `thoughts/roadmap/` local, NUNCA no body. Preserva NNN/titulo/`Depende de:`, so preenche `pr:` (o merge e quem move pra `concluido/`). O grafo do Obsidian se atualiza sozinho — sem mermaid
 - **Empty commit, nunca codigo** — o commit do kickoff e vazio (`--allow-empty`); implementacao so na worktree
 - **Root volta pra branch default** — o repositorio principal nunca fica preso na branch da feature
 - **Nunca force-push, nunca delete branch, nunca reescreva historico**

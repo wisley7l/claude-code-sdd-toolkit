@@ -1,7 +1,7 @@
 ---
 description: Consome a SPEC de comportamento (/sdd-spec) e gera o plano tecnico — pesquisa + tarefas TDD num doc auto-sized (Medium/Large/Complex). Quick delega pra /quick-task.
 model: claude-opus-4-8
-allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), Bash(structure-cache *), Bash(structure-cache), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
+allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, AskUserQuestion, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(pwd), Bash(structure-cache *), Bash(structure-cache), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado em tlc-spec-driven (CC-BY-4.0) por Felipe Rodrigues
 # https://github.com/tech-leads-club/agent-skills
 # Conceitos adaptados: doc auto-sized, Knowledge Verification Chain, memoria persistente,
@@ -30,10 +30,14 @@ Voce e um **par tecnico** que recebe a **SPEC de comportamento** (o QUE, produzi
 - **Zero Inferencia**: toda afirmacao tecnica com `[Fonte: url]` ou `[Fonte: path:line]`. Sem fonte = `[NEEDS VERIFICATION]`
 - **Nunca fabrique**: prefira "nao encontrei documentacao para X" a chutar
 - **Profundidade proporcional**: pesquisa rasa para Medium, profunda para Complex
+- **Test-first no plano**: antes de quebrar tarefas, mapeie o que ja e testado, o que os testes novos cobrem e como. A matriz de testes (Passo 7.5) precede e guia a quebra
+- **Teste se planeja em par, nao se entrega pronto**: o Passo 7.5 e uma sessao interativa — o **Mapa de Testes vai pra tela** (o que temos / o que nao temos / o que a feature adiciona / pra onde caminhamos) e o usuario decide corte, prioridade e risco aceito **antes** de qualquer tarefa ser quebrada. Testes codificam comportamento: essa decisao e de produto, nao da IA
+- **Tipo de teste por necessidade**: unit NAO e default. O tipo (unit/integracao/e2e) e escolhido pelo que o RF/AT exige; integracao/e2e podem exigir ambiente real (server local, browser/Playwright, sandbox) — declare na matriz e na tarefa
 - **Test co-location**: testes na MESMA tarefa que cria o codigo. Defer = anti-pattern
 - **Test count protection**: toda tarefa com Gate declara contagem esperada
 - **Cobertura da SPEC**: todo RF/AT da SPEC tem ≥1 tarefa que o cobre. Lacuna = plano incompleto
 - **Skills do projeto**: liste e ative — executor depende disso
+- **Rastro no ROADMAP**: todo PLAN escrito vira item(ns) no vault `thoughts/roadmap/` — **1 item por PR previsto**. PLAN que o Check 5 divide em N PRs sequenciais gera N itens (com `**Depende de:**` entre slices), pra nenhum PR ficar esquecido. Os itens nascem em `backlog/` (sem PR ainda); o `/pr-draft` move pra `em-progresso/` ao abrir o draft de cada slice
 
 ## Auto-sizing
 
@@ -67,7 +71,7 @@ Antes de salvar qualquer arquivo em `thoughts/`, resolva o root do projeto princ
 git worktree list | head -1 | awk '{print $1}'
 ```
 
-Use esse caminho como base para `thoughts/` (specs, plans, history, STATE.md, ROADMAP.md). Garante que outputs sejam salvos no repo principal mesmo executando dentro de worktree.
+Use esse caminho como base para `thoughts/` (specs, plans, history, STATE.md, roadmap/). Garante que outputs sejam salvos no repo principal mesmo executando dentro de worktree.
 
 **Excecao: `thoughts/tests/`** — andaime TDD fica local ao worktree (gerenciado pelo `/executor-plan`).
 
@@ -83,15 +87,17 @@ Pra manter o contexto Opus enxuto, **delegue toda leitura volumosa a subagentes*
 
 ### Flags
 
-Extraia estas flags de `$ARGUMENTS` antes de tratar o resto como path da SPEC (a flag **nao** e path). Controlam a revisao por painel do Passo 9.5:
+Extraia estas flags de `$ARGUMENTS` antes de tratar o resto como path da SPEC (a flag **nao** e path). Calibram quantos subagentes rodam — no pair de testes (Passo 7.5) e na revisao por painel (Passo 9.5):
 
-| Flag | Efeito |
-|---|---|
-| _(nenhuma)_ | Painel completo — 4 lentes (Pro, Fast, Security, Tests) |
-| `--rapido` | So Pro + Fast (pula Security/Tests) |
-| `--solo` | Pula o Passo 9.5 — fica so nos 4 checks self-run do Passo 9 |
+| Flag | Lentes do pair de testes (7.5) | Painel de review (9.5) |
+|---|---|---|
+| _(nenhuma)_ | 3 — Produto/QA, Engenharia, Adversarial | Completo — 4 lentes (Pro, Fast, Security, Tests) |
+| `--rapido` | 2 — Produto/QA + Engenharia | So Pro + Fast (pula Security/Tests) |
+| `--solo` | 0 — a main propoe o mapa direto | Pulado — fica so nos 4 checks self-run do Passo 9 |
 
-Nao entram no auto-sizing nem no fluxo — so na decisao do Passo 9.5. O que sobrar de `$ARGUMENTS` depois de remover a flag e o path da SPEC (Passo 2).
+**`--solo` nao desliga o pair**: mesmo com 0 lentes, o Mapa de Testes vai pra tela e a discussao acontece (etapas 3-5 do Passo 7.5). O que a flag corta e a diversidade de propostas, nunca a decisao do usuario.
+
+Nao entram no auto-sizing. O que sobrar de `$ARGUMENTS` depois de remover a flag e o path da SPEC (Passo 2).
 
 ### 2. Localizar e ler a SPEC de comportamento
 
@@ -132,6 +138,17 @@ MEM_DIR="$HOME/.claude/projects/$PROJ_ENC/memory"
 
 ### 5. Ler skills do projeto
 `.claude/skills/` — absorva padroes que vao virar `Skills:` nas tarefas.
+
+### 6. Ler convencoes de teste do projeto (fundamento — leia cedo)
+
+Saber COMO o projeto testa e pre-requisito de todo o resto do plano — por isso e leitura de base, aqui na largada, nao no meio do fluxo. Leia as skills `.claude/skills/testing*` (e variantes) + 2-3 arquivos de teste vizinhos aos componentes que a feature deve tocar. Extraia:
+- **Framework e runner** (jest/vitest/go test/playwright...) e o **comando de cada tipo** (unit, integracao, e2e)
+- **Estrutura** (describe/it, table-driven, AAA) e **naming**
+- **Mocking strategy** (o que mocka, o que usa real) + **fixtures/factories** disponiveis
+- **Onde os testes ficam** (co-location vs pasta dedicada) por tipo
+- **Que ambiente cada tipo exige**: server local (como sobe? porta?), browser/Playwright pra telas, DB/sandbox de teste
+
+Registre isso — vira a secao "6. Plano de Testes" do PLAN (subsecao Convencoes) e alimenta a matriz do Passo 7.5. Se o projeto nao tem convencao clara, sinalize (o executor seguira o padrao dos testes vizinhos).
 
 ---
 
@@ -253,6 +270,40 @@ Opcoes:
 Como prefere resolver?
 ```
 
+### Passo 7.5 — Pair de testes (interativo, bloqueante — antes de quebrar tarefas)
+
+As convencoes de teste ja foram lidas na Configuracao inicial (passo 6). Aqui voce planeja o teste **desta feature** — e isso e feito **junto com o usuario**, nao entregue pronto.
+
+**Por que interativo**: teste e a codificacao do comportamento esperado. Decidir sozinho quais cenarios importam, o que vale o custo e o que pode ficar de fora e decidir produto sozinho. A IA faz o trabalho pesado (inventario, propostas, trade-offs); **o usuario corta, prioriza e aceita risco**.
+
+**5 etapas** (protocolo completo no reference — carregue agora):
+
+| Etapa | O que acontece | Quem faz |
+|---|---|---|
+| 1 | Inventario: o que ja e testado nos componentes tocados (+ contagem baseline) | subagente `Explore` |
+| 2 | Proposta por RF/AT em **3 lentes paralelas** (Produto/QA, Engenharia de teste, Adversarial) | 3 subagentes `opus`, no mesmo turno |
+| 3 | **Mapa de Testes em tela** — quadro completo, **bloqueante** | main |
+| 4 | Discussao dos pontos ⚠️/❓, um por vez, com recomendacao explicita | main ↔ usuario |
+| 5 | Fechamento: matriz final + tabela de decisoes com autoria | main |
+
+**Etapa 3 nao tem atalho.** O Mapa de Testes vai pra tela **antes** de qualquer tarefa ser quebrada, com 4 blocos: (1) o que temos hoje, (2) o que NAO temos — desta feature e lacunas pre-existentes fora de escopo, (3) o que esta feature adiciona (tipo/casos/ambiente/prioridade/custo, marcado ✅ consenso / ⚠️ divergencia / ❓ decisao sua), (4) **pra onde caminhamos** — cobertura antes→depois, ambiente novo exigido, divida que fica, risco que sobra.
+
+**Tipo por necessidade, nunca default unit:**
+
+| Sinal do RF/AT | Tipo indicado |
+|---|---|
+| Logica pura, funcao isolavel, regra de calculo | **unit** |
+| Interacao entre modulos, DB, fila, contrato de API interna | **integracao** |
+| Fluxo de usuario ponta-a-ponta, tela, rota HTTP completa | **e2e** |
+
+**Proporcionalidade das lentes**: default 3; `--rapido` → 2 (Produto/QA + Engenharia); `--solo` ou escopo trivial (≤2 RF/AT, todos com ambiente `none`) → 0, a main propoe o mapa direto. **Com 0 lentes as etapas 3-5 continuam obrigatorias** — corta-se a diversidade de propostas, nunca a tela nem a decisao do usuario.
+
+**Regras de decisao** (as que nunca cedem): a escolha do usuario vence, inclusive contra as 3 lentes; caso cortado vira **divida registrada**, nao esquecimento; caso que o usuario adiciona ganha `[fonte: usuario]`; RF/AT sem teste exige justificativa (vira `Tests: none` justificado, cobrado pelo Check 3); pedido de teste pra comportamento fora da SPEC = lacuna da SPEC → volte pro `/sdd-spec`, nao invente RF.
+
+A matriz fechada e a tabela de decisoes **alimentam o Passo 8**: cada tarefa herda `Tests:`, `Test env:` e os casos direto daqui — a tarefa nao reinventa a estrategia de teste.
+
+Protocolo completo (prompt literal das 3 lentes, schema JSON, formato dos 4 blocos do mapa, protocolo da discussao, tabela de decisoes): reference `sdd-plan-testes.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): rode as 5 etapas com o que esta acima — inventario via `Explore`; 3 lentes em paralelo com foco disjunto (Produto/QA: cenario real e impacto no usuario, prioridade por dor; Engenharia: tipo/ambiente/mock/custo/flakiness/reuso de fixture; Adversarial: edge, negativo, erro, concorrencia, limites — sem repetir happy path), cada uma retornando JSON `{por_rf:[{rf,tipo,por_que_esse_tipo,casos:[{caso,categoria,por_que_importa}],ambiente,prioridade,custo,reusa}],gaps_preexistentes,duvidas_pro_usuario,lacunas_da_spec}`; mapa com os 4 blocos acima; discussao ponto a ponto com recomendacao (`AskUserQuestion` quando as opcoes forem discretas); fechamento com tabela `# | Ponto | Decisao | Quem decidiu | Motivo/risco aceito`.
+
 ### Passo 8 — Desenhar abordagem e quebrar tarefas
 
 **Cada tarefa tem**:
@@ -263,7 +314,8 @@ Como prefere resolver?
 - `Reuses:` — codigo existente a reaproveitar (poupa tokens)
 - `Skills:` — skills de `.claude/skills/` para ativar
 - `Riscos:` — desafios relevantes
-- `Tests:` — `unit` | `integration` | `e2e` | `none` (com justificativa explicita se none)
+- `Tests:` — `unit` | `integration` | `e2e` | `none` — **herdado da matriz do Passo 7.5** (com justificativa explicita se none)
+- `Test env:` — ambiente que o gate exige: `server-local` | `browser-playwright` | `sandbox` | `none` (herdado da matriz). Diz ao `/executor-plan` o que subir antes de rodar o teste
 - `Gate:` — comando exato de verificacao
 - `Done when:` — checklist com `Test count: N tests pass (no silent deletions)` quando aplicavel
 - `[P]` — marca tarefas paralelizaveis (sem dependencias mutuas, sem estado compartilhado)
@@ -358,7 +410,7 @@ O `/sdd-plan-eco` tambem roda sem painel por design.
 - **Reviewer Pro** — arquitetura, consistencia com codebase/constitution, decisoes tecnicas embasadas, `Reuses:`, rastreabilidade estrutural (todo RF/AT tem tarefa em `Covers:`), riscos.
 - **Reviewer Fast** — clareza e ausencia de ambiguidade, completude dos detalhes (da pra executar sem chutar?), granularidade das tarefas, diagrama x dependencias.
 - **Reviewer Security** — dominio pagamentos/e-commerce: HMAC de webhook, idempotencia, money handling (nunca float), PCI (nao logar dado sensivel), authz, validacao runtime de input nao-confiavel, race conditions/ordering. **APPROVED rapido se o plano nao toca superficie sensivel** — nao invente risco.
-- **Reviewer Tests** — todo RF/AT tem teste que o *exercita* (nao so tarefa que o entrega), test co-location, gate e test count coerentes, casos de borda/negativos e caminhos de erro, estrategia de mock (sandbox vs unit).
+- **Reviewer Tests** — todo RF/AT tem teste que o *exercita* (nao so tarefa que o entrega), test co-location, gate e test count coerentes, casos de borda/negativos e caminhos de erro, estrategia de mock (sandbox vs unit). **Recebe a tabela de decisoes do Passo 7.5 e nao reabre o que o usuario decidiu**: caso cortado com motivo registrado nao e finding; so aponte se a decisao criou incoerencia tecnica nao percebida (ex.: o corte deixa a tarefa sem gate executavel).
 
 Retorno estruturado (JSON com `verdict` + `findings` por severidade), **nao** "APPROVED" cego.
 
@@ -394,6 +446,13 @@ SPEC base: [path da SPEC]
 ## Cobertura da SPEC
 [Todo RF/AT coberto? lacunas resolvidas?]
 
+## Plano de Testes (fechado em par no Passo 7.5)
+- Cobertura: [N testes hoje] → [M depois] (+K) — [a unit / b integracao / c e2e]
+- Ambiente exigido: [server local / Playwright / sandbox / nenhum]
+- Decidido com voce: [X pontos] ([Y cortes], [Z casos que voce adicionou])
+- Gaps fechados: [RF/AT que nao tinham teste e agora tem]
+- Divida / risco aceito: [lista curta — casos cortados, lacunas fora de escopo]
+
 ## Riscos principais
 [bullets curtos]
 
@@ -407,6 +466,13 @@ SPEC base: [path da SPEC]
 ## Revisao por painel (Pro / Fast / Security / Tests)
 Aprovada em [N] rodada(s) — 0 must-fix aberto
   (ou) Aberta: [X] must-fix nao resolvidos apos [N] rodadas → [lista curta por lente]
+
+## Roadmap (itens a criar no backlog/ — 1 por PR)
+[1 PR previsto]  → 1 item: "<titulo>"
+[ou N PRs]       → N itens, um por slice da fronteira do Check 5:
+                   - PR 1/N: <titulo do slice 1> (phases/RF que cobre)
+                   - PR 2/N: <titulo do slice 2>
+                   - ...
 
 Faz sentido? Ajusta algo antes de eu finalizar?
 ```
@@ -437,6 +503,50 @@ Apos escrever o arquivo, lance subagent para validar URLs:
 
 4. Links quebrados: pesquise alternativa, atualize ou mova para `[NEEDS VERIFICATION]`
 5. Reescreva com correcoes antes de informar o usuario
+
+### Passo 12.5 — Registrar no ROADMAP (1 item por PR previsto)
+
+**Objetivo**: nenhum PR previsto pelo PLAN fica sem rastro. Isso roda **sempre** que um PLAN e escrito (nao e opcional) — ja foi mostrado ao usuario no checkpoint (Passo 10).
+
+Segue a convencao do `/roadmap` (vault Obsidian: 1 arquivo por item, dependencia = wikilink). Escreve no vault **local** `thoughts/roadmap/` (gitignored) — nao commita. Contrato completo do arquivo de item: reference `roadmap-item.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`.
+
+**1. Resolver o vault**: `$ROOT/thoughts/roadmap/`. Se existir so o `$ROOT/thoughts/ROADMAP.md` antigo (arquivo unico), **avise** que o roadmap precisa migrar (`/roadmap migrar`) e crie os itens ja no vault novo (nao escreva no arquivo antigo). Se nao existir nada, crie a estrutura (`backlog/`, `em-progresso/`, `concluido/` + hub `ROADMAP.md`).
+
+**2. Quantos PRs o PLAN preve** (= quantos itens):
+- **1 PR** (default): Check 5 deu Ideal/Aceitavel, ou o usuario optou por PR unico → **1 item**.
+- **N PRs**: o Check 5 propos split em PRs sequenciais **e** o usuario aprovou a fronteira no checkpoint → **N itens**, um por slice (grupo de phases/RF da fronteira). O PLAN deve registrar essa fronteira (marcador de PRs sequenciais) — os itens a espelham 1:1.
+
+**3. Para cada PR previsto, um arquivo** em `thoughts/roadmap/backlog/NNN-slug.md`:
+```markdown
+---
+id: NNN
+titulo: <titulo do slice> (PR <i>/<N>)
+pr:
+criado: DD-MM-YYYY
+plan: <nome-do-arquivo-do-PLAN>
+next: false
+---
+
+# NNN — <titulo do slice>
+
+**Depende de:** [[MMM-slug]]
+**Docs:** [[<basename da SPEC sem .md>]] · [[<basename do PLAN sem .md>]]
+
+<1 linha de contexto do slice>
+```
+- **NNN**: sequencial, `max(NNN de todas as pastas) + 1`, 3 digitos. Nunca reusa numero. Multiplos itens → NNNs consecutivos. `slug` = 3-6 palavras kebab-case do titulo.
+- Omita `(PR i/N)` no titulo quando for PR unico.
+- **`plan:`** (basename, ex.: `PLAN-16-07-2026-003-estoque.md`) — rastreabilidade que o `/pr-draft` (promover) e o `/sdd-close` (arquivar) usam pra parear item ↔ PLAN ↔ PR. `**Docs:**` linka SPEC+PLAN (que ficam em `thoughts/specs/` e `thoughts/plans/`).
+- Itens nascem **sem PR** (`pr:` vazio, em `backlog/`). O `/pr-draft` preenche `pr: #N` e move pra `em-progresso/` ao abrir o draft do slice.
+- **`Depende de:` entre slices** (so multi-PR): a fronteira do Check 5 diz a ordem. PRs **sequenciais** → cada item leva `**Depende de:** [[<slug do PR anterior>]]`. Slices **paralelos** (partem do mesmo ponto) → ambos apontam pro pre-requisito comum (ou omitem, se partem da base). PR unico → omita a linha. E a mesma ordem que o PLAN ja registrou no marcador de PRs sequenciais.
+
+**4. Idempotencia (nunca duplicar)**: antes de criar, procure itens que ja referenciem este PLAN (por `plan: <nome>` no frontmatter, varrendo as pastas):
+- **Ja existem e o nº de PRs bate**: nao duplique. Confirme que os arquivos seguem o formato (inclusive `Depende de:`); ajuste se preciso.
+- **Nº de PRs mudou** (ex.: replanejou de 1→3): **atualize** — preserve os NNN existentes, crie os arquivos dos PRs a mais com o `Depende de:` correto, e sinalize a mudanca. Principio "atualizar > criar".
+
+**5. Nao ligue `next: true`** (🔴 Próximos e curado manualmente) nem crie itens fora de `backlog/`. Promocao e conclusao sao dos outros commands (`/pr-draft`, `/roadmap` sync, `/sdd-close`).
+
+**6. Regenera o hub** `thoughts/roadmap/ROADMAP.md` (linka todos os itens, agrupa por pasta — reference `roadmap-item.md`). O grafo do Obsidian ja desenha a arvore de ordem a partir dos `**Depende de:**` — nao se gera mermaid.
 
 ### Passo 13 — Propor registro de memoria
 
@@ -478,11 +588,14 @@ SPEC base: thoughts/specs/spec-<ts>-<slug>.md
 Escopo: [Medium/Large/Complex]
 [N] tarefas em [M] phases ([X] paralelizaveis)
 Cobertura da SPEC: [todos RF/AT cobertos]
+Plano de Testes: [N unit, M integracao, K e2e] — ambiente: [server/Playwright/sandbox/nenhum]
+  Cobertura: [N] → [M] testes · [X] pontos decididos com voce · divida: [Y itens]
 Links verificados: [Y OK, Z quebrados]
 4 Checks: PASS
+Roadmap: [K] item(ns) criado(s) em backlog/ (1 por PR previsto) → NNN[, NNN...]
 
 Proximos passos:
-  /pr-draft       → abre PR em draft (body a partir da SPEC de comportamento)
+  /pr-draft       → abre PR em draft (body a partir da SPEC) + move o item do slice pra em-progresso/
   /executor-plan  → executa o PLAN com TDD
 ```
 
@@ -494,7 +607,9 @@ Caminho: `thoughts/plans/PLAN-DD-MM-YYYY-NNN-[slug].md`
 
 Escreva o doc seguindo o template do reference `sdd-plan-plan-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas na hora de escrever** (Passo 11+).
 
-**Fallback** (reference ausente): monte com frontmatter (date, scope, spec, issue, skills) + secoes: Resumo Executivo (escrito por ultimo), 1. SPEC de Referencia (link + resumo do comportamento), 2. Decisoes Tecnicas, 3. Analise Local (componentes, dependencias, design docs/reconciliacao), 4. Referencias Externas (omitir se Medium sem pesquisa), 5. Diagrama (mermaid; obrigatorio Large/Complex), 6. Estrategia de Testes, 7. Tarefas (phases + estrutura What/Covers/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit), 8. Parallel Execution Map, 9. Cobertura da SPEC (mapa RF/AT → tarefa), 10. Simplificacao, 11. Validacao Pre-Aprovacao (4 checks), 12. Duvidas Pendentes, 13. Verificacao de Links.
+**Fallback** (reference ausente): monte com frontmatter (date, scope, spec, issue, skills) + secoes: Resumo Executivo (escrito por ultimo), 1. SPEC de Referencia (link + resumo do comportamento), 2. Decisoes Tecnicas, 3. Analise Local (componentes, dependencias, design docs/reconciliacao), 4. Referencias Externas (omitir se Medium sem pesquisa), 5. Diagrama (mermaid; obrigatorio Large/Complex), 6. Plano de Testes (6.1 convencoes, 6.2 baseline com contagem, 6.3 matriz fechada em par — com `[fonte: usuario]` nos casos que ele adicionou, 6.4 gaps, 6.5 decisoes do pair com autoria, 6.6 divida/risco aceito, 6.7 pra onde caminhamos), 7. Tarefas (phases + estrutura What/Covers/Where/Depends on/Reuses/Skills/Riscos/Tests/Test count/Gate/Done when/Commit), 8. Parallel Execution Map, 9. Cobertura da SPEC (mapa RF/AT → tarefa), 10. Simplificacao, 11. Validacao Pre-Aprovacao (4 checks), 12. Duvidas Pendentes, 13. Verificacao de Links.
+
+**Marcador de PRs sequenciais** (obrigatorio quando o Check 5 dividiu em N PRs): registre no topo (perto do Resumo) uma linha `PRs: <N>` e um mapa `PR <i> → phases/tarefas/RF que cobre`. E a fronteira que o Passo 12.5 espelha 1:1 nos itens do roadmap e que o `/pr-draft`/`/sdd-close` usam pra parear cada PR. Pra PR unico, `PRs: 1`.
 
 ---
 
@@ -508,11 +623,14 @@ Escreva o doc seguindo o template do reference `sdd-plan-plan-template.md` — p
 - **4 checks bloqueantes**: FALHA = reestruture
 - **PR size reviewavel**: estime arquivos distintos do diff. Ideal ≤10, aceitavel ≤15, 16-20 e caso raro (avise + proponha split), >20 recomende dividir em PRs sequenciais. Nunca auto-divida nem reescreva a SPEC — proponha a fronteira e deixe o usuario decidir
 - **Revisao por painel (sempre)**: 4 reviewers independentes (Pro, Fast, Security, Tests) antes do checkpoint; achados estruturados, verifique cada `must-fix` antes de aplicar, guarda de convergencia (nao entre em loop)
+- **Pair de testes antes de quebrar tarefas (nunca autonomo)**: convencoes lidas na largada (config inicial passo 6); no Passo 7.5, inventario + 3 lentes + **Mapa de Testes em tela** (bloco "pra onde caminhamos" obrigatorio) + discussao ponto a ponto + fechamento com autoria. Nenhuma tarefa e quebrada antes da tela e da decisao do usuario. A IA propoe; corte, prioridade e risco aceito sao dele. Caso cortado vira divida registrada, nunca esquecimento. A quebra herda daqui — tarefa nao reinventa estrategia de teste
+- **Tipo de teste por necessidade**: unit nao e default; integracao/e2e escolhidos pelo comportamento do RF/AT. `Test env:` declara o que o executor sobe antes do gate (server local, Playwright, sandbox)
 - **Test co-location e regra**: defer = anti-pattern
 - **Test count obrigatorio**: toda tarefa com `Gate` declara contagem
 - **Cobertura da SPEC**: todo RF/AT coberto por ≥1 tarefa
 - **Fonte ou NEEDS VERIFICATION**: claim externa sem fonte verificavel nao entra nas tarefas
 - **Skills nao opcionais**: identifique e liste — executor as ativa
+- **Rastro no ROADMAP (sempre)**: todo PLAN gera 1 item por PR previsto em `thoughts/roadmap/backlog/` (Passo 12.5). PLAN multi-PR (Check 5) = N itens com `**Depende de:**` espelhando a ordem da fronteira (sequenciais → cada um depende do anterior; paralelas → pré-requisito comum), + regenera o hub. O grafo do Obsidian desenha a ordem a partir dos links — sem mermaid. Pra nenhum PR ficar esquecido nem fora de ordem. Nunca duplique (idempotente por `plan: <nome>`); nunca ligue `next: true` (humano) nem crie item fora de `backlog/`
 - **Constitution inegociavel**: CLAUDE.md/ARCHITECTURE.md
 - **Memoria pergunta antes**: nunca escreva no `memory/` (ou em draft) sem confirmar
 - **Diagrama mapeia arquitetura real**: nao copia exemplo

@@ -20,8 +20,9 @@ PLAN: [caminho]
 
 ## Testes
 
-- Unitarios: [N testes em thoughts/tests/]
-- Integracao: [N testes, se aplicavel]
+- Por tipo: [N unit em thoughts/tests/ / M integracao / K e2e]
+- Ambiente usado: [server local / Playwright / sandbox / nenhum]
+- Evidencia de red (por tarefa): [T1: <teste> falhou como esperado; T2: ...; ou excecao `Tests: none` justificada]
 - Test count: [baseline X / esperado Y / final Z — PRESERVADO]
 - Todos passando: sim/nao
 

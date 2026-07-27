@@ -37,6 +37,11 @@ Checagem 5 — Sinais de parada dura:
 - A transcript mostra SPEC_DEVIATION, blocker nao resolvido, ou test count drop?
 - Esperado: nenhum.
 
+Checagem 6 — Evidencia de red (TDD):
+- Pra cada tarefa que criou teste, a transcript mostra o red ("T<N> red: ... falhou como esperado")?
+- Tarefas com `Tests: none` devem trazer a justificativa da excecao.
+- Esperado: toda tarefa com teste tem evidencia de red OU excecao declarada. Falso-verde (implementou com teste ja verde) = falha.
+
 Retorne JSON estrito (sem markdown, sem narrativa):
 
 {
@@ -46,7 +51,8 @@ Retorne JSON estrito (sem markdown, sem narrativa):
     "test_count": "ok" | "dropped from X to Y",
     "gate": "ok" | "failed" | "not reported",
     "staging": "ok" | "missing files" | "not reported",
-    "hard_stops": "none" | "<descricao>"
+    "hard_stops": "none" | "<descricao>",
+    "red_evidence": "ok" | "missing for T<N>" | "false-green in T<N>"
   },
   "reason": "<1-2 frases>"
 }
@@ -58,11 +64,12 @@ Retorne JSON estrito (sem markdown, sem narrativa):
 ⚠️ Validador independente reportou execucao incompleta.
 
 Checks:
-  plan_marks: <status>
-  test_count: <status>
-  gate:       <status>
-  staging:    <status>
-  hard_stops: <status>
+  plan_marks:   <status>
+  test_count:   <status>
+  gate:         <status>
+  staging:      <status>
+  hard_stops:   <status>
+  red_evidence: <status>
 
 Razao: <reason>
 

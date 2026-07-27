@@ -17,7 +17,9 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 
 ## Principios
 
-- **TDD sempre**: Teste unitario antes do codigo. Sem excecao
+- **TDD sempre, red verificavel**: teste antes do codigo. Escreva o teste, RODE, e confirme que ele **falha pelo motivo certo** (o comportamento ainda nao existe) — nao por erro de import/setup. So entao implemente. O tipo (unit/integracao/e2e) **vem do PLAN** (campo `Tests:` da tarefa, definido na matriz do Passo 7.5) — unit NAO e default
+- **Falso-verde = parada dura**: se o teste PASSA antes de voce escrever o codigo de producao, ele nao esta exercitando o comportamento novo. PARE e reescreva o teste (ou, se a tarefa declara `Tests: none` justificado, registre a excecao)
+- **Excecao ao red so quando declarada no PLAN**: tarefa que nao admite red classico (migration pura, mudanca de config, codigo gerado, ajuste declarativo) so pula o teste se a tarefa traz `Tests: none` com justificativa. Registre o motivo no log/IMP — nunca pule em silencio
 - **Test count protection**: A tarefa declara `Test count: N tests pass`. Se executar e a contagem cair, PARE — alguem deletou teste
 - **Testes unitarios sao contrato**: Em `thoughts/tests/`, nao commitados. Se quebram, paramos e discutimos
 - **Teste apenas exports reais**: Nunca exporte funcao so para testar. Testes cobrem so API publica
@@ -27,7 +29,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 - **Zero Inferencia**: Verifique comportamento de API no codigo, Context7, WebFetch/Search, ou pergunte. Sem verificacao = pare
 - **Skills do projeto**: Ative skills listadas na tarefa antes de comecar
 - **Default autonomo**: zero pausa entre tarefas. Em `--step`, pausa apos cada tarefa.
-- **Paradas duras (sempre param, mesmo em autonomo)**: test count drop, gate falhando, SPEC_DEVIATION reportado por sub-agent, blocker que exige decisao arquitetural, encruzilhada com solucao nao-obvia, reconciliacao com doc do projeto, complexidade acima do threshold apos 2 tentativas de refactor (gate da Verificacao Final)
+- **Paradas duras (sempre param, mesmo em autonomo)**: test count drop, **falso-verde (teste passa antes da implementacao)**, **ambiente de teste (server/sandbox) que nao sobe quando o PLAN pede integracao/e2e**, gate falhando, SPEC_DEVIATION reportado por sub-agent, blocker que exige decisao arquitetural, encruzilhada com solucao nao-obvia, reconciliacao com doc do projeto, complexidade acima do threshold apos 2 tentativas de refactor (gate da Verificacao Final)
 - **Notificar quando precisa atencao humana**: dispare `PushNotification` em (a) toda parada dura listada acima e (b) no fim de execucao autonoma antes do prompt de decisao de commit. Mensagem ≤200 chars, sem markdown, lead com o acionavel (ex: "executor-plan parou: test count caiu de 42 para 39")
 - **Commits sob aprovacao humana**: executor faz `git add` por tarefa; **nunca commita** automaticamente em modo autonomo. No fim, lista arquivos staged e pergunta ao user como commitar. Em `--step`, comportamento antigo (commit atomico por tarefa imediato)
 - **Tracking de arquivos por T_i**: durante a execucao, mantenha um log interno (`thoughts/.executor-staged.log` no root, nao commitado) com `T1: file1, file2 | T2: file3 | ...` para permitir commits atomicos opcionais no fim
@@ -39,7 +41,7 @@ Voce e um **par de programacao** que executa tarefas com TDD. Voce le o plano, e
 git worktree list | head -1 | awk '{print $1}'
 ```
 
-Use esse caminho como base para `thoughts/` (research, plans, history, STATE, ROADMAP).
+Use esse caminho como base para `thoughts/` (research, plans, history, STATE, roadmap/).
 
 **Excecao: `thoughts/tests/`**:
 - Em worktree: testes ficam em `<worktree>/thoughts/tests/` — imports relativos ao worktree
@@ -191,13 +193,24 @@ Antes de mexer em qualquer codigo, rode o gate da tarefa e anote a contagem ATUA
 
 Anote: `Baseline: X testes existentes`. Isso e o numero ANTES de voce comecar.
 
-**2. Escrever testes unitarios (TDD)**
+**2. Escrever testes (TDD, red verificavel)**
 
 Antes de qualquer codigo de producao:
-- Leia a descricao dos testes na tarefa (`Tests: unit` + `Done when:`)
-- Crie os testes em `thoughts/tests/` (ou onde a tarefa declara, se integration/e2e)
-- Nomes descritivos, sem dependencia externa
-- Execute — devem FALHAR (red phase)
+- Leia o `Tests:` e o `Test env:` da tarefa (definidos na matriz do Passo 7.5 do PLAN) + os casos no `Done when:`. **O tipo (unit/integracao/e2e) vem do PLAN — nao assuma unit.**
+- **Unit**: crie em `thoughts/tests/` (andaime, nao commitado). **Integracao/e2e**: crie onde o projeto manda (commitados), seguindo a convencao lida na config inicial. Se o `Test env:` exige ambiente, prepare-o primeiro (bloco 2.5) — o red de um teste e2e tambem roda contra o ambiente.
+- Nomes descritivos; mock/real conforme a convencao do projeto.
+- **Execute e confirme o RED**: o teste deve FALHAR, e falhar **pelo motivo certo** (o comportamento ainda nao existe) — nao por erro de import, sintaxe ou setup. Se falha por setup, conserte o setup e re-rode ate o red ser legitimo.
+- **PARADA DURA — falso-verde**: se o teste PASSA agora (sem o codigo de producao), ele nao testa o comportamento novo. PARE e reescreva. Nao prossiga com teste verde.
+- **Registre a evidencia do red** pro log da tarefa: `T<N> red: <teste> falhou como esperado (<motivo>)`. O validador e o review interno auditam isso.
+- **Excecao declarada**: se a tarefa traz `Tests: none` justificado (migration pura, config, codigo gerado), pule o red e registre a justificativa no log/IMP — nunca em silencio.
+
+**2.5 Preparar ambiente do gate (quando `Test env:` != none)**
+
+Se a tarefa exige ambiente (integracao/e2e), suba-o ANTES de rodar o teste (vale pro red E pro green):
+- **server-local**: suba o server em background com o comando do projeto (consulte a memoria do projeto / CLAUDE.md pra comando + porta; a skill `run` cobre os padroes). Confirme que respondeu antes de rodar o teste. **Reaproveite** o server entre tarefas do mesmo grupo — nao suba um por teste.
+- **browser-playwright**: use o Playwright do projeto (`npx playwright test ...` ou o runner configurado) pra exercitar telas/fluxos. Headless por default.
+- **sandbox**: use o DB/sandbox de teste conforme a convencao. **Nunca producao**; side effects reais so contra o ambiente de teste.
+- Ao terminar o grupo, derrube o que subiu (ou deixe pro fim). Se o ambiente **nao sobe**, e parada dura — nao "mocke por fora" um teste que o PLAN pediu integracao/e2e sem avisar.
 
 **Delegacao opcional pra agent especializado em testes** — entre os agents ja listados no passo 7 da Configuracao Inicial, considere **match forte** se a `description` mencionar ≥2 termos especificos de teste ("TDD", "red-phase", "edge cases", "fixtures", "mocking"...). Se houver, **prefira delegar** a escrita em modo red-phase via `Agent` (`subagent_type: <name>`), passando: modo red-phase, comportamento esperado da tarefa T\<N\>, path onde a implementacao vai morar, path do PLAN e os criterios de `Done when:`. Ele devolve paths dos testes + comando do gate + status — voce continua no passo 3 (Implementar) usando esses testes. Sem match: escreva voce mesmo seguindo o padrao do projeto (skills `.claude/skills/testing*` + arquivos de teste vizinhos). Em modo autonomo, **nao pergunte** — detecte e prossiga.
 
@@ -232,7 +245,7 @@ Ao delegar `[P]` a subagentes, **inclua esta diretriz no prompt** — eles tambe
 
 **5. Verificar — incluindo Test count**
 
-Execute o Gate da tarefa:
+Se a tarefa tem `Test env:` != none, garanta que o ambiente (server/sandbox) ainda esta de pe antes de rodar o gate. Execute o Gate da tarefa:
 ```bash
 [comando do Gate:]
 ```
@@ -256,9 +269,9 @@ Execute tambem typecheck/lint do projeto (consulte CLAUDE.md).
 **6. Testes de integracao/e2e (se aplicavel)**
 
 Se a tarefa especifica `Tests: integration` ou `e2e`:
-- Escreva onde o projeto manda (sao commitados)
-- Siga convencao existente
-- Execute e valide
+- Ja foram escritos no passo 2 com o ambiente do passo 2.5 de pe (o red desses tipos roda contra o ambiente, nao mockado)
+- Escreva/mantenha onde o projeto manda (sao commitados), seguindo a convencao
+- Execute contra o ambiente real (server local, Playwright pra telas) e valide o green
 - Test count protection se aplica aqui tambem
 
 **7. Reconciliacao com Doc do Projeto (se aplicavel)**
@@ -311,11 +324,11 @@ Se aprovado:
 
 **Em modo autonomo**: avance direto para a proxima tarefa, sem pausa. Informe brevemente (1-2 linhas) com **fatos auditaveis** — esse log e a unica evidencia que o validador independente da Etapa 3 (Verificacao Final) tem pra auditar a execucao:
 ```
-T[N] OK — [titulo] — staged [X] arquivos, test count [atual]/[esperado] pass, gate green
+T[N] OK — [titulo] — red: <teste> falhou como esperado, staged [X] arquivos, test count [atual]/[esperado] pass, gate green
 Avancando para T[N+1]...
 ```
 
-**Obrigatorio neste log** (em modo autonomo, mesmo sem ML): test count atual + status do gate. Sem isso o validador nao consegue confirmar conclusao.
+**Obrigatorio neste log** (em modo autonomo, mesmo sem ML): evidencia do red (ou a excecao `Tests: none` declarada) + test count atual + status do gate. Sem isso o validador nao consegue confirmar que o TDD foi real nem a conclusao.
 
 **Em `--step`**: informe e pause.
 ```
@@ -693,7 +706,8 @@ Apos escrever, lance subagente para verificar links (instrucoes detalhadas no me
 
 ## Guardrails
 
-- **TDD sem excecao**: teste antes do codigo. Sempre. Nunca pule red phase
+- **TDD com red verificavel**: teste antes do codigo; rode e confirme que FALHA pelo motivo certo antes de implementar. Falso-verde (passa sem o codigo) = parada dura. Tipo (unit/integracao/e2e) vem do PLAN — unit nao e default. Excecao ao red so quando a tarefa declara `Tests: none` justificado, sempre registrada no log/IMP
+- **Ambiente real quando o PLAN pede**: tarefa com `Test env:` (server-local/browser-playwright/sandbox) tem o ambiente subido antes do gate (red e green rodam contra ele). Server em background, Playwright pra telas, sandbox pra DB — nunca producao. Ambiente que nao sobe = parada dura; nao mocke por fora um teste que o PLAN pediu integracao/e2e
 - **Test count e bloqueante**: se contagem cair, PARE. Silent deletion e o bug mais perigoso
 - **Testes quebrando = parada**: testes que passavam falham, PARE, discuta. Nunca conserte sozinho
 - **Nunca commite testes unitarios**: `thoughts/tests/` nunca entra no git — andaime

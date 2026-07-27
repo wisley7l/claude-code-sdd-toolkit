@@ -19,7 +19,7 @@ Perspectivas diferentes pegam falhas que redundância não pega. As lentes NÃO 
 - **Reviewer Pro** — arquitetura, consistência com codebase/constitution/ADRs, decisões técnicas embasadas, reaproveitamento (`Reuses:`), **rastreabilidade estrutural** (todo RF/AT tem tarefa em `Covers:`), riscos arquiteturais.
 - **Reviewer Fast** — clareza e ausência de ambiguidade, completude dos detalhes de implementação (dá pra executar sem chutar?), granularidade das tarefas (nem gigante nem fatiada demais), diagrama x dependências.
 - **Reviewer Security** — domínio pagamentos/e-commerce: verificação de assinatura HMAC de webhook, idempotência de operações que mutam pagamento, money handling (inteiros/decimal, **nunca float**), PCI (não logar cartão/CVV/dado sensível), authz, validação runtime de input não-confiável (Zod/schema do projeto), race conditions e ordering de webhook. **APPROVED rápido se o plano não toca nenhuma superfície sensível — não invente risco.**
-- **Reviewer Tests** — todo RF/AT tem teste que o *exercita* (não só a tarefa que o entrega), test co-location respeitada, gate e test count coerentes, casos de borda/negativos e caminhos de erro cobertos, estratégia de mock (sandbox vs unit).
+- **Reviewer Tests** — todo RF/AT tem teste que o *exercita* (não só a tarefa que o entrega), test co-location respeitada, gate e test count coerentes, casos de borda/negativos e caminhos de erro cobertos, estratégia de mock (sandbox vs unit). **Recebe a seção 6.5/6.6 do PLAN (decisões do pair de testes do Passo 7.5) e NÃO reabre o que o usuário decidiu**: caso cortado com motivo registrado, ou RF/AT com risco aceito, não é finding. Só aponte se a decisão criou incoerência técnica que o usuário não teve como perceber (ex.: o corte deixou a tarefa sem gate executável, ou o tipo escolhido não consegue exercitar o comportamento).
 
 ## Como disparar
 
@@ -28,7 +28,7 @@ As 4 lentes rodam **em paralelo, no mesmo turno** (emita as 4 chamadas `Agent` n
 - `subagent_type: general-purpose`
 - `model: opus`
 - `description`: `"Reviewer Pro"` / `"Reviewer Fast"` / `"Reviewer Security"` / `"Reviewer Tests"`
-- `prompt`: o **draft completo do PLAN** (inline, montado no contexto da main nos Passos 8-9 — o arquivo ainda não foi escrito, o checkpoint vem depois) + o path da SPEC (o subagente lê) + paths de `CLAUDE.md`/`ARCHITECTURE.md` + a lente + o formato de saída.
+- `prompt`: o **draft completo do PLAN** (inline, montado no contexto da main nos Passos 8-9 — o arquivo ainda não foi escrito, o checkpoint vem depois) + o path da SPEC (o subagente lê) + paths de `CLAUDE.md`/`ARCHITECTURE.md` + a lente + o formato de saída. O draft **inclui a seção 6** (Plano de Testes com as decisões do pair) — é o que impede o painel de reabrir escolha já feita pelo usuário.
 
 ## Prompt (base comum às 4 lentes — só troque a linha de foco)
 

@@ -87,12 +87,61 @@ skills: [lista]
 
 ---
 
-## 6. Estrategia de Testes
+## 6. Plano de Testes
 
-- **Unitarios**: [convencao + caminho]
-- **Integracao**: [se aplicavel]
-- **Compile-time**: [se houver cross-check tipo `satisfies`]
-- **Convencao do projeto**: [jest, vitest, go test, etc]
+> Fechado **em par com o usuario** no Passo 7.5 do /sdd-plan (Mapa de Testes em tela → discussao → decisoes). Precede e guia a quebra de tarefas — cada tarefa herda seu tipo, ambiente e casos daqui.
+
+### 6.1 Convencoes do projeto
+
+- **Framework/runner**: [jest, vitest, go test, playwright...] + comando de cada tipo
+- **Estrutura e naming**: [describe/it, table-driven, AAA...]
+- **Mocking**: [o que mocka vs usa real]
+- **Fixtures/factories**: [disponiveis a reusar]
+- **Onde ficam**: [co-location vs pasta] por tipo
+- **Ambiente por tipo**: [server local + porta / browser-playwright / sandbox-DB / nenhum]
+
+### 6.2 Cobertura existente (baseline)
+
+| Componente tocado | Ja testado por | O que cobre hoje | Testes |
+|---|---|---|---|
+| `path/to/x.ts` | `x.spec.ts` | happy path de ... | 6 |
+| `path/to/y.ts` | — | sem teste | 0 |
+
+Baseline: [N] testes nos componentes tocados.
+
+### 6.3 Matriz de testes novos (fechada em par)
+
+| RF/AT | Comportamento a exercitar | Tipo | Casos (happy/edge/negativo/erro) | Como / Ambiente | Prio | Ja coberto? |
+|---|---|---|---|---|---|---|
+| RF1 | ... | unit | happy + valor zero + negativo | mock do repo X / none | critico | nao |
+| AT2 | ... | e2e | login valido + credencial invalida `[fonte: usuario]` | server-local :3000 + Playwright | importante | parcial |
+
+> **Tipo por necessidade**, nao default unit: logica pura → unit; interacao entre modulos/DB → integracao; fluxo de usuario/tela/rota → e2e.
+> `[fonte: usuario]` marca caso que o usuario adicionou no pair — conhecimento de produto que as lentes nao tinham.
+
+### 6.4 Gaps
+
+[RF/AT que a SPEC exige e hoje NAO tem teste — cada um vira teste novo numa tarefa.]
+
+### 6.5 Decisoes do pair de testes
+
+| # | Ponto | Decisao | Quem decidiu | Motivo / risco aceito |
+|---|---|---|---|---|
+| 1 | RF3: tipo (integracao vs e2e) | integracao | usuario | e2e ficaria flaky no gateway |
+| 2 | AT2: 2 casos de borda | cortados | usuario | nao acontece na pratica |
+
+### 6.6 Divida e risco aceito
+
+- **Casos cortados**: [caso — motivo dado pelo usuario]
+- **RF/AT sem teste**: [ancora — justificativa; a tarefa nasce com `Tests: none` justificado]
+- **Lacunas pre-existentes (fora de escopo)**: [componente — sugestao: item separado no roadmap]
+- **Risco que sobra apos este PR**: [o que continua sem rede de protecao]
+
+### 6.7 Pra onde caminhamos
+
+- Cobertura: [N] testes hoje → [M] depois (+[K]) — [a unit / b integracao / c e2e]
+- Ambiente novo exigido: [sandbox / Playwright / nenhum]
+- Custo de suite: [sinal de tempo — e2e novo pesa no CI]
 
 ---
 
@@ -125,7 +174,8 @@ T3, T4, T5 → T6
 - **Reuses**: [path:line]
 - **Skills**: [lista]
 - **Riscos**: [se aplicavel, senao omita]
-- **Tests**: unit
+- **Tests**: unit | integration | e2e | none  (herdado da matriz 6.3; justifique se none)
+- **Test env**: none | server-local | browser-playwright | sandbox  (herdado da matriz; o que o executor sobe antes do gate)
 - **Test count**: N tests
   - [descricao do teste 1]
   - [descricao do teste 2]

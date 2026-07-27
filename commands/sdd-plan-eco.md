@@ -27,7 +27,7 @@ Leia o command base: `.claude/commands/sdd-plan.md` do projeto, senao `~/.claude
 
    Se o usuario insistir, prossiga no eco (ciente da limitacao).
 
-3. **Passos 8 e 9 (quebrar tarefas + 4 checks) rodam num subagente Opus.** Monte um pacote de contexto com: a SPEC de comportamento (RFs + ATs), sintese da pesquisa (Passos 2-4), decisoes tecnicas resolvidas (Passo 6), reconciliacao com docs (Passo 7), constraints da constitution e skills do projeto. Dispare `Agent` com:
+3. **Passos 8 e 9 (quebrar tarefas + 4 checks) rodam num subagente Opus.** Monte um pacote de contexto com: a SPEC de comportamento (RFs + ATs), sintese da pesquisa (Passos 2-4), decisoes tecnicas resolvidas (Passo 6), reconciliacao com docs (Passo 7), **a matriz de testes fechada no pair + a tabela de decisoes do usuario (Passo 7.5)**, constraints da constitution e skills do projeto. Dispare `Agent` com:
    - `subagent_type: general-purpose`
    - `model: opus`
    - `description`: "Quebrar tarefas + 4 checks"
@@ -37,6 +37,8 @@ Leia o command base: `.claude/commands/sdd-plan.md` do projeto, senao `~/.claude
 
 4. **Passo 9.5 (revisao por painel) fica OFF por design.** No `/sdd-plan` cheio o painel de reviewers roda sempre; o modo eco e justamente o escape pra Medium com orcamento apertado — varios subagentes Opus por rodada contradiz o proposito. Os 4 checks (rodados pelo subagente Opus unico do item 3) bastam. Se o usuario quiser a revisao por painel, sugira migrar pro `/sdd-plan` cheio.
 
-5. **Checkpoints com o usuario** (Passos 6, 7 e 10) continuam na main, normalmente — o subagente nunca interage com o usuario.
+5. **Passo 7.5 (pair de testes) roda na main, com lentes em Sonnet.** O que o modo eco corta e custo de modelo, **nao a mao do usuario no produto**: as 5 etapas continuam (inventario → lentes → **Mapa de Testes em tela** → discussao ponto a ponto → fechamento com autoria). Diferenca unica: as lentes rodam `model: sonnet` em vez de `opus`. Escopo trivial (≤2 RF/AT, todos com ambiente `none`) dispensa as lentes — a main propoe o mapa direto —, mas a tela e a discussao **nunca** sao dispensadas. O pacote que vai pro subagente Opus do item 3 inclui a matriz fechada + as decisoes do usuario: a quebra de tarefas herda, nao reabre.
 
-6. Todo o resto (localizar/ler a SPEC no Passo 2, auto-sizing, Knowledge Verification Chain com Step 0 de memoria, template do PLAN via reference, Passos 11-14, guardrails) segue o base sem alteracao.
+6. **Checkpoints com o usuario** (Passos 6, 7, **7.5** e 10) continuam na main, normalmente — o subagente nunca interage com o usuario.
+
+7. Todo o resto (localizar/ler a SPEC no Passo 2, auto-sizing, Knowledge Verification Chain com Step 0 de memoria, template do PLAN via reference, Passos 11-14 — **incluindo o Passo 12.5 (registrar no ROADMAP: 1 item por PR previsto em `thoughts/roadmap/backlog/`, com `**Depende de:**` entre slices sequenciais + regeneracao do hub; grafo nativo do Obsidian, sem mermaid)** —, guardrails) segue o base sem alteracao.

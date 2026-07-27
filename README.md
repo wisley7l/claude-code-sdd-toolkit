@@ -12,13 +12,13 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/sdd-spec`** — escreve a **especificação de comportamento** (o QUÊ): pesquisa o codebase e produz a SPEC com histórias de usuário, critérios de sucesso, requisitos funcionais/não funcionais, fora de escopo e testes de aceitação em `thoughts/specs/spec-<ts>-<slug>.md`. **Não escreve código, plano nem tarefas** — descreve comportamento, não implementação. Detecta escopo trivial e delega pra `/quick-task`. (Inspirado na gist ["Formação da especificação"](https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3) por @parruda.)
 
-**`/sdd-plan`** — consome a SPEC de comportamento e produz o **plano técnico** (o COMO): pesquisa + quebra em tarefas TDD num único doc auto-sized (Medium/Large/Complex) em `thoughts/plans/PLAN-<...>.md`. Cada tarefa rastreia a um requisito funcional (RF) ou teste de aceitação (AT) da SPEC — um 4º check de **Cobertura** garante que nada da SPEC fique sem tarefa. Detecta escopo Quick e delega pra `/quick-task`.
+**`/sdd-plan`** — consome a SPEC de comportamento e produz o **plano técnico** (o COMO): pesquisa + quebra em tarefas TDD num único doc auto-sized (Medium/Large/Complex) em `thoughts/plans/PLAN-<...>.md`. Cada tarefa rastreia a um requisito funcional (RF) ou teste de aceitação (AT) da SPEC — um 4º check de **Cobertura** garante que nada da SPEC fique sem tarefa. **Antes de quebrar tarefas, os testes são planejados em par com você** (Passo 7.5, interativo por design): lê as convenções de teste do projeto na largada, inventaria o que **já é testado**, e **3 lentes paralelas** (Produto/QA, Engenharia de teste, Adversarial) propõem a cobertura por RF/AT. O resultado vai **pra tela como um Mapa de Testes** — o que temos hoje, o que **não** temos (desta feature e lacunas pré-existentes), o que a feature adiciona (tipo/casos/ambiente/prioridade/custo, marcado ✅ consenso / ⚠️ lentes divergem / ❓ decisão sua) e **pra onde caminhamos** (cobertura antes→depois, ambiente novo exigido, dívida que fica, risco que sobra). Aí a discussão vai ponto a ponto, com recomendação explícita: **a IA propõe, você corta, prioriza e aceita risco.** Caso cortado vira dívida registrada no PLAN, não esquecimento; caso que você adicionou entra marcado `[fonte: usuário]`. A quebra de tarefas herda a matriz fechada — nenhuma tarefa nasce sem saber que teste a cobre, e o painel de review (abaixo) não reabre o que você decidiu. Ao finalizar, **registra no ROADMAP 1 item por PR previsto** (`backlog/`): PLAN que o Check 5 divide em N PRs sequenciais gera N itens (com `Depende de:` ligando os slices), pra nenhum PR ficar esquecido. Detecta escopo Quick e delega pra `/quick-task`.
 
-**`/sdd-plan-eco`** — variante econômica do `/sdd-plan` pra escopo Medium: main em Sonnet, quebra de tarefas + 4 checks delegadas a um único subagente Opus de contexto focado.
+**`/sdd-plan-eco`** — variante econômica do `/sdd-plan` pra escopo Medium: main em Sonnet, quebra de tarefas + 4 checks delegadas a um único subagente Opus de contexto focado. **O pair de testes continua** (lentes em Sonnet em vez de Opus) — o modo eco corta custo de modelo, nunca a sua mão no produto.
 
-**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body derivados da **SPEC de comportamento** — histórias de usuário e critérios são a melhor prévia pro reviewer) e cria a worktree pra implementação isolada. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer em 4 seções — **O quê · Por quê · Como · Test plan** (incluindo desvios do plano e como testar manualmente) — tudo rastreável a SPEC/PLAN/IMP/diff. Nunca tira o PR de draft.
+**`/pr-draft`** — abre o PR inicial em draft a partir do plano (branch + empty commit + title/body derivados da **SPEC de comportamento** — histórias de usuário e critérios são a melhor prévia pro reviewer) e cria a worktree pra implementação isolada. **Promove o item do slice no ROADMAP** (`backlog/` → `em-progresso/` + `#PR`) no vault local — nunca no body. **`/pr-draft sync`** (pós-implementação) reescreve o body como prévia pro reviewer em 4 seções — **O quê · Por quê · Como · Test plan** (incluindo desvios do plano e como testar manualmente) — tudo rastreável a SPEC/PLAN/IMP/diff. Nunca tira o PR de draft.
 
-**`/executor-plan`** — executa as tarefas com TDD em modo autônomo, sub-agents paralelos pras tarefas marcadas `[P]`, staging por tarefa. Commits sob aprovação humana; `--step` volta ao modo pausado.
+**`/executor-plan`** — executa as tarefas com TDD em modo autônomo, sub-agents paralelos pras tarefas marcadas `[P]`, staging por tarefa. TDD com **red verificável**: roda o teste e confirma que ele **falha pelo motivo certo** antes de implementar — **falso-verde** (teste que passa sem o código) é parada dura, e a evidência do red vai pro log/IMP (o validador Haiku audita). O tipo de teste **vem do PLAN** (não default unit) e, quando o PLAN pede integração/e2e, sobe **ambiente real** pra rodar o red→green: server local em background, Playwright pra telas, sandbox/DB de teste. Exceção ao red só quando a tarefa declara `Tests: none` justificado. Commits sob aprovação humana; `--step` volta ao modo pausado.
 
 **`/verifica`** — verificação comportamental pós-implementação: sobe a aplicação, exercita os fluxos que a mudança tocou e registra **evidência real** no IMP (testes verdes ≠ feature funcionando). Nunca aponta pra produção; pagamentos sempre em test mode; side effects externos só com confirmação.
 
@@ -32,9 +32,9 @@ O planejamento é dividido em dois documentos: a **SPEC de comportamento** (o QU
 
 **`/memory-organize`** — reorganiza o auto-memory: órfãs, links quebrados, duplicatas e sub-sumários quando `MEMORY.md` cresce. Modo `revisar` reescreve o **conteúdo** de notas antigas presas ao caso pontual pra **princípio + gatilho** (mesmo padrão que `/sdd-learning` já aplica nas novas), caso a caso, sem inventar motivo que a nota não registrou.
 
-**`/roadmap`** — gerencia `thoughts/ROADMAP.md`: entradas, import de issues do GitHub, sync de seções por status de PR (Próximos / Backlog / Em progresso / Concluído).
+**`/roadmap`** — gerencia o roadmap como **vault Obsidian** em `thoughts/roadmap/`: cada item é um `.md`, dependência é wikilink `[[...]]` e o grafo é nativo (sem mermaid). Status = pasta (`backlog/` · `em-progresso/` · `concluido/`); dependência via `/roadmap dep NNN <- MMM`; sync por status de PR; `migrar` converte o formato antigo (arquivo único). O hub lista 🔴 Próximos e 🔓 Desbloqueados agora (o que um merge liberou).
 
-**`/sdd-close`** — arquiva o par **SPEC+PLAN concluído** (PR **mergeado**): move os docs de `thoughts/specs/` e `thoughts/plans/` pra `closed/` em cada pasta e marca a entrada no ROADMAP como Concluído. Só age sob PR MERGED, confirmação individual, par junto (detecta o PLAN→SPEC pela linha `SPEC:` do topo). Distinto de `old/` (specs/planos **descartados**, geridos à mão). Nunca commita (`thoughts/` é gitignored).
+**`/sdd-close`** — arquiva o par **SPEC+PLAN concluído** (PR **mergeado**): move os docs de `thoughts/specs/` e `thoughts/plans/` pra `closed/` em cada pasta e move o item do roadmap pra `concluido/` (recalculando o que isso desbloqueou). Só age sob PR MERGED, confirmação individual, par junto (detecta o PLAN→SPEC pela linha `SPEC:` do topo). Distinto de `old/` (specs/planos **descartados**, geridos à mão). Nunca commita (`thoughts/` é gitignored).
 
 ### Utilitários
 
@@ -74,7 +74,7 @@ Entregar um PR:   /pr-ready   (avalia, corrige, sync do body; tira de draft e ma
 Review manual:    /clear → /pair-review   (companheiro interativo sobre o staged, sem ruído da execução)
 Mudança pequena:  /quick-task
 Bug misterioso:   /investiga → root cause com fonte → /quick-task ou /sdd-plan
-Após PR fechar:   /sdd-learning → /sdd-close (arquiva SPEC+PLAN + marca ROADMAP)
+Após PR fechar:   /sdd-learning → /sdd-close (arquiva SPEC+PLAN + move item do ROADMAP)
 Projeto novo:     /sdd-init (uma vez)
 Quando precisar:  /busca · /verifica · /complexidade · /git-rebase-seguro · /roadmap · /memory-organize
 ```
@@ -124,7 +124,8 @@ No projeto onde os commands rodam:
 
 - **Zero Inferência** — nunca assume comportamento de API ou padrão; verifica na doc oficial (Context7) ou no código existente
 - **Constitution-first** — lê `CLAUDE.md` e `ARCHITECTURE.md` antes de qualquer ação
-- **TDD como contrato** — testes antes do código; se quebram, paramos e discutimos
+- **TDD como contrato, red verificável** — teste antes do código; roda e confirma que **falha pelo motivo certo** antes de implementar (falso-verde = parada dura). Se quebram depois, paramos e discutimos
+- **Tipo de teste por necessidade** — unit não é default; o tipo (unit/integração/e2e) sai do que o RF/AT exige, planejado na matriz do `/sdd-plan` e executado contra ambiente real quando preciso (server local, Playwright, sandbox)
 - **Test count protection** — toda tarefa declara `Test count: N tests pass`; cair = bloqueio (previne silent deletion)
 - **Test co-location** — testes na MESMA tarefa que cria o código; defer é anti-pattern
 - **Commit sob aprovação humana** — commands fazem `git add`, nunca `git commit`/`push` sozinhos
@@ -149,8 +150,11 @@ Dois usos que aumentam o retorno por token:
 
 ## Testes
 
-- **Unitários** em `thoughts/tests/`, escritos antes do código (TDD). Não commitados — são andaime de trabalho
-- **Integração/e2e** vão onde o projeto manda e são commitados
+- **Testes se planejam em par** — o `/sdd-plan` lê as convenções do projeto na largada, inventaria o que já é testado, e traz o **Mapa de Testes pra tela** (o que temos / o que não temos / pra onde caminhamos) pra você decidir cortes, prioridade e risco **antes** de qualquer tarefa ser quebrada. Testes codificam comportamento: essa decisão é de produto, não da IA
+- **Tipo por necessidade** — unit não é default: lógica pura → unit; interação entre módulos/DB → integração; fluxo de usuário/tela → e2e
+- **Red verificável** — o `/executor-plan` roda o teste e confirma que falha antes de implementar; falso-verde é parada dura, evidência do red vai pro IMP
+- **Unitários** em `thoughts/tests/`, escritos antes do código. Não commitados — são andaime de trabalho
+- **Integração/e2e** vão onde o projeto manda e são commitados; rodam contra **ambiente real** (server local em background, Playwright pra telas, sandbox/DB de teste)
 - Se testes que passavam começam a falhar, ou a contagem cai: parada obrigatória pra discutir
 
 ## Statusline (opcional)
@@ -190,7 +194,8 @@ scripts/                    # Extras opt-in. Ver scripts/README.md
 
 ```
 thoughts/
-  ROADMAP.md                  # Visão multi-feature (opcional)
+  roadmap/                    # Visão multi-feature — vault Obsidian (opcional)
+    ROADMAP.md                #   hub + backlog/ · em-progresso/ · concluido/
   specs/spec-<ts>-slug.md            # /sdd-spec (comportamento — o QUÊ)
   plans/PLAN-DD-MM-YYYY-slug.md      # /sdd-plan (técnico — o COMO)
   history/IMP-DD-MM-YYYY-slug.md     # /executor-plan
