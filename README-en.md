@@ -6,11 +6,15 @@ A collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sl
 
 Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd-spec`) and the **technical PLAN** (the HOW, via `/sdd-plan`).
 
+Both are **ephemeral** — they describe one change and move to `closed/` when the PR merges. What survives is the **living capability** (`thoughts/capabilities/<domain>.md`): the accumulated specification of what the system **does today**, merged by `/sdd-close` on every merge. Mnemonic: **has a timestamp = dies; no timestamp = lives.** It's what lets the next cycle's `/sdd-spec` start from already-specified behavior instead of rediscovering everything in the code.
+
 ## Commands
 
 ### Main workflow
 
-**`/sdd-spec`** — writes the **behavior specification** (the WHAT): researches the codebase and produces the SPEC with user stories, success criteria, functional/non-functional requirements, out-of-scope, and acceptance tests in `thoughts/specs/spec-<ts>-<slug>.md`. **Writes no code, no plan, no tasks** — it describes behavior, not implementation. Detects trivial scope and hands off to `/quick-task`. (Inspired by the gist ["Formação da especificação"](https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3) by @parruda.)
+**`/sdd-spec`** — writes the **behavior specification** (the WHAT): researches the codebase and produces the SPEC with user stories, success criteria, functional/non-functional requirements, out-of-scope, and acceptance tests in `thoughts/specs/spec-<ts>-<slug>.md`. **Writes no code, no plan, no tasks** — it describes behavior, not implementation. **Capability-first**: research starts at `thoughts/capabilities/<domain>.md` (what the system already promises) and, when the request touches existing behavior, it **marks the delta** on the RFs (`[MODIFIED → checkout C1]`, `[REMOVED → …]`; unmarked = `ADDED`) — that's what `/sdd-close` merges after the merge. Detects trivial scope and hands off to `/quick-task`. (Inspired by the gist ["Formação da especificação"](https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3) by @parruda.)
+
+**`/sdd-spec --explore`** — the **no-commitment** phase before specifying: reads the domain's capabilities, measures the **structural cost** of each candidate direction with `structure-cache` (real blast radius, not a guess), and puts 2-3 directions on the table with trade-offs and an explicit recommendation. **Writes no file at all** — it ends in a decision: SPEC / `/quick-task` / `/investiga` / **don't do it now** (that last one offers to record an `idea` note, so the idea doesn't come back from scratch). Direction, not design — implementation design still belongs to `/sdd-plan`.
 
 **`/sdd-plan`** — consumes the behavior SPEC and produces the **technical PLAN** (the HOW): research + breakdown into TDD tasks in a single auto-sized doc (Medium/Large/Complex) in `thoughts/plans/PLAN-<...>.md`. Each task traces to a functional requirement (RF) or acceptance test (AT) from the SPEC — a 4th **Coverage** check ensures nothing in the SPEC is left without a task. **Before breaking down tasks, tests are planned in pair with you** (Step 7.5, interactive by design): it reads the project's testing conventions up front, inventories what is **already tested**, and **3 parallel lenses** (Product/QA, Test engineering, Adversarial) propose the coverage per RF/AT. The result goes **on screen as a Test Map** — what we have today, what we **don't** have (from this feature and pre-existing gaps), what the feature adds (type/cases/environment/priority/cost, flagged ✅ consensus / ⚠️ lenses disagree / ❓ your call), and **where we're heading** (coverage before→after, new environment required, debt left behind, remaining risk). Then the discussion goes point by point, with an explicit recommendation: **the AI proposes, you cut, prioritize and accept risk.** A cut case becomes recorded debt in the PLAN, not an oversight; a case you added is marked `[fonte: usuário]`. The task breakdown inherits the closed matrix — no task is born without knowing which test covers it, and the review panel (below) does not reopen what you decided. On finishing, it **records one ROADMAP item per planned PR** (`backlog/`): a PLAN that Check 5 splits into N sequential PRs yields N items (linked via `Depende de:`), so no PR gets forgotten. Detects Quick scope and hands off to `/quick-task`.
 
@@ -32,7 +36,9 @@ Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd
 
 **`/roadmap`** — manages the roadmap as an **Obsidian vault** in `thoughts/roadmap/`: each item is a `.md`, a dependency is a `[[...]]` wikilink, and the graph is native (no mermaid). Status = folder (`backlog/` · `em-progresso/` · `concluido/`); dependencies via `/roadmap dep NNN <- MMM`; sync by PR status; `migrar` converts the old (single-file) format. The hub lists Up next and 🔓 Unblocked now (what a merge just freed up).
 
-**`/sdd-close`** — archives a **completed SPEC+PLAN pair** (PR **merged**): moves the docs from `thoughts/specs/` and `thoughts/plans/` into `closed/` under each folder and moves the ROADMAP item into `concluido/` (recomputing what it unblocked). Acts only on MERGED PRs, individual confirmation, pair kept together (detects PLAN→SPEC via the top `SPEC:` line). Distinct from `old/` (**discarded** specs/plans, managed by hand). Never commits (`thoughts/` is gitignored).
+**`/sdd-close`** — closes out completed work (PR **merged**) in four acts. **Archives** the SPEC+PLAN pair (`thoughts/{specs,plans}/` → `closed/`). **Merges** the delivered behavior into the **living capability** — the delta marked in the SPEC becomes a `C<N>` requirement in `thoughts/capabilities/<domain>.md`, carrying `[Origem: <spec> · PR #N]`, via surgical and idempotent edits (a missing `C<N>` stops and reports — it never invents a requirement). **Harvests** what would otherwise be lost: follow-ups from review comments (including inline ones, which `gh pr view` doesn't return) and the **test debt** from PLAN section 6.6 — each becomes a `backlog/` item under individual confirmation, deduped, born into 🔓 Unblocked. **Completes** the ROADMAP item → `concluido/` (recomputing what it unblocked). Acts only on MERGED PRs; permanently accepted risk does not become an item; never posts on the PR and never commits (`thoughts/` is gitignored). Distinct from `old/` (**discarded**, managed by hand).
+
+> Why the harvest lives here: the merge is the only moment we know the behavior became true. Before it, promoting to a capability would assert something that doesn't exist yet. Without it, the debt `/sdd-plan` records in the PLAN is recorded **and forgotten all the same** — the PLAN moves to `closed/` and takes it along.
 
 ### Utilities
 
@@ -47,6 +53,8 @@ Planning is split into two documents: the **behavior SPEC** (the WHAT, via `/sdd
 **`/busca`** — web research via an isolated subagent, with no impact on the main context. Flags `--rapido`, `--profundo`, and `--save`.
 
 **`/pr-report`** — report of the user's PRs in the repo (weekly inline, monthly and yearly saved).
+
+**`/pr-followup-audit`** — **retroactive rescue of review debt**. Sweeps the PRs merged in a window (default 3 weeks), extracts everything reviewers raised — including review bodies and inline comments, where the content actually lives — and verifies **point by point against the current code** whether it still holds. The governing rule: *"the author promised in the PR" is not state; `file:line` is.* Fans out **read-only** Opus subagents per thematic group of PRs. The triage is what separates audit from noise: **not** debt are a review awaiting reply (`CHANGES_REQUESTED` later than the last commit — it belongs to the PR; filing it in a backlog bypasses the reviewer), a follow-up that already has an open PR, and a deliberate deferral; **debt** are the accepted fix that never executes (a guard on a field that route never populates) and scope regression across PRs from different reviews. It also detects a **lying tracker** (open item for an already-fixed problem, a dependency that already landed, an archived plan describing the design review rejected) and **code with no consumer**. Feeds a **perennial issue** — body = only what's open (so the checklist counter means something), comment = append-only round including what was left out and why — **under confirmation**; never posts on the audited PRs. Complementary to `/sdd-close`: one is prophylaxis per PR, the other rescues accumulated debt.
 
 **`/complexidade`** — measures cyclomatic complexity **only on changed files** (vs base or `--staged`), threshold 10 (or the target project's `CLAUDE.md` override). Detects the tool in order: project linter → `lizard` → `fta`. With `--fix`, offers refactoring via `code-simplifier`. The same gate runs embedded in `/sdd-review` (becomes a MINOR/MAJOR issue) and in `/executor-plan` (automatic fix during Final Verification, hard stop after 2 attempts).
 
@@ -168,10 +176,12 @@ Result: `[Claude Sonnet 4.5] meu-projeto ████░░░░░░ 42% ctx 
 commands/                   # Slash commands — CANONICAL SOURCE (copied to ~/.claude/commands/)
   sdd-spec.md · sdd-plan.md · sdd-plan-eco.md · pr-draft.md · executor-plan.md · pair-review.md
   quick-task.md · sdd-review.md · sdd-learning.md · verifica.md · investiga.md
-  sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md
+  sdd-init.md · memory-organize.md · roadmap.md · busca.md · pr-report.md · pr-followup-audit.md
   complexidade.md · worktree-detect.md · modo-livre.md · git-worktree.md
   git-remove-worktree.md · git-rebase-seguro.md · sync-tests.md · git-prune-branches.md
   references/               # Templates loaded on demand (progressive disclosure)
+                            #   capability-template.md (living spec + delta merge rules)
+                            #   sdd-spec-explore.md · sdd-close-colheita.md
   deprecated/               # Older versions — fallback (.vN.md suffix). Do not delete
 skills/
   memory-keeper/            # Auto-memory: 9 types, flat convention, MEMORY.md as index
@@ -191,8 +201,9 @@ scripts/                    # Opt-in extras. See scripts/README.md
 thoughts/
   roadmap/                    # Multi-feature view — Obsidian vault (optional)
     ROADMAP.md                #   hub + backlog/ · em-progresso/ · concluido/
-  specs/spec-<ts>-slug.md            # /sdd-spec (behavior — the WHAT)
-  plans/PLAN-DD-MM-YYYY-slug.md      # /sdd-plan (technical — the HOW)
+  capabilities/<domain>.md           # LIVING spec — what the system does today (merged by /sdd-close)
+  specs/spec-<ts>-slug.md            # /sdd-spec (behavior — the WHAT) → closed/ on merge
+  plans/PLAN-DD-MM-YYYY-slug.md      # /sdd-plan (technical — the HOW) → closed/ on merge
   history/IMP-DD-MM-YYYY-slug.md     # /executor-plan
   reviews/                    # /sdd-review
   research/YYYY-MM-DD-slug.md        # /busca --save
@@ -201,6 +212,36 @@ thoughts/
   tests/                      # TDD scaffolding (NOT committed)
   cache/structure/            # [prototype] index.json + manifest.json + HOTSPOTS.md (regenerable, gitignored)
 ```
+
+### Living spec (`capabilities/`)
+
+SPEC and PLAN are **ephemeral**: they describe *one change* and move to `closed/` when the PR merges. With nothing else, the specified behavior dies in the archived file and the next cycle's `/sdd-spec` rediscovers everything in the code.
+
+The **capability** is the counterweight: `thoughts/capabilities/<domain>.md` accumulates what the system **does today** in that domain, one delivered SPEC at a time.
+
+```
+thoughts/capabilities/checkout.md
+  C1 — Coupon application      [Origem: spec-1730… · PR #142]
+  C2 — Shipping calculation    [Origem: spec-1730… · PR #142]
+  ## Dívida conhecida          → linked to the roadmap item
+  ## Removido                  → ~~C3~~ with PR and date (trail preserved)
+```
+
+How the cycle works:
+
+1. **`/sdd-spec` reads** the domain's capability up front — behavior already specified, no rediscovery. If the request touches existing behavior, it marks the delta on the RF: `[MODIFIED → checkout C1]`, `[REMOVED → checkout C3]`. An unmarked RF is an implicit `ADDED`.
+2. **`/sdd-close` merges**, and only on a **merged** PR — the only moment the behavior became true. `ADDED` creates a new `C<N>`; `MODIFIED` edits the requirement and **appends** to its origin without erasing the previous trail; `REMOVED` moves to `## Removido` with PR and date.
+
+The details that separate a useful document from one that rots:
+
+- **One domain = one area of behavior** (`checkout`, `auth-session`), not a code module nor a feature. A new capability requires confirmation — dozens of files with one requirement each destroy the value.
+- **`C<N>` is never reused**, and every requirement carries `[Origem: <spec> · PR #N]`. With no identifiable origin, the merge stops and asks.
+- **Observable behavior, never implementation** — same contract as the SPEC. A capability that became a description of code has lost its purpose.
+- **Idempotent**: running `/sdd-close` twice does not duplicate a requirement (the origin already cites the SPEC+PR). A missing `C<N>` stops and reports — it never invents one.
+- **Acceleration, never a dependency**: without `capabilities/`, the whole flow works exactly as before.
+- **Local** (falls under the already-gitignored `thoughts/`) — no merge conflicts to resolve.
+
+> Concept inspired by the *living specs* in [OpenSpec](https://github.com/Fission-AI/OpenSpec) (Fission-AI), adapted to this toolkit's SPEC→PLAN→PR pipeline: here the merge trigger is the **PR merge**, and the same step harvests review follow-ups and test debt into the roadmap.
 
 ### Structure cache (prototype)
 

@@ -1,6 +1,7 @@
 ---
-description: Cria a especificação de comportamento (o QUÊ) — pesquisa o codebase e escreve a SPEC sem código/plano/tarefas. Antecede o /sdd-plan. Quick delega pra /quick-task.
+description: Cria a especificação de comportamento (o QUÊ) — pesquisa o codebase e escreve a SPEC sem código/plano/tarefas. Antecede o /sdd-plan. `--explore` pesa direções sem escrever nada. Quick delega pra /quick-task.
 model: claude-opus-4-8
+argument-hint: [<demanda> | --explore <demanda>]
 allowed-tools: Read, Write, Edit, Glob, Grep, Skill, Agent, Bash(git diff*), Bash(git log*), Bash(git status*), Bash(git worktree list*), Bash(git branch*), Bash(git fetch*), Bash(gh *), Bash(ls *), Bash(mkdir *), Bash(find *), Bash(date *), Bash(pwd), Bash(structure-cache *), Bash(structure-cache), WebFetch, WebSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs
 # Inspirado na gist "Formação da especificação" por @parruda
 # https://gist.github.com/parruda/85bf3d6ee2e8adee5c0dd9429afd76b3
@@ -19,11 +20,24 @@ Voce e um **par tecnico** que entende o problema e descreve **o comportamento es
 - **Mudanca trivial** (≤3 arquivos, 1 frase, sem comportamento novo observavel): use `/quick-task`. Este skill detecta e delega.
 - **Bug fix simples** (root cause obvio, comportamento ja especificado): use `/quick-task`.
 - **Voce ja tem o comportamento 100% claro e so quer o plano tecnico**: pode ir direto pro `/sdd-plan`. Para feature nao trivial, o recomendado e SPEC primeiro.
+- **Bug de causa desconhecida**: use `/investiga`. Especificar comportamento antes de entender a causa produz SPEC errada.
+
+## Argumentos
+
+| Invocacao | O que faz |
+|---|---|
+| `/sdd-spec <demanda>` | Fluxo completo: pesquisa e escreve a SPEC |
+| `/sdd-spec --explore <demanda>` | **Fase sem compromisso**: pesa 2-3 direcoes com custo estrutural medido e termina numa decisao (SPEC / quick-task / investiga / nao fazer). **Nao escreve arquivo nenhum** |
+
+Com `--explore`, siga o protocolo do reference `sdd-spec-explore.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue **apenas** quando a flag for passada. **Fallback** (reference ausente): leia constitution + capabilities + memoria, meca blast radius das direcoes com `structure-cache query --importers/--hotspots`, apresente 2-3 direcoes (direcao / custo estrutural / trade-off / o que ja e prometido) com recomendacao explicita, e feche numa das 4 saidas. Nunca escreva arquivo no modo explore.
+
+Se o usuario escolher **(1) SPEC** no fim do explore, siga daqui pro **Passo 2** carregando o contexto ja levantado — nao repita a pesquisa dos Passos 3 e 4.
 
 ## Principios
 
 - **Comportamento, nao implementacao**: o QUE, nao o COMO. Se voce se pegar escrevendo "usar a lib X", "criar a funcao Y", "no arquivo Z faca...", pare e reformule pro comportamento observavel. Excecao: a secao **Contexto Tecnico & Integracao**, que mapeia onde o recurso encosta no sistema atual (com fonte)
 - **Constitution-first**: `CLAUDE.md` e `ARCHITECTURE.md` delimitam o que e possivel e desejavel
+- **Capability-first**: `thoughts/capabilities/<dominio>.md` e a spec **viva** do que o sistema promete hoje. Leia antes do codigo — e o comportamento ja especificado em ciclos anteriores, sem redescoberta. Aceleracao, nunca dependencia
 - **Memoria persistente**: o `MEMORY.md` ja vem carregado pelo harness. Abra notas relevantes sob demanda (decisoes, blockers, licoes do dominio). Proponha registro novo so com confirmacao. Detalhes no skill `memory-keeper`
 - **Zero Inferencia** no Contexto Tecnico: toda afirmacao sobre o sistema atual com `[Fonte: path:line]`; sobre lib/API externa com `[Fonte: url]`. Sem fonte = `[NEEDS VERIFICATION]`
 - **Knowledge Verification Chain** (so quando o Contexto Tecnico cita lib/API externa): Memoria → Codebase → Project docs → Context7 → Web → flag incerto. Nunca pule etapas
@@ -105,7 +119,19 @@ Aguarde. Registre as respostas (vao virar RFs e/ou itens de "Decisoes adiadas").
 
 ### Passo 3 — Pesquisa do codebase (entender o sistema atual)
 
-Leia o codigo real pra entender como o sistema funciona hoje e onde o recurso se encaixa. Use Grep/Glob/Read de forma minuciosa — **nao adivinhe**.
+**Comece pelas capabilities, nao pelo codigo.** `thoughts/capabilities/<dominio>.md` e a especificacao **viva** do que o sistema promete hoje — ler ela primeiro evita redescobrir do zero o comportamento que ja foi especificado em ciclos anteriores.
+
+```bash
+ls "$ROOT/thoughts/capabilities/" 2>/dev/null    # pasta ausente = projeto ainda sem capabilities; siga sem
+```
+
+Abra a(s) do dominio da demanda. Contrato no reference `capability-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. **Fallback** (reference ausente): capability = `thoughts/capabilities/<dominio>.md` com requisitos `C<N>` de comportamento observavel, cada um com `[Origem: <spec> · PR #N]`, mais secoes de Fora do escopo / Divida conhecida / Removido; a SPEC marca delta nos RFs com `[MODIFIED → <dominio> C<N>]` e `[REMOVED → <dominio> C<N>]`, e o `/sdd-close` mescla apos o merge.
+
+**Capability e aceleracao, nunca dependencia** — ausente ou incompleta, a pesquisa segue pelo codigo como sempre.
+
+Se a demanda **sobrepoe** comportamento ja prometido, anote agora quais `C<N>` serao afetados: isso vira a marcacao de delta nos RFs (Passo 7) e o `/sdd-close` usa pra mesclar depois do merge.
+
+Em seguida, leia o codigo real pra entender como o sistema funciona hoje e onde o recurso se encaixa. Use Grep/Glob/Read de forma minuciosa — **nao adivinhe**.
 
 Para varredura ampla (>3 queries, varios diretorios), use subagent `Agent` (`subagent_type: Explore`) — ele localiza e devolve so a sintese com `path:line`, preservando o contexto Opus principal.
 
@@ -157,6 +183,8 @@ Extraia comportamento esperado, criterios de aceite e stakeholders mencionados.
 
 **Requisitos funcionais (visao de cima)**: [RF1, RF2, RF3 — 1 linha cada]
 
+**Impacto no que ja e prometido**: [se a demanda toca capability existente: "modifica checkout C1, remove C3"; senao: "comportamento novo, dominio <slug>" ou "sem capability pro dominio"]
+
 **Fora de escopo**: [bullets — lembrando: o que nao listar aqui esta NO escopo]
 
 **Testes de aceitacao (visao de cima)**: [AT1 cobre RF1, ...]
@@ -179,6 +207,16 @@ Caminho: `thoughts/specs/spec-<TS>-<slug>.md` (o nome **deve** comecar com `spec
 
 Escreva seguindo o template do reference `sdd-spec-template.md` — procure em `.claude/sdd-references/` do projeto, senao em `~/.claude/sdd-references/`. Carregue o reference **apenas na hora de escrever**.
 
+**Marque o delta nos RFs que tocam capability existente** (Passo 3). Isso e o que permite ao `/sdd-close` mesclar o comportamento na capability viva depois do merge:
+
+```markdown
+- **RF3** [MODIFIED → checkout C1]: passa a aceitar ate 3 cupons cumulativos por pedido
+- **RF4** [REMOVED → checkout C3]: cupom por CPF deixa de existir
+- **RF5**: (sem marcacao) — comportamento novo, sera ADDED
+```
+
+Regras: RF sem marcacao e `ADDED` implicito — **nao marque nada em dominio novo**. Marque `MODIFIED`/`REMOVED` so contra `C<N>` que voce **confirmou** existir na capability (nunca chute o numero: numero errado faz o `/sdd-close` parar). Se a demanda cria dominio novo, registre na SPEC qual `<dominio>` voce propoe — o `/sdd-close` vai pedir confirmacao antes de criar o arquivo.
+
 **Fallback** (reference ausente): monte com frontmatter (date, request, status, related) + secoes: Resumo (por ultimo), 1. Historico do Usuario & Partes Interessadas (com historias de usuario), 2. Criterios de Sucesso (mensuraveis, funcional + operacional), 3. Requisitos Funcionais (RF numerados — entrada/saida/regra, happy path + borda + erro), 4. Requisitos Nao Funcionais (so o relevante), 5. Restricoes & Fora de Escopo (fora-de-escopo + limites + decisoes adiadas), 6. Contexto Tecnico & Integracao (com `[Fonte: path:line]`), 7. Testes de Aceitacao (Given/When/Then, cada um cobre ≥1 RF), 8. Mapa RF → Teste de Aceitacao.
 
 ### Passo 8 — Verificacao Final (bloqueante)
@@ -189,6 +227,7 @@ Apos escrever, releia e verifique:
 3. **Contexto Tecnico checado** — abra 2-3 dos arquivos referenciados e confirme que `path:line` batem com a realidade; ajuste ou marque `[NEEDS VERIFICATION]`
 4. **Testes de aceitacao concretos** — Given/When/Then verificaveis, cada um mapeado a ≥1 RF; sem RF orfao no Mapa (Secao 8)
 5. **Fora de escopo explicito** — o que esta excluido esta listado; o resto e escopo
+6. **Delta valido** (so se houver marcacao) — cada `[MODIFIED → <dominio> C<N>]` / `[REMOVED → …]` aponta pra `C<N>` que **existe** na capability. Abra o arquivo e confirme. Numero inventado quebra o sync do `/sdd-close`
 
 Encontrou problema? Atualize a SPEC antes de informar o usuario.
 
@@ -212,6 +251,8 @@ SPEC salva em thoughts/specs/spec-<TS>-<slug>.md
 Cobre: [N] historias de usuario, [N] criterios de sucesso, [N] RFs, [N] testes de aceitacao.
 Fora de escopo: [resumo curto].
 Verificacao Final: PASS [ou: pendencias [NEEDS VERIFICATION] listadas].
+Capability: [modifica checkout C1, remove C3 | comportamento novo em <dominio> | sem capability]
+  → o /sdd-close mescla na capability viva quando o PR mergear.
 
 Proximo passo: /sdd-plan thoughts/specs/spec-<TS>-<slug>.md
   → gera o plano tecnico (pesquisa + tarefas TDD) a partir desta SPEC.
@@ -232,4 +273,7 @@ Proximo passo: /sdd-plan thoughts/specs/spec-<TS>-<slug>.md
 - **Resumo por ultimo**: espelha o conteudo real das secoes
 - **GitHub via `gh` CLI**: nunca tokens manuais
 - **Quick detectado = saia**: nao force SPEC formal em escopo trivial
+- **Capability e leitura, nunca escrita**: este command **le** `thoughts/capabilities/` e **marca** o delta na SPEC. Quem escreve/mescla a capability e o `/sdd-close`, e so sob PR merged — comportamento nao entregue nao entra na spec viva
+- **Delta so contra `C<N>` confirmado**: abra a capability e verifique o numero. Nunca chute
+- **`--explore` nao escreve nada**: sem SPEC, sem doc, sem codigo. Termina numa das 4 saidas
 - **Handoff explicito**: termine apontando `/sdd-plan <path da SPEC>`
