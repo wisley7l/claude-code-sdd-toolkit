@@ -1,15 +1,15 @@
 ---
 name: pr-close
-description: Fecha o ciclo de uma mudança DEPOIS que o PR já foi mergeado — não mergeia nem fecha PR nenhum. Arquiva os artefatos, promove o comportamento entregue pra capability viva, conclui o item do roadmap, colhe a dívida que sobrou e destila os aprendizados pra memória. Um de cada vez, sob confirmação.
+description: Fecha o ciclo de uma mudança DEPOIS que o PR foi mergeado — não mergeia nem fecha PR nenhum. Arquiva os artefatos, promove o comportamento pra capability viva, conclui o item do roadmap, colhe a dívida e destila os aprendizados. Com o PR aprovado mas ainda aberto, colhe os follow-ups na janela em que ainda dá pra corrigir dentro do PR. Um de cada vez, sob confirmação.
 disable-model-invocation: true
-argument-hint: [<NNN-slug> | --pr <N> | vazio = varre o que já mergeou]
+argument-hint: [<NNN-slug> | --pr <N> | vazio = varre o que mergeou ou foi aprovado]
 allowed-tools: Read Write Edit Grep Glob Agent AskUserQuestion Bash(roadmap:*) Bash(roadmap) Bash(memory-audit:*) Bash(git worktree list*) Bash(git status*) Bash(git log*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(find *) Bash(cat *)
 ---
 
 # pr-close
 
-**Você não fecha o PR aqui** — quem mergeia é o time, e isso já aconteceu. O que fecha é o **ciclo
-da mudança**: o que sobrevive ao PR e some se ninguém recolher agora.
+**Você não fecha o PR aqui** — quem mergeia é o time. O que fecha é o **ciclo da mudança**: o que
+sobrevive ao PR e some se ninguém recolher agora.
 
 O merge é o único momento em que o comportamento **passou a ser verdade**. É por isso que tudo o
 que vale além da mudança acontece aqui, e não antes:
@@ -26,20 +26,57 @@ registrada *e esquecida do mesmo jeito*.
 Root é o **repositório principal** (`git worktree list | head -1`), como sempre — `thoughts/` é
 gitignored e a worktree nasce sem ele.
 
-## O gate: só mergeado
+## Dois momentos
 
 ```bash
-gh pr view <N> --json state,mergedAt,title,url
+gh pr view <N> --json state,mergedAt,title,url,reviews,latestReviews
 ```
 
-| Estado | O que fazer |
+| Estado | O que acontece |
 |---|---|
-| `MERGED` | segue (e `reopened` depois de merged conta: o código entrou) |
-| `OPEN` | **não fecha nada.** Diga que segue em andamento e passe adiante |
+| `MERGED` | **fechamento completo** — os cinco passos (e `reopened` depois de merged conta: o código entrou) |
+| `OPEN` **e aprovado** | **colheita antecipada** — só os passos 4 e 5, e a decisão que só existe agora |
+| `OPEN` sem aprovação | nada: o review ainda não aconteceu |
 | `CLOSED` sem merge | **não arquiva.** Isso é descarte, não conclusão — sinalize e deixe a decisão com o usuário |
 
 Nada aqui acontece sem confirmação, **um item por vez**. Fechamento em lote é como se arquiva coisa
 errada em silêncio.
+
+### Aprovado e ainda aberto: a janela que some no merge
+
+O time aprova e deixa "opcional, se quiser já ajusta aqui". **Esse é o momento mais barato que vai
+existir** pra corrigir: o PR está aberto, o código na tela, o contexto quente. Depois do merge, o
+mesmo conserto custa PR novo, review novo e contexto frio — e é assim que o opcional vira dívida
+permanente.
+
+Aqui rodam **só** a colheita (passo 4) e os aprendizados (passo 5), e cada item ganha uma pergunta
+que não existe mais depois:
+
+> **#3 · `src/refund/calc.ts:88`** — @fulano, na aprovação: *"opcional: dá pra extrair esse cálculo
+> e testar isoladamente"*.
+>
+> **(a)** Corrigir agora, neste PR — vira tarefa no `tasks.md`, você roda `/toolkit:implement`
+> **(b)** Aceitar como dívida — vai pro roadmap (e pra issue perene, se o time precisa ver)
+> **(c)** Descartar — não é dívida; me diga o porquê e eu registro
+
+Corrigir agora **não é o passo seguinte automático**: mais commits num PR aprovado podem exigir
+nova rodada de review, e às vezes o certo é mergear e tratar depois. A escolha é sua; o que a peça
+garante é que ela seja feita de olho aberto, e não por omissão.
+
+**O que NÃO acontece aqui, e o motivo:**
+
+| Passo | Por que não |
+|---|---|
+| Arquivar a mudança | ela não terminou — os artefatos ainda estão em uso |
+| Promover pra capability | **comportamento não entregue nunca entra na spec viva.** Aprovação não é merge: o PR ainda pode mudar, ou não entrar nunca |
+| Concluir no roadmap | o item continua em `em-progresso/`, que é a verdade |
+
+Esse segundo é invariante, não preferência. Capability é lida como verdade pela `spec` do próximo
+ciclo — afirmar ali um comportamento que só foi aprovado propaga uma mentira pra dentro do próximo
+planejamento.
+
+Depois do merge, **rode de novo**. A colheita é idempotente (dedup contra o backlog e contra a issue),
+e a segunda passada faz o que faltou: arquivar, promover e concluir.
 
 **Mudança com vários PRs** (o `plan` quebrou em slices): a pasta só é arquivada e a capability só é
 mesclada quando **todos** mergearem. Mesclar no primeiro slice afirmaria na capability um
@@ -118,7 +155,8 @@ linha e siga.
 Duas fontes, e as duas somem se ninguém colher agora:
 
 **Dívida de teste** — a seção de dívida do `plan.md` e o que o `notes.md` registrou durante a
-execução, incluindo verificação manual que ficou pendente.
+execução, incluindo verificação manual que ficou pendente. Com o PR ainda aberto, parte disso pode
+não ser dívida: ainda dá tempo de cobrir.
 
 **Follow-up de review** — o padrão mais comum é o revisor **aprovar** e deixar o follow-up no corpo
 da aprovação, às vezes como opcional:
@@ -215,7 +253,9 @@ Fechado: <NNN-slug> — PR #512 "<título>", mergeado em <data>
                → roadmap: 2  ·  → issue perene #77: 1 (o outro é só seu, a seu pedido)
   Memória:     1 nota (bug_webhook_timeout) · 3 candidatos descartados pelos filtros
 
-Não fechado: 003-slug (PR #498 ainda aberto)
+Aprovado, não mergeado: 005-slug (PR #521) — 2 follow-ups colhidos, 1 virou tarefa
+             rode de novo depois do merge pra arquivar e promover a capability
+Não fechado: 003-slug (PR #498 aberto, sem review ainda)
 Atenção:     delta [MODIFIED → checkout C9] parou — C9 não existe na capability
 ```
 

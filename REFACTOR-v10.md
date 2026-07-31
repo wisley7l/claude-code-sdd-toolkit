@@ -1401,3 +1401,27 @@ desambiguação.
 Aproveitado na mesma passada: a tabela dos READMEs foi reordenada pela **ordem do ciclo** (estava
 com `pr-ready` antes de `pr-draft`), com as transversais — `roadmap`, `memory`, `baseline`,
 `grilling` — no fim.
+
+
+### I.34 — ⭐ `pr-close` ganha o momento "aprovado, ainda aberto" ✅ (31-07-2026)
+
+Furo apontado pelo usuário com a peça já commitada: *"as vezes o time aprova o pr e deixa follow-up
+ou alterações opcionais a se fazer sem mergear, então o pr-close pode atuar tbm quando o pr esta
+aprovado"*.
+
+O gate `MERGED` veio do v9 e deixava um buraco de cobertura: **nenhuma peça do toolkit tratava
+"aprovado com opcional pendente"**. E o que se perdia ali não era registro, era **janela** — o
+`pr-audit` já registrava que corrigir dentro do PR aberto é o momento mais barato que existe, e que
+o opcional recusado ali é dívida confirmada.
+
+Dois momentos agora. Aprovado-e-aberto roda só colheita (4) e aprendizados (5), com a pergunta que
+some no merge: corrigir agora (vira tarefa no `tasks.md`), aceitar como dívida, ou descartar com
+motivo. Corrigir não é default — mais commits num PR aprovado podem exigir nova rodada de review.
+
+**O invariante segurou o resto.** Aprovação não promove capability, não arquiva e não conclui
+roadmap: E.5 diz *spec viva só sob merge*, e a capability é lida como verdade pela `spec` do ciclo
+seguinte. Foi o invariante que definiu onde o novo momento para — sem ele, a tentação seria fazer o
+fechamento inteiro e "corrigir depois se o PR mudar".
+
+Lição de método: **buraco de cobertura aparece no uso, não na revisão da peça.** Três leituras da
+`pr-close` não pegaram; a primeira tentativa de usar, sim.

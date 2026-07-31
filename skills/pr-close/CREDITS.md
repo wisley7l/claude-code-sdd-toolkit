@@ -73,6 +73,34 @@ O item publicado segue o **formato do `pr-audit` exatamente** (taxonomia de risc
 próxima auditoria reconhecê-lo como rastreado em vez de reabri-lo. Publicar é ação outward-facing:
 texto na tela e OK antes.
 
+## Segundo momento: aprovado e ainda aberto (31-07-2026)
+
+Furo apontado pelo usuário depois de a peça estar pronta e commitada: *"as vezes o time aprova o pr
+e deixa follow-up ou alterações opcionais a se fazer sem mergear, então o pr-close pode atuar tbm
+quando o pr esta aprovado"*.
+
+O gate original era só `MERGED`, herdado do v9 — e com isso o toolkit **não tinha peça nenhuma** pro
+estado "aprovado com opcional pendente". O `code-review` valida se pontos foram atendidos, o
+`pr-ready` re-solicita revisão, mas ninguém tratava o follow-up que a aprovação deixou.
+
+O que se perdia era uma **janela**, não só um registro. O próprio `pr-audit` já dizia: *"o revisor
+ofereceu a janela mais barata que existia — corrigir dentro do PR, código aberto, contexto quente"*.
+Depois do merge, o mesmo conserto custa PR novo, review novo, contexto frio. Era assim que o
+opcional virava dívida permanente — e o `pr-close` chegava tarde demais pra evitar.
+
+Agora são dois momentos. Aprovado e aberto roda **só** colheita e aprendizados, e cada item vem com
+a pergunta que só existe nessa janela: corrigir agora (vira tarefa no `tasks.md`), aceitar como
+dívida, ou descartar com motivo. Corrigir **não** é o default: mais commits num PR aprovado podem
+exigir nova rodada de review, e às vezes o certo é mergear. A peça garante que a escolha seja
+consciente, não omissa.
+
+**O limite que não se cruza:** aprovação **não** promove capability, não arquiva e não conclui o
+roadmap. É o invariante E.2 (*spec viva só sob merge*) — a capability é lida como verdade pela
+`spec` do próximo ciclo, e afirmar ali um comportamento que só foi aprovado propaga mentira pra
+dentro do próximo planejamento. Aprovado ainda pode mudar, ou não entrar nunca.
+
+Rodar de novo depois do merge completa o que faltou; a colheita é idempotente por dedup.
+
 ## I.7 resolvido — `fix` e `chore` na capability
 
 Pendência aberta desde o começo do refactor. A régua é uma pergunta: **mudou o que o sistema
