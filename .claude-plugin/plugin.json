@@ -1,5 +1,5 @@
 {
-  "name": "toolkit",
+  "name": "tk7",
   "description": "Workflow de pair programming com TDD — spec de comportamento, plano tecnico, execucao e review, com o usuario no volante.",
   "version": "10.0.0-dev"
 }

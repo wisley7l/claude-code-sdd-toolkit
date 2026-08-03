@@ -61,7 +61,7 @@ Fora dessas, decida e **mostre o que assumiu**, uma linha por suposição.
 
 **Pare aqui e peça a matriz de testes**, com esta frase e nada depois dela:
 
-> Decisões técnicas fechadas. Antes de quebrar as tarefas, rode **`/toolkit:test-plan`** — a matriz
+> Decisões técnicas fechadas. Antes de quebrar as tarefas, rode **`/tk7:test-plan`** — a matriz
 > de testes decide o tipo, o ambiente e o que fica sem rede. Volte pra cá quando ela fechar.
 
 Você **não invoca** a skill: nenhuma peça deste toolkit invoca outra. Espere o usuário voltar, e

@@ -18,7 +18,7 @@ Não é uma aplicação — é um **toolkit** de artefatos markdown instalados e
 e `~/.claude/skills/`.
 
 ```
-.claude-plugin/plugin.json   # manifesto — o repo É o plugin `toolkit`
+.claude-plugin/plugin.json   # manifesto — o repo É o plugin `tk7`
 skills/                      # AS PEÇAS VIVAS. o scanner varre aqui — nada morto dentro
   grilling/  spec/  baseline/  plan/  test-plan/  implement/
   worktree/  pr-draft/  code-review/  pr-review/  pr-ready/
@@ -29,11 +29,11 @@ deprecated/                  # TODO o v9: commands-v9/ skills-v9/ READMEs, CLAUD
 scripts/                     # executáveis (structure-cache, ouvir) — INTOCADO pelo refactor
 ```
 
-**O repo é um plugin.** `.claude-plugin/plugin.json` com `name: toolkit` faz todas as peças
-carregarem namespaced: `skills/spec/SKILL.md` → **`/toolkit:spec`**. Plugin skills **não colidem
+**O repo é um plugin.** `.claude-plugin/plugin.json` com `name: tk7` faz todas as peças
+carregarem namespaced: `skills/spec/SKILL.md` → **`/tk7:spec`**. Plugin skills **não colidem
 com skills personal, project ou bundled** — e o nome curto (`/spec`) continua funcionando como
-atalho enquanto estiver livre. Instala como *skills-directory plugin* (`~/.claude/skills/toolkit/`),
-sem marketplace e sem install step.
+atalho enquanto estiver livre. Instala como *skills-directory plugin* (`~/.claude/skills/tk7/`),
+sem marketplace e sem install step — clone ou symlink, os dois carregam.
 
 ⚠️ **Nada de arquivo morto dentro de `skills/`** — o scanner varre esse diretório. Foi por isso
 que `skills/deprecated/` e `commands/deprecated/` foram consolidados em `deprecated/` na raiz.

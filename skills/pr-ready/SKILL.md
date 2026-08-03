@@ -100,7 +100,7 @@ E **espere de fato**. Só depois do push confirmado o CI tem o que verificar.
 Com verde na mão, o corpo precisa refletir o que foi implementado. Isso é do `pr-draft`, e **você
 não o invoca** — nenhuma peça deste toolkit invoca outra:
 
-> Verde confirmado. Rode **`/toolkit:pr-draft sync`** pra reescrever o corpo como prévia de quem
+> Verde confirmado. Rode **`/tk7:pr-draft sync`** pra reescrever o corpo como prévia de quem
 > revisa. Volte pra cá e eu sigo pro handoff.
 
 Espere ele fechar antes de oferecer o handoff. Entregar o PR com corpo desatualizado gasta o tempo

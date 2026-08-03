@@ -55,7 +55,7 @@ que não existe mais depois:
 > **#3 · `src/refund/calc.ts:88`** — @fulano, na aprovação: *"opcional: dá pra extrair esse cálculo
 > e testar isoladamente"*.
 >
-> **(a)** Corrigir agora, neste PR — vira tarefa no `tasks.md`, você roda `/toolkit:implement`
+> **(a)** Corrigir agora, neste PR — vira tarefa no `tasks.md`, você roda `/tk7:implement`
 > **(b)** Aceitar como dívida — vai pro roadmap (e pra issue perene, se o time precisa ver)
 > **(c)** Descartar — não é dívida; me diga o porquê e eu registro
 

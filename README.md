@@ -27,11 +27,18 @@ claude --plugin-dir /caminho/para/claude-code-sdd-toolkit
 **Instalar de vez** — clone dentro da sua pasta de skills pessoal:
 
 ```bash
-git clone https://github.com/wisley7l/claude-code-sdd-toolkit ~/.claude/skills/toolkit
+git clone https://github.com/wisley7l/claude-code-sdd-toolkit ~/.claude/skills/tk7
 ```
 
-Uma pasta de skill com `.claude-plugin/plugin.json` carrega como plugin `toolkit@skills-dir`, sem
+Uma pasta de skill com `.claude-plugin/plugin.json` carrega como plugin `tk7@skills-dir`, sem
 marketplace e sem passo de instalação. Para atualizar, `git pull`.
+
+**Já tem o repositório clonado?** Aponte um symlink em vez de clonar de novo — editou no repo,
+vale na hora:
+
+```bash
+ln -s /caminho/para/claude-code-sdd-toolkit ~/.claude/skills/tk7
+```
 
 **Dependência opcional.** O `implement` oferece uma passada do `code-simplifier` depois do verde.
 Vale ter instalado — sem ele a skill apenas avisa e segue:
@@ -57,12 +64,12 @@ quatro vezes e divergiria na primeira edição.
 
 ### Como invocar
 
-As peças ficam sob o namespace do plugin: **`/toolkit:spec`**, `/toolkit:plan`, e assim por diante.
+As peças ficam sob o namespace do plugin: **`/tk7:spec`**, `/tk7:plan`, e assim por diante.
 O nome curto (`/spec`) também funciona **enquanto não houver outra skill com esse nome**.
 
 Três peças daqui têm nome igual ao de algo que já vem com o Claude Code — `plan`, `code-review` e
-`memory` (esta última é comando embutido). Nesses casos use o nome completo: `/toolkit:plan`,
-`/toolkit:code-review` e `/toolkit:memory`. Plugin skills têm namespace próprio e não substituem as
+`memory` (esta última é comando embutido). Nesses casos use o nome completo: `/tk7:plan`,
+`/tk7:code-review` e `/tk7:memory`. Plugin skills têm namespace próprio e não substituem as
 originais, então `/code-review` e `/memory` continuam chamando as nativas.
 
 ## O ciclo

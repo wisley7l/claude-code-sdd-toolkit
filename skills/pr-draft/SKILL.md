@@ -125,7 +125,7 @@ dependência, e espere a confirmação de cada um antes do próximo. O resto do 
 A worktree é o passo seguinte e é **do usuário**: nenhuma peça deste toolkit invoca outra. Feche
 pedindo, com o nome da branch já preenchido:
 
-> PR draft aberto. Agora rode **`/toolkit:worktree <branch>`** — ela monta a worktree sobre a branch
+> PR draft aberto. Agora rode **`/tk7:worktree <branch>`** — ela monta a worktree sobre a branch
 > recém-publicada, aplica as permissões e centraliza a memória.
 
 ```

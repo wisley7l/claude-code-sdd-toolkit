@@ -148,7 +148,7 @@ say "O que este script NÃO faz"
 cat <<EOF
   • O plugin com as skills. No Claude Code:
         claude --plugin-dir $(cd "$SCRIPT_DIR/.." && pwd)      # só esta sessão
-        git clone <repo> ~/.claude/skills/toolkit               # permanente
+        ln -s $(cd "$SCRIPT_DIR/.." && pwd) ~/.claude/skills/tk7   # permanente (já clonado)
   • O code-simplifier (opcional, usado pelo implement depois do verde):
         /plugin install code-simplifier@claude-plugins-official
   • gh auth login, se o gh ainda não estiver autenticado.
