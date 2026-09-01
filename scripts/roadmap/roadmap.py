@@ -22,6 +22,7 @@ Uso (de qualquer lugar dentro do repo/worktree):
   roadmap status [--json]                             # contagens, sinais, desbloqueados
   roadmap list [--status X] [--json]                  # itens
   roadmap check                                       # exit 1 se houver ciclo ou órfão
+  roadmap board [-a] [--live SEG]                     # espelho HTML em <vault>/board.html
 
 Toda mutação regenera o hub. Todo comando é idempotente.
 """
@@ -194,6 +195,17 @@ def resolve(items: list[Item], link: str) -> Item | None:
     return hit or (find(items, link[:3]) if re.match(r"^\d{3}", link) else None)
 
 
+def duplicados(items: list[Item]) -> list[tuple[str, list[str]]]:
+    """Dois arquivos com o mesmo NNN. `find` só enxerga o primeiro, e o outro vira nó fantasma.
+
+    Não nasce do motor (`next_nnn` é max+1), mas nasce de edição à mão e de merge de vault.
+    """
+    por_nnn: dict[str, list[str]] = {}
+    for i in items:
+        por_nnn.setdefault(i.nnn, []).append(i.slug)
+    return [(n, slugs) for n, slugs in sorted(por_nnn.items()) if len(slugs) > 1]
+
+
 def orphans(items: list[Item]) -> list[tuple[str, str]]:
     return [(i.nnn, d) for i in items for d in i.deps if resolve(items, d) is None]
 
@@ -303,10 +315,28 @@ def regen_hub(root: Path) -> None:
 
 # ---------------------------------------------------------------- comandos
 
+def regen_board(root: Path) -> None:
+    """Espelho HTML, best-effort: board quebrado nunca pode derrubar uma mutação do vault.
+
+    Só regenera o que já existe — quem nunca rodou `roadmap board` não ganha arquivo novo.
+    """
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import board
+        if not (board.board_root(root) / board.BOARD_NAME).exists():
+            return
+        board.escrever(root)
+        import changes
+        changes.escrever(root)
+    except Exception as e:  # noqa: BLE001 — o board é acessório; o vault é o que importa
+        print(f"aviso: board não regenerado ({e})", file=sys.stderr)
+
+
 def cmd_init(root: Path, _a) -> int:
     for s in STATUSES:
         (vault(root) / s).mkdir(parents=True, exist_ok=True)
     regen_hub(root)
+    regen_board(root)
     print(f"vault pronto: {vault(root)}")
     return 0
 
@@ -349,6 +379,7 @@ def cmd_add(root: Path, a) -> int:
 
     write_item(vault(root) / "backlog" / f"{slug}.md", fm, "\n".join(body))
     regen_hub(root)
+    regen_board(root)
     print(f"{nnn}\t{slug}\tbacklog" + (f"\tdepende de: {', '.join(deps)}" if deps else ""))
     return 0
 
@@ -382,6 +413,7 @@ def cmd_dep(root: Path, a) -> int:
 
     write_item(item.path, item.fm, set_deps_line(item.body, links))
     regen_hub(root)
+    regen_board(root)
     print(f"{item.nnn} depende de: {', '.join(links) or '(nada)'}")
     return 0
 
@@ -402,6 +434,7 @@ def cmd_move(root: Path, a) -> int:
     if dest != item.path:
         item.path.unlink()          # `thoughts/` é gitignored — nunca `git mv`
     regen_hub(root)
+    regen_board(root)
 
     freed = [i.nnn for i in unblocked(load_items(root))]
     print(f"{item.nnn} → {a.to}" + (f" · {item.fm['pr']}" if item.fm.get("pr") else ""))
@@ -423,6 +456,7 @@ def cmd_set(root: Path, a) -> int:
         item.fm["next"] = a.next
     write_item(item.path, item.fm, item.body)
     regen_hub(root)
+    regen_board(root)
     print(f"{item.nnn} atualizado")
     return 0
 
@@ -440,6 +474,7 @@ def collect(root: Path) -> dict:
         "em_progresso_com_pr": [{"nnn": i.nnn, "pr": i.pr} for i in items
                                 if i.status == "em-progresso" and i.pr],
         "orfaos": [{"item": n, "link": l} for n, l in orphans(items)],
+        "duplicados": [{"nnn": n, "slugs": s} for n, s in duplicados(items)],
         "ciclos": cycles(items),
         "proximo_nnn": next_nnn(items),
     }
@@ -465,6 +500,9 @@ def cmd_status(root: Path, a) -> int:
         print(f"\n  ⚠ links órfãos: " + ", ".join(f"{o['item']}→{o['link']}" for o in data["orfaos"]))
     if data["ciclos"]:
         print("  ⚠ ciclos: " + " · ".join(" → ".join(c) for c in data["ciclos"]))
+    if data["duplicados"]:
+        print("  ⚠ NNN duplicado: " + ", ".join(
+            f"{d['nnn']} ({' e '.join(d['slugs'])})" for d in data["duplicados"]))
     return 0
 
 
@@ -483,6 +521,7 @@ def cmd_list(root: Path, a) -> int:
 
 def cmd_hub(root: Path, _a) -> int:
     regen_hub(root)
+    regen_board(root)
     print(f"hub regenerado: {vault(root) / HUB_NAME}")
     return 0
 
@@ -490,6 +529,9 @@ def cmd_hub(root: Path, _a) -> int:
 def cmd_check(root: Path, _a) -> int:
     items = load_items(root)
     bad = False
+    for nnn, slugs in duplicados(items):
+        print(f"NNN duplicado: {nnn} em {' e '.join(slugs)}", file=sys.stderr)
+        bad = True
     for nnn, link in orphans(items):
         print(f"órfão: {nnn} aponta pra [[{link}]], que não existe", file=sys.stderr)
         bad = True
@@ -502,6 +544,34 @@ def cmd_check(root: Path, _a) -> int:
 
 
 # ---------------------------------------------------------------- cli
+
+def cmd_board(root: Path, a) -> int:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import board
+    tem_vault = vault(root).is_dir()
+    if a.out:  # destino avulso: só o índice, sem a pasta de páginas
+        Path(a.out).write_text(board.render(root, live=a.live), encoding="utf-8")
+        alvo = Path(a.out).resolve()
+        print(f"índice gerado: file://{alvo}", flush=True)
+    else:
+        if board.limpar_legado(root):
+            print("board de layout antigo removido — é tudo regenerável", flush=True)
+        import changes
+        escritos = (board.escrever(root, live=a.live) if tem_vault else [])
+        escritos += changes.escrever(root, live=a.live)
+        if not escritos:
+            die("nada pra gerar: nem vault de roadmap, nem pasta em thoughts/changes/")
+        alvo = escritos[0].resolve()
+        for f in escritos:
+            print(f"{'board' if f.name == board.BOARD_NAME else 'changes'}: "
+                  f"file://{f.resolve()}", flush=True)
+
+    if a.abrir:
+        import webbrowser
+        if not webbrowser.open(f"file://{alvo}"):
+            print("aviso: não achei navegador — abra o caminho acima à mão", file=sys.stderr)
+    return 0
+
 
 def main(argv: list[str]) -> int:
     p = argparse.ArgumentParser(prog="roadmap", description=__doc__,
@@ -549,12 +619,20 @@ def main(argv: list[str]) -> int:
 
     sub.add_parser("check", help="exit 1 se houver ciclo ou órfão")
 
+    pb = sub.add_parser("board", help="espelho HTML do vault, pra abrir no navegador")
+    pb.add_argument("-o", "--out", default=None, help="default: <vault>/board.html")
+    pb.add_argument("--live", type=int, metavar="SEG", default=0,
+                    help="recarrega sozinho a cada N segundos (aba deixada aberta)")
+    pb.add_argument("-a", "--abrir", action="store_true",
+                    help="abre no navegador padrão depois de gerar")
+
     a = p.parse_args(argv)
     root = main_root(a.root)
-    if a.cmd != "init" and not vault(root).is_dir():
+    if a.cmd not in ("init", "board") and not vault(root).is_dir():
         die(f"vault não existe em {vault(root)} — rode `roadmap init`")
     return {"init": cmd_init, "add": cmd_add, "dep": cmd_dep, "move": cmd_move, "set": cmd_set,
-            "hub": cmd_hub, "status": cmd_status, "list": cmd_list, "check": cmd_check}[a.cmd](root, a)
+            "hub": cmd_hub, "status": cmd_status, "list": cmd_list, "check": cmd_check,
+            "board": cmd_board}[a.cmd](root, a)
 
 
 if __name__ == "__main__":

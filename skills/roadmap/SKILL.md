@@ -2,7 +2,7 @@
 name: roadmap
 description: Gerencia o roadmap do projeto — a visão de cima, um item por PR previsto. Adiciona itens, liga dependências entre eles, sincroniza o status pelo estado real dos PRs no GitHub, e mostra o que está desbloqueado agora. O grafo é nativo do Obsidian.
 disable-model-invocation: true
-argument-hint: [add "<título>" | add #<issue> | dep NNN <- MMM | sync | migrar | vazio = estado atual]
+argument-hint: '[add "<título>" | add #<issue> | dep NNN <- MMM | sync | board | migrar | vazio = estado atual]'
 allowed-tools: Read Write Edit Grep Glob AskUserQuestion Bash(roadmap:*) Bash(roadmap) Bash(git worktree list*) Bash(git log*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(cp *)
 ---
 
@@ -122,6 +122,71 @@ Depois, `gh pr list --author "@me" --state open --json number,title,headRefName`
 
 **🔴 Próximos nunca é automático.** `next: true` é curadoria humana; nem o sync nem você ligam isso
 sozinhos. Vale sugerir, com o usuário decidindo.
+
+## `board` — o espelho pra olhar
+
+```bash
+roadmap board                  # regenera e imprime o file:// (regenerar é o default)
+roadmap board -a               # o mesmo, e já abre no navegador padrão
+roadmap board --live 10        # recarrega sozinho, pra aba deixada aberta
+```
+
+Gera **duas views** em `thoughts/board/`, ligadas por abas no topo:
+
+```
+thoughts/board/
+  roadmap.html    os itens do vault
+  changes.html    as mudanças de thoughts/changes/ — spec, plano, tarefas, notas
+```
+
+Derivado não mora junto do dado: `thoughts/roadmap/` fica só com os `.md`. O `changes.html` só
+nasce se houver pasta em `thoughts/changes/`, e o comando funciona **sem vault de roadmap** — um
+projeto pode ter mudanças e nenhum roadmap ainda. O nome não é `index.html` porque é ele que o usuário
+fixa como aba: quando outras views existirem (`changes.html`), entram ao lado na barra de abas,
+sem mudar esse caminho. Board de layout antigo é apagado na primeira geração — é tudo regenerável.
+
+A página abre **compacta**: tiles com as contagens, busca (`/` foca), e seções que **nascem
+fechadas** — 🔴 Próximos, 🔓 Dá pra começar agora, Em progresso, Backlog, Concluído, e a
+consistência do vault (essa abre sozinha se houver ciclo, órfão ou NNN duplicado). Buscar abre só
+as seções com resultado.
+
+**Não há grafo na abertura.** Um roadmap real tem a maioria dos itens sem dependência nenhuma, e
+desenhar tudo junto dá um paredão inútil (medido: 16.678 px num vault de 268 itens). O grafo
+aparece quando se pergunta por um item: clicar abre uma **gaveta que cobre quase a tela** — sobra
+uma faixa do fundo à esquerda, pra lembrar que a lista continua ali atrás. Dentro dela: a
+vizinhança desenhada na hora (de quem ele espera, quantas ainda estão em aberto, o que ele
+destrava) e, abaixo, duas colunas — o corpo renderizado à esquerda com largura de leitura, e à
+direita `Depende de` / `Destrava` mais os botões de editar no Obsidian, ver PR e copiar o comando
+de prioridade.
+
+Dentro da gaveta, clicar em qualquer card **troca de item**, e o **← Voltar** desfaz o caminho
+percorrido: dá pra descer pela cadeia de dependências sem perder de onde veio (`Backspace` faz o
+mesmo, `Esc` fecha). O `#item-NNN` na URL abre a gaveta direto.
+
+Só o grafo é desenhado em JS; o resto vem pronto do Python. Sem CDN e sem lib: abre offline.
+
+Depois de existir uma vez, **toda mutação do vault o regenera** — inclusive as que vêm de `plan`,
+`pr-draft` e do fechamento. Não é preciso rodar de novo: basta o F5 na aba (ou `--live`).
+
+É **espelho, nunca fonte**: derivado, descartável, e editar o HTML não muda nada em `thoughts/`.
+Ele só enxerga o vault — PR parado e PR aberto sem item continuam saindo do `sync`, que fala com o
+GitHub.
+
+### A view de changes
+
+Não é markdown renderizado — é **view tipada**, que é de onde vem o ganho de leitura. A spec vira
+requisito com `[ADDED]`/`[MODIFIED]` em destaque e os cenários DADO/QUANDO/ENTÃO em duas colunas;
+o plano vira abordagem e decisões `D1…Dn` enumeradas; as tarefas viram **progresso por PR
+previsto**, com o `#PR` e o branch lidos da nota do bloco; as notas de execução ficam em blocos
+que abrem e fecham. A ficha tem abas Spec · Plano · Tarefas · Notas.
+
+O parser aguenta o que o dado real tem, e isso não é opcional: o agrupador de `tasks.md` pode ser
+`## PR 1` **ou** `## Etapa 1`; o id da tarefa pode ser `T1` **ou** `S1`; e existe um terceiro
+estado, **`[~]` = tarefa movida pra outra mudança**, que não conta como feita nem como pendente.
+A mudança se liga ao item do roadmap pelo campo `change:` do item.
+
+Rodar por conta própria não custa nada, mas não substitua o fechamento em texto por "abri o board":
+o usuário está no terminal, e o board é pra quando ele quiser **ver** o grafo.
 
 ## `migrar` — o formato antigo
 

@@ -43,5 +43,6 @@ case ":$PATH:" in
 esac
 
 say "Pronto. Teste com: roadmap status"
+say "Pro board no navegador (por projeto): roadmap board -a"
 say "Pra pré-autorizar sem prompt, adicione em ~/.claude/settings.json:"
 printf '      "Bash(roadmap:*)"\n'
