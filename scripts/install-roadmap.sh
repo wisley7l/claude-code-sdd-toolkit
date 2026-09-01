@@ -13,6 +13,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"          # .../scripts
 ENGINE="$SCRIPT_DIR/roadmap/roadmap.py"
+NOTA="$SCRIPT_DIR/roadmap/nota.py"
 BIN_DIR="$HOME/.local/bin"
 
 say() { printf '\033[1;36m==>\033[0m %s\n' "$1"; }
@@ -42,7 +43,23 @@ case ":$PATH:" in
      warn '  export PATH="$HOME/.local/bin:$PATH"' ;;
 esac
 
+# `nota` — markdown virando página com a casca do board. Serve pra pesquisa, diagnóstico,
+# qualquer doc que o agente escreva pra você ler.
+if [ -f "$NOTA" ]; then
+  if command -v nota >/dev/null 2>&1 && [ ! -f "$BIN_DIR/nota" ]; then
+    warn "já existe um 'nota' no PATH ($(command -v nota)) que não é nosso — pulando."
+  else
+    say "Instalando 'nota' em $BIN_DIR/nota (wrapper → $NOTA)"
+    cat > "$BIN_DIR/nota" <<EOF
+#!/bin/sh
+# wrapper gerado por install-roadmap.sh — aponta pro renderizador no repo
+exec python3 "$NOTA" "\$@"
+EOF
+    chmod +x "$BIN_DIR/nota"
+  fi
+fi
+
 say "Pronto. Teste com: roadmap status"
 say "Pro board no navegador (por projeto): roadmap board -a"
 say "Pra pré-autorizar sem prompt, adicione em ~/.claude/settings.json:"
-printf '      "Bash(roadmap:*)"\n'
+printf '      "Bash(roadmap:*)",\n      "Bash(nota:*)"\n'

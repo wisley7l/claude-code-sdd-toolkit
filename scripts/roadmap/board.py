@@ -140,14 +140,15 @@ def inline(txt: str, items, root: Path, base: str) -> str:
 
 
 def markdown(corpo: str, items, root: Path, base: str) -> str:
-    """Subset de bloco: heading, campo, lista, citação, code fence e parágrafo.
+    """Heading, campo, lista (aninhada e numerada), tabela, citação, code fence, régua, parágrafo.
 
-    É o que os itens do roadmap de fato usam. Markdown mais rico (tabela, lista aninhada)
-    continua legível no Obsidian — o board mostra o essencial, não substitui o editor.
+    Não é CommonMark: é o que os documentos de `thoughts/` de fato usam. O que não couber aqui
+    continua legível no Obsidian — a view mostra o essencial, não substitui o editor.
     """
     out: list[str] = []
     buffer_p: list[str] = []
-    lista: list[str] = []
+    lista: list[tuple[int, str, bool]] = []   # (nível, texto, é numerada)
+    tabela: list[list[str]] = []
     fence: list[str] | None = None
 
     def fecha_p():
@@ -156,15 +157,41 @@ def markdown(corpo: str, items, root: Path, base: str) -> str:
             buffer_p.clear()
 
     def fecha_lista():
-        if lista:
-            out.append("<ul>" + "".join(f"<li>{inline(x, items, root, base)}</li>" for x in lista)
-                       + "</ul>")
-            lista.clear()
+        """Fecha respeitando nível e numeração — pesquisa usa lista aninhada e ordenada."""
+        if not lista:
+            return
+        html_ = ""
+        pilha: list[str] = []
+        for nivel, texto, num in lista:
+            tag = "ol" if num else "ul"
+            while len(pilha) > nivel + 1:
+                html_ += f"</li></{pilha.pop()}>"
+            if len(pilha) == nivel + 1:
+                html_ += "</li>"
+            else:
+                html_ += f"<{tag}>"
+                pilha.append(tag)
+            html_ += f"<li>{inline(texto, items, root, base)}"
+        while pilha:
+            html_ += f"</li></{pilha.pop()}>"
+        out.append(html_)
+        lista.clear()
+
+    def fecha_tabela():
+        if not tabela:
+            return
+        cab, resto = tabela[0], tabela[1:]
+        th = "".join(f"<th>{inline(c, items, root, base)}</th>" for c in cab)
+        tr = "".join("<tr>" + "".join(f"<td>{inline(c, items, root, base)}</td>" for c in linha)
+                     + "</tr>" for linha in resto)
+        out.append(f'<div class="tabela"><table><thead><tr>{th}</tr></thead>'
+                   f"<tbody>{tr}</tbody></table></div>")
+        tabela.clear()
 
     for ln in corpo.split("\n"):
         if ln.startswith("```"):
             if fence is None:
-                fecha_p(); fecha_lista(); fence = []
+                fecha_p(); fecha_lista(); fecha_tabela(); fence = []
             else:
                 out.append("<pre><code>" + esc("\n".join(fence)) + "</code></pre>")
                 fence = None
@@ -173,33 +200,43 @@ def markdown(corpo: str, items, root: Path, base: str) -> str:
             fence.append(ln)
             continue
         if not ln.strip():
-            fecha_p(); fecha_lista()
+            fecha_p(); fecha_lista(); fecha_tabela()
             continue
         if m := re.match(r"^(#{1,6})\s+(.*)$", ln):
-            fecha_p(); fecha_lista()
+            fecha_p(); fecha_lista(); fecha_tabela()
             if len(m.group(1)) == 1:
                 continue  # o h1 repete o título que a página já mostra em cima
             out.append(f"<h{min(len(m.group(1)) + 1, 6)}>"
                        f"{inline(m.group(2), items, root, base)}</h{min(len(m.group(1)) + 1, 6)}>")
             continue
         if _CAMPO.match(ln):  # linha de campo do template: fica em linha só dela
-            fecha_p(); fecha_lista()
+            fecha_p(); fecha_lista(); fecha_tabela()
             out.append(f'<p class="campo">{inline(ln.strip(), items, root, base)}</p>')
             continue
-        if m := re.match(r"^\s*[-*+]\s+(.*)$", ln):
-            fecha_p()
-            lista.append(m.group(1))
+        if m := re.match(r"^(\s*)([-*+]|\d+[.)])\s+(.*)$", ln):
+            fecha_p(); fecha_tabela()
+            lista.append((len(m.group(1)) // 2, m.group(3), m.group(2)[0].isdigit()))
+            continue
+        if ln.lstrip().startswith("|") and ln.rstrip().endswith("|"):
+            fecha_p(); fecha_lista()
+            celulas = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if not all(re.fullmatch(r":?-{2,}:?", c) for c in celulas):  # a linha de traços some
+                tabela.append(celulas)
+            continue
+        if re.fullmatch(r"\s*([-*_])\1{2,}\s*", ln):
+            fecha_p(); fecha_lista(); fecha_tabela()
+            out.append("<hr>")
             continue
         if m := re.match(r"^>\s?(.*)$", ln):
-            fecha_p(); fecha_lista()
+            fecha_p(); fecha_lista(); fecha_tabela()
             out.append(f"<blockquote>{inline(m.group(1), items, root, base)}</blockquote>")
             continue
-        fecha_lista()
+        fecha_lista(); fecha_tabela()
         buffer_p.append(ln.strip())
 
     if fence is not None:  # fence sem fechamento: mostra o que veio, não engole
         out.append("<pre><code>" + esc("\n".join(fence)) + "</code></pre>")
-    fecha_p(); fecha_lista()
+    fecha_p(); fecha_lista(); fecha_tabela()
     return "".join(out)
 
 
@@ -805,6 +842,20 @@ footer { font-size:12.5px; color:var(--muted); border-top:1px solid var(--rule);
 .corpo p.campo + p:not(.campo) { margin-top:16px; }
 .corpo ul { display:block; margin:0 0 13px; padding-left:20px; }
 .corpo li { display:list-item; list-style:disc; margin-bottom:5px; }
+.corpo ol { display:block; margin:0 0 13px; padding-left:22px; }
+.corpo ol > li { list-style:decimal; }
+.corpo ul ul, .corpo ol ol, .corpo ul ol, .corpo ol ul { margin:5px 0 0; }
+.corpo ul ul > li { list-style:circle; }
+.corpo hr { border:0; border-top:1px solid var(--rule); margin:22px 0; }
+.tabela { overflow-x:auto; margin:0 0 16px; }
+.tabela table { border-collapse:collapse; width:100%; font-size:13.5px; }
+.tabela th { text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em;
+  color:var(--muted); font-weight:700; padding:8px 12px; border-bottom:1.5px solid var(--rule);
+  white-space:nowrap; }
+.tabela td { padding:9px 12px; border-bottom:1px solid var(--rule); vertical-align:top;
+  line-height:1.5; }
+.tabela tr:last-child td { border-bottom:0; }
+.tabela tbody tr:hover { background:var(--ground); }
 .corpo blockquote { margin:0 0 13px; padding:2px 0 2px 14px; border-left:2px solid var(--rule);
   color:var(--muted); }
 .corpo pre { background:var(--surface); border:1px solid var(--rule); padding:13px 15px;
