@@ -50,9 +50,15 @@ Se já existir um `settings.local.json` na worktree (veio commitado na branch), 
 perde tudo que foi aprendido no root.
 
 ```bash
-WT_MEM="$HOME/.claude/projects/$(echo "$WORKTREE_DIR" | sed 's|/|-|g')/memory"
-ROOT_MEM="$HOME/.claude/projects/$(echo "$ROOT" | sed 's|/|-|g')/memory"
+WT_MEM="$HOME/.claude/projects/$(echo "$WORKTREE_DIR" | sed 's|[^a-zA-Z0-9]|-|g')/memory"
+ROOT_MEM="$HOME/.claude/projects/$(echo "$ROOT" | sed 's|[^a-zA-Z0-9]|-|g')/memory"
 ```
+
+O slug troca **todo** caractere não-alfanumérico por `-`, não só a barra: o ponto de `.worktrees`
+também vira `-`, então o diretório é `…-meu-projeto--worktrees-feat-x`, com dois hifens. Trocando apenas
+`/` sai `…-meu-projeto-.worktrees-feat-x`, um diretório que o harness nunca lê — o link fica criado no
+lugar errado e a worktree roda sem a memória do root. Se houver qualquer dúvida sobre o slug,
+descubra em vez de montar: `ls ~/.claude/projects/ | grep <nome-da-branch>`.
 
 - Não existe → `ln -s "$ROOT_MEM" "$WT_MEM"`.
 - Já é symlink pro root → nada a fazer.
