@@ -2,7 +2,7 @@
 name: pr-audit
 description: Audita a dívida que os code reviews deixaram para trás — varre PRs mergeados de um período, extrai o que os revisores levantaram, confere ponto por ponto no código de hoje, e alimenta uma issue perene com o que continua aberto. Só afirma o que tem evidência em arquivo:linha. Nunca comenta nos PRs auditados.
 disable-model-invocation: true
-argument-hint: [<4 semanas atrás | de DD-MM a DD-MM | desde <tag/release>>] [--autor @me] [--revisor <login>]
+argument-hint: '[<4 semanas atrás | de DD-MM a DD-MM | desde <tag/release>>] [--autor @me] [--revisor <login>]'
 allowed-tools: Read Write Grep Glob Agent AskUserQuestion Bash(gh *) Bash(git log*) Bash(git diff*) Bash(git check-ignore *) Bash(git worktree list*) Bash(roadmap:*) Bash(roadmap) Bash(ls *) Bash(find *) Bash(structure-cache *) Bash(structure-cache)
 ---
 
