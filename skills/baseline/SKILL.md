@@ -1,15 +1,16 @@
 ---
 name: baseline
-description: Deriva a capability viva de um domínio a partir dos testes e do código existentes — a linha de base do que o sistema já promete hoje. Trabalha por lotes, sob confirmação. Use quando um domínio ainda não tem capability, ao adotar o toolkit num projeto com código, ou pra entender um domínio herdado.
+description: Deriva a capability viva de um domínio a partir dos testes e do código existentes — a linha de base do que o sistema já promete hoje — e revalida a que já existe, requisito por requisito, com `--auditar`. Trabalha por lotes, sob confirmação. Use quando um domínio ainda não tem capability, ao adotar o toolkit num projeto com código, pra entender um domínio herdado, ou pra conferir se o que está escrito ainda é verdade.
 disable-model-invocation: true
-argument-hint: <domínio | área que você quer mapear>
-allowed-tools: Read Grep Glob Write Edit Agent Bash(ls *) Bash(mkdir *) Bash(git log*) Bash(git worktree list*) Bash(structure-cache *) Bash(structure-cache)
+argument-hint: <domínio | área que você quer mapear> [--auditar]
+allowed-tools: Read Grep Glob Write Edit Agent Bash(ls *) Bash(mkdir *) Bash(git log*) Bash(git rev-parse*) Bash(git worktree list*) Bash(structure-cache *) Bash(structure-cache)
 ---
 
 # baseline
 
-Escreve a **capability viva** de um domínio — `thoughts/capabilities/<domínio>.md`, o documento
-que responde "o que o sistema faz hoje aqui" — derivando do que já existe no repositório.
+Mantém a **capability viva** de um domínio — `thoughts/capabilities/<domínio>.md`, o documento que
+responde "o que o sistema faz hoje aqui" — contra o que já existe no repositório: escrevendo o que
+falta, e conferindo o que já está lá.
 
 Existe porque a capability normalmente só nasce no fechamento de uma mudança, sob PR mergeado.
 Num projeto com código anterior ao toolkit, isso significa que ela **nunca cobre o que já estava
@@ -19,6 +20,21 @@ delta desde o primeiro ciclo.
 **Não documente o codebase inteiro.** Um domínio por vez, e de preferência o domínio que você
 está prestes a mexer. Capability incompleta é normal e útil; capability errada é pior que
 nenhuma, porque vira fonte de verdade pro ciclo seguinte e propaga o erro.
+
+## Três momentos, uma peça
+
+O alvo muda; o resto — promessa × acidente, evidência, lotes, formato — é o mesmo nos três.
+
+| Situação | O que você faz | A pergunta que responde |
+|---|---|---|
+| Domínio **sem** capability | **derivar** do zero | "o que o sistema faz aqui?" |
+| Capability existe (padrão) | **complementar** o que não está coberto | "o que falta escrever?" |
+| Pedido explícito (`--auditar`) | **revalidar** o que já está escrito | "o que ainda é verdade?" |
+
+Complementar e auditar percorrem caminhos opostos e **não se misturam num mesmo lote** — um sai do
+código atrás de buraco, o outro sai do documento atrás de evidência. Rodar os dois na mesma sessão
+é normal e útil (é o que responde "o que mudou e o que entrou"), mas em passadas separadas, ou o
+usuário perde o fio de qual pergunta está respondendo.
 
 ## O que é um domínio
 
@@ -91,6 +107,10 @@ Preserve o contrato da capability — ele é lido pela `spec` e escrito pelo fec
 ---
 dominio: checkout
 atualizado: DD-MM-YYYY
+verificado-ate: <sha>
+paths:
+  - src/checkout/
+  - test/checkout/
 specs: []
 ---
 
@@ -122,12 +142,36 @@ O sistema DEVE aceitar no máximo um cupom por pedido.
   — e, quando houver, `## Dívida conhecida`.
 - Um comportamento por `C<N>`. "E também" significa dois requisitos.
 
+### `verificado-ate` e `paths` — o marcador que faz a capability envelhecer em voz alta
+
+`thoughts/` é local: mudança que não passou por este fluxo nunca entra na capability, e ela segue
+afirmando o comportamento velho. Os dois campos são o que permite a `spec` do próximo ciclo
+perceber isso — sem eles ela não tem como checar nada e vai dizer que não verificou.
+
+- **`paths`** — os caminhos que sustentaram a evidência deste domínio, código e teste. Saem do
+  levantamento que você acabou de fazer, **não de palpite sobre a árvore do projeto**. Confirme com
+  o usuário junto do último lote: recorte errado aqui produz alarme falso pra sempre, ou silêncio
+  pra sempre.
+- **`verificado-ate`** — o `HEAD` do **repositório principal** (`git worktree list | head -1`, onde
+  `thoughts/` mora), **capturado antes de começar a levantar evidência**, não no fim. A sessão pode durar, e gravar o HEAD final afirmaria ter olhado commit
+  que você não olhou. Conservador é o correto: um alarme a mais custa uma linha na tela; um a menos
+  custa a próxima spec inteira.
+
+Ao complementar capability existente, atualize o marcador **só sobre o que você de fato
+reconciliou**. Cobriu duas sub-áreas de cinco? O marcador não avança — ele vale pelo domínio, e
+avançá-lo por cima do que você não olhou apaga o sinal em vez de resolver o drift.
+
 **Confiança baixa** (comportamento sem teste) ganha marca no próprio requisito:
 `> ⚠ sem cobertura de teste — derivado só do código, não confirmado como intencional`.
 
 **Buraco que você encontrou mas não resolveu** vai pra `## Dívida conhecida`, não some.
 
-## Se a capability já existe
+## Complementar: se a capability já existe
+
+É por aqui que entra o domínio que a `spec` sinalizou como envelhecido — commits tocaram os `paths`
+depois do `verificado-ate`. Nesse caso o alvo não é cobrir o que falta, e sim **percorrer o que
+mudou**: comece pelos commits do range (`git log <verificado-ate>..HEAD -- <paths>`) e vá aos
+requisitos que eles tocam.
 
 Você **complementa**, nunca reescreve. Leia o que está lá, identifique o que não está coberto e
 proponha só o delta. Requisito já registrado com `[Origem: spec-… · PR #…]` **não se toca** — ele
@@ -139,10 +183,101 @@ sincronizada.
 
 Rodar de novo não duplica: o que já está no arquivo é pulado.
 
+## Auditar: revalidar o que já está escrito
+
+Complementar acha o que **entrou**; nada acha o que **deixou de valer**. Requisito envelhece sem
+deixar rastro nos `paths` — mudou uma dependência, mudou a config, mudou o domínio vizinho — e
+continua no documento com toda a aparência de contrato. Auditar é o percurso inverso: **de cada
+`C<N>` pra evidência que o sustenta hoje**.
+
+**Só sob pedido explícito.** São N buscas dirigidas, uma por requisito; capability grande vira
+sessão longa. Isto não roda "de passagem" durante um `complementar`.
+
+### A ordem importa
+
+1. **Os requisitos que os commits do range tocaram** (`git log <verificado-ate>..HEAD -- <paths>`),
+   se houver marcador — é onde a chance de ter apodrecido é maior.
+2. **Os de `[Origem: derivado]`** — ninguém nunca validou.
+3. **O resto**, incluindo os de origem de spec.
+
+Assim uma sessão interrompida no meio já entregou o mais provável. Diga sempre quantos faltam.
+
+### Três estados, e nenhum deles é "corrigido em silêncio"
+
+Para cada requisito, procure a evidência **atual** — teste primeiro, código depois, na mesma ordem
+de confiança de sempre:
+
+| Estado | O que você achou | O que fazer |
+|---|---|---|
+| **confirmado** | evidência sustenta o requisito e os cenários | atualize o `arquivo:linha` do `[Origem]` se ele mudou de lugar; nada mais |
+| **contradito** | o comportamento hoje é outro | **achado** — mostre os dois textos lado a lado e deixe a decisão com o usuário |
+| **órfão** | nada sustenta, nem teste nem código | **pergunta** — foi removido, foi renomeado, ou você não achou? |
+
+Vale o mesmo lote de 3 a 5 de sempre — e aqui ele **paraleliza**: as buscas de evidência do lote
+são independentes entre si, então dispare os `Explore` do lote inteiro **numa única mensagem** (em
+mensagens separadas eles rodam em fila) e traga o resultado junto pro usuário decidir. Repita no
+prompt de cada um a diretiva do `structure-cache`, e mande o requisito **como está escrito** —
+subagente que recebe o comportamento resumido procura outra coisa.
+
+**Os cenários apodrecem antes do requisito.** "DEVE recusar upload acima de 10 MB" continua
+verdadeiro em espírito quando o limite virou 20 MB, e o `Quando → então` é que fica mentindo — e é
+justamente ele que a `spec` do próximo ciclo lê como fato. Audite **cenário por cenário**, com o
+número na mão, não o requisito no atacado.
+
+### A origem decide o que você pode fazer com o achado
+
+- **`[Origem: derivado …]`** — nunca foi validado por ninguém. Pode ser corrigido nesta sessão, com
+  confirmação, e o `[Origem]` passa a apontar a evidência nova.
+- **`[Origem: spec-X · PR #N]`** — comportamento especificado e entregue. **Não se toca.** Sua
+  leitura do código não tem autoridade sobre um contrato: vira achado, e o usuário decide se é
+  regressão (que é bug, e o destino é uma mudança) ou mudança que nunca foi sincronizada (que é
+  `MODIFIED` de uma spec futura, não uma edição sua).
+
+Essa é a mesma assimetria do `complementar` — aqui ela aparece requisito a requisito.
+
+### Órfão confirmado não some, vira registro
+
+Se o usuário confirmar que o comportamento foi mesmo removido, tire de `## Comportamento atual` e
+registre em `## Removido` com a procedência que você tem de verdade:
+
+```markdown
+### C4 — Cupom acumulável (removido)
+[Removido: auditoria de DD-MM-YYYY · sem evidência no código nem nos testes]
+```
+
+**Sem PR, porque você não tem um.** A auditoria descobre que sumiu; ela não sabe por qual mudança —
+e inventar um PR aqui é falsificar rastro. O `C<N>` continua queimado, como sempre.
+
+### Ao fim
+
+O marcador (`verificado-ate`) **só avança se você auditou o domínio inteiro** — auditoria parcial
+deixa metade da capability sem conferir, e avançar afirmaria o contrário. Se o usuário parou no
+meio, diga que parou e que o domínio segue sinalizado.
+
+Buraco que você tropeçar no caminho (comportamento sem `C<N>`) **anote, não escreva**: ele é assunto
+do `complementar`. Ofereça a segunda passada ao terminar, com a lista do que viu.
+
 ## Ao terminar
 
-Mostre: quantos `C<N>` entraram, quantos ficaram de fora **e por quê**, o que ficou como dívida,
-e o que você não cobriu do domínio. Encerre lembrando a natureza do que foi escrito:
+**Derivando ou complementando** — mostre: quantos `C<N>` entraram, quantos ficaram de fora **e por
+quê**, o que ficou como dívida, o que você não cobriu do domínio, e se o marcador
+(`verificado-ate`) avançou ou não — se não avançou, diga que o domínio segue sinalizado como
+envelhecido pra `spec`.
+
+**Auditando** — o mesmo, pelos três estados, e o que sobrou aparece com o mesmo destaque do que
+passou:
+
+```
+Auditado: checkout — 12 requisitos, 9 conferidos
+  Confirmados: 9 (2 com [Origem] reapontado)
+  Contraditos: 2 — C3 (limite 10 MB → 20 MB, derivado, corrigido)
+                   C7 (origem spec-014 · PR #488 — NÃO tocado, decisão sua)
+  Órfãos:      1 — C4 sem evidência, você confirmou removido → ## Removido
+  Não auditados: 3 (você parou em 2FA) · marcador NÃO avançou
+  Fora do escopo desta passada: 2 comportamentos sem C<N> — rode o complementar
+```
+
+Encerre lembrando a natureza do que foi escrito:
 
 > Esta capability foi **derivada**, não especificada. Ela descreve o que o código faz hoje —
 > incluindo o que talvez ninguém tenha decidido. Cada requisito que passar por uma mudança

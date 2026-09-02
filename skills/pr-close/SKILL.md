@@ -3,7 +3,7 @@ name: pr-close
 description: Fecha o ciclo de uma mudança DEPOIS que o PR foi mergeado — não mergeia nem fecha PR nenhum. Arquiva os artefatos, promove o comportamento pra capability viva, conclui o item do roadmap, colhe a dívida e destila os aprendizados. Com o PR aprovado mas ainda aberto, colhe os follow-ups na janela em que ainda dá pra corrigir dentro do PR. Um de cada vez, sob confirmação.
 disable-model-invocation: true
 argument-hint: [<NNN-slug> | --pr <N> | vazio = varre o que mergeou ou foi aprovado]
-allowed-tools: Read Write Edit Grep Glob Agent AskUserQuestion Bash(roadmap:*) Bash(roadmap) Bash(memory-audit:*) Bash(git worktree list*) Bash(git status*) Bash(git log*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(find *) Bash(cat *)
+allowed-tools: Read Write Edit Grep Glob Agent AskUserQuestion Bash(roadmap:*) Bash(roadmap) Bash(memory-audit:*) Bash(git worktree list*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(find *) Bash(cat *)
 ---
 
 # pr-close
@@ -108,6 +108,31 @@ O `spec.md` marcou o delta de cada requisito. É ele que manda:
 | `[REMOVED → <domínio> C<N>]` | tire de `## Comportamento atual`, registre em `## Removido` com PR e data |
 
 Depois, `atualizado:` e a spec em `specs:`.
+
+### O marcador `verificado-ate`
+
+Ele responde "até onde esta capability foi conferida contra o repositório", e é o que faz a `spec`
+do próximo ciclo perceber mudança que veio por fora — PR de outra pessoa, hotfix na main, você em
+outra máquina. Promover o delta **não** é conferir o domínio inteiro, então o marcador só avança
+sob condição:
+
+```bash
+git -C <root> log <verificado-ate>..<sha do merge> --format='%h %an %s' -- <paths do frontmatter>
+gh pr view <N> --json commits --jq '.commits[].oid'      # o que é deste PR
+```
+
+Sobrou no range algum commit que não é deste PR? **Não avance.** Empurrar o marcador por cima do
+trabalho de outra pessoa não reconcilia nada — apaga o único sinal de que há o que reconciliar, e
+troca "capability incompleta" por "capability errada em silêncio". Registre no sumário e siga; quem
+resolve é o `baseline`, quando o usuário quiser.
+
+Vazio o range, avance para o **sha do merge** — nunca o `HEAD` atual do principal, que inclui o que
+mergeou depois deste PR e nunca passou por aqui.
+
+**Capability sem o marcador não ganha um agora.** Ele nasce no `baseline`, que é quem de fato olhou
+o código; criá-lo aqui afirmaria que tudo até este merge está conferido, e a maior parte nunca foi.
+O mesmo vale pra `paths` ausente — sem ele não há range pra calcular, então pule esta parte e diga
+no sumário que o domínio não tem detecção.
 
 **Edição cirúrgica, nunca reescrita.** Use `Edit` no requisito alvo. Reescrever o arquivo inteiro
 perde o histórico dos outros requisitos, que vieram de mudanças que não são esta.
@@ -248,6 +273,7 @@ Fechado: <NNN-slug> — PR #512 "<título>", mergeado em <data>
 
   Arquivado:   thoughts/changes/archive/<NNN-slug>/
   Capability:  checkout — C7 novo · C3 modificado
+               marcador parado: 3 commits de fora deste PR tocaram o domínio · rode /tk7:baseline
   Roadmap:     item 004 → concluído  ·  🔓 desbloqueou: 007
   Colhido:     2 itens (1 follow-up do review, 1 dívida de teste)
                → roadmap: 2  ·  → issue perene #77: 1 (o outro é só seu, a seu pedido)

@@ -31,6 +31,35 @@ suficiente pra escrever — não existe obrigação de percorrer tudo.
 ela não cobre ou está suspeita. "Ler tudo que for relevante" não tem limite, e pesquisa sem
 limite produz documento sem limite.
 
+### Antes de confiar nela: até onde ela foi verificada
+
+`thoughts/` é local. Mudança que não passou por este fluxo — PR de outra pessoa, hotfix direto na
+main, você mesmo em outra máquina — **nunca entrou na capability**, e ela continua afirmando o
+comportamento velho com toda a aparência de autoridade. O dano não é só um requisito errado: é que
+uma capability confiável **desliga** a pesquisa que pegaria o erro.
+
+O frontmatter diz até onde ela foi conferida. Compare com o repositório **antes** de usá-la como
+critério de parada:
+
+```bash
+# root = repositório principal, como sempre (ver "Onde escrever")
+git -C <root> log <verificado-ate>..HEAD --format='%h %an %s' -- <paths do frontmatter>
+```
+
+Havendo commits, mostre a contagem e os assuntos **antes de qualquer outra coisa**, e ofereça o
+`baseline` no domínio pra reconciliar — `--auditar` quando o que pesa é conferir se o que já está
+escrito ainda vale. É o `baseline` que trata contradição entre código e requisito já registrado —
+aqui você só levanta a suspeita.
+
+- **Não filtre por autoria.** Hotfix seu, commit seu de outra máquina e merge de terceiro dão o
+  mesmo estrago. O critério é *não passou por esta capability*, nunca *não foi você*.
+- **É aviso, não gate.** Refactor que não mudou comportamento vai aparecer no range, e tudo bem —
+  isto é sinal, não veredito. Quem decide se para pra reconciliar é o usuário.
+- **Sem `verificado-ate` ou sem `paths`, diga que não deu pra verificar** e siga. Capability antiga
+  ou promovida sem marcador não tem como ser checada — tratar isso como "está em dia" é inventar
+  cobertura, que é exatamente o defeito que a checagem existe pra pegar. Vale igual quando o `git
+  log` reclama do sha: histórico reescrito é marcador perdido, não domínio em dia.
+
 **Os testes valem mais que a implementação** pra saber o que o sistema promete: implementação
 conta o que o código faz hoje, bugs inclusive; teste conta o que alguém *decidiu* que ele deve
 fazer. O inventário de testes que você levantar aqui serve de novo no `plan` — anote.

@@ -450,6 +450,15 @@ deletar. E **detectar formato antigo sem re-migrar** (idempotência).
   rastro · `REMOVED` vai pra `## Removido`.
 - Edição **cirúrgica e idempotente**. `C<N>` inexistente = **parar e avisar**, nunca inventar requisito.
 - Lida (e marcada com delta) por `/sdd-spec`, que **nunca escreve** nela.
+- **`## Removido` por auditoria** (desde 12-08-2026, I.38): além de `[Removido: … PR #N]`, existe
+  `[Removido: auditoria de DD-MM-YYYY · sem evidência no código nem nos testes]` — a auditoria
+  descobre que o comportamento sumiu, mas não sabe por qual mudança. **Sem PR inventado.**
+- **Frontmatter** (desde 11-08-2026, I.37): além de `dominio` · `atualizado` · `specs`, o par
+  **`verificado-ate: <sha>`** + **`paths: []`** — o marcador de staleness. Escrito pelo `baseline`
+  (que é quem olha o código), avançado pelo `pr-close` **só quando o range não contém commit de
+  fora do PR**, lido pela `spec` como aviso. **Aditivo e opcional:** capability sem os campos
+  continua válida — perde a detecção, e as peças dizem que não verificaram em vez de assumir que
+  está em dia.
 
 Se o v10 mudar o formato: `C<N>` é referenciado por SPECs antigas já arquivadas. Renumerar quebra
 rastreabilidade histórica.
@@ -861,6 +870,10 @@ Opções levantadas, **não decidido**:
 | Todo PR + auditoria periódica | sync no merge quando há delta; varredura periódica reconcilia capability × código, pegando até hotfix que nunca passou pelo toolkit |
 
 Também não decidido: o sync acontece no **close** ou no **review**.
+
+> A terceira linha da tabela (**auditoria periódica**) foi fechada pela **I.37** em 11-08-2026 —
+> não como varredura avulsa, mas como detector de staleness disparado pela `spec`. Ela cobre o que
+> a resolução deste item não alcança: mudança que nunca passa por você.
 
 ### I.8 — Formato do `spec.md` ✅ (aprovado 30-07-2026)
 
@@ -1513,3 +1526,154 @@ listagem do que ficou e oferta de limpeza.
 **A armadilha do grau `duvida`.** Comportamento não especificado que parece errado vira **pergunta**,
 nunca bug. Sem essa separação a peça viraria lista de opinião com aparência de defeito — o mesmo vício
 que a `spec` combate, um passo mais tarde no ciclo.
+
+---
+
+### I.37 — ⭐ Capability local × mudança de terceiro: detector de staleness ✅ (11-08-2026)
+
+Achado do usuário: *"e se vier de outra pessoa? nós mantemos spec apenas local"*.
+
+**O furo.** A capability é promovida no `pr-close` sob merge, e vive em `thoughts/`, que é
+gitignored. Mudança que **nunca toca o seu fluxo em momento nenhum** — PR de outra pessoa, hotfix
+direto na main, você mesmo em outra máquina — não tem por onde entrar. A capability local continua
+afirmando o comportamento velho, e continua parecendo autoritativa.
+
+**Isto não é o I.7.** Aquele item cobre PR *seu* sem spec (`quick-task`, `fix`, `chore`), e a
+resolução de 31-07 depende de **você** rodar o fechamento. O que sobra é exatamente o que passa
+longe de você. A terceira linha da tabela do I.7 (*"todo PR + auditoria periódica"*) tinha ficado
+sem decidir; **este item a fecha.**
+
+**A cadeia de dano, e por que ela é pior do que parece:**
+
+1. `spec/SKILL.md` lê a capability como primeira fonte **e como critério de parada** da pesquisa —
+   quanto mais confiável ela parece, menos se vai ao código conferir. O erro não só passa: ele
+   *desliga* a verificação que o pegaria.
+2. O delta sai errado — `[ADDED]` no que já existe, ou `[MODIFIED → <domínio> C<N>]` sobre um
+   `C<N>` que não descreve mais nada real.
+3. `pr-close` edita esse `C<N>` e **acrescenta** ao `[Origem]`. O rastro fica impecável e o
+   conteúdo fica falso — que é o pior formato possível para um documento errado.
+
+Em time o agravante é outro: **cada dev tem a sua capability**, e não existe ponto de reconciliação
+entre elas.
+
+**Metade da solução já está construída.** O `baseline`, sobre capability existente, já trata
+contradição código × requisito com origem de spec como **achado** para o usuário decidir
+(*"pode ser regressão, pode ser mudança que nunca foi sincronizada"*). A máquina de reconciliação
+existe. O que falta é o **gatilho**: ninguém roda `baseline` num domínio que já tem capability,
+porque nada avisa que ela envelheceu. O furo é silencioso — o atributo que a E.5 mais combate,
+já que *capability errada é pior que capability incompleta*.
+
+#### O que foi decidido: detector de staleness (opção A)
+
+A capability passa a guardar **onde ela foi verificada pela última vez**, e a `spec` compara isso
+com o repositório antes de confiar nela.
+
+| Peça | Papel |
+|---|---|
+| frontmatter da capability | ganha `verificado-ate: <sha>` e `paths:` (os caminhos do domínio) |
+| `baseline` | escreve os dois — ao derivar e ao complementar |
+| `pr-close` | atualiza `verificado-ate` ao promover o delta |
+| `spec` | **lê e avisa**, antes de usar a capability como critério de parada |
+
+O sinal é um `git log <verificado-ate>..HEAD -- <paths>` no repositório principal. Havendo commits,
+a `spec` mostra a contagem e os assuntos **antes de qualquer outra coisa** e oferece o `baseline`
+no recorte suspeito.
+
+**Não filtrar por autoria.** Tentador e errado: hotfix seu, commit seu de outra máquina e merge de
+terceiro dão o mesmo estrago. O critério é *não passou por esta capability*, não *não foi você*.
+
+**É aviso, nunca gate** (E.5, *usuário no volante*). Refactor que não muda comportamento vai
+aparecer no range e isso é ruído aceito — o custo é uma linha na tela, e o detector é sinal, não
+veredito.
+
+**Sem `paths:`, o detector não roda — e diz que não roda.** O fallback é derivar os caminhos dos
+`arquivo:linha` dos `[Origem]` derivados; numa capability inteiramente de origem de spec não há
+nenhum, e aí a saída correta é declarar que a verificação não foi possível. Inventar cobertura aqui
+seria repetir o próprio bug que o item conserta.
+
+**Falso negativo assumido:** comportamento que muda por arquivo fora dos `paths`, ou por
+dependência. O detector pega o caso comum e não promete os outros.
+
+#### O que foi recusado, e por quê
+
+- **B · tirar a capability do gitignore.** É a única solução *real* pro caso multi-pessoa — vira
+  artefato do repo, o PR do colega atualiza, o merge conflita e alguém resolve. Fica registrada
+  como o caminho de quando o time entrar no fluxo, porque hoje exige adoção que não existe e
+  quebra a premissa de `thoughts/` local. **O A não vira dispensável nesse dia:** hotfix direto na
+  main escapa dos dois.
+- **C · auditoria periódica avulsa.** É o A sem gatilho automático e com custo por rodada bem
+  maior. Só volta à mesa se o A se mostrar inviável.
+
+#### O que só apareceu ao implementar
+
+**Quem pode avançar o marcador não é quem promove o delta.** O `pr-close` parecia o lugar natural
+pra manter o `verificado-ate` em dia — e é onde ele mais estragaria. Promover um delta não é
+conferir o domínio; se entre o último marcador e este merge houver commit de outra pessoa nos
+`paths`, avançar apaga exatamente o sinal que o item existe pra criar. Daí a condição: o `pr-close`
+avança **só** quando o range não contém commit de fora do PR, e para o sha do merge — nunca o `HEAD`
+do principal, que arrasta junto o que mergeou depois.
+
+**O marcador nasce no `baseline` e em nenhum outro lugar**, porque ele é uma afirmação sobre ter
+olhado o código. Capability antiga sem os campos não ganha um no fechamento: seria declarar
+conferido tudo que veio antes. Fica sem detecção e as peças dizem isso.
+
+**No `baseline`, o sha é capturado no início da sessão, não no fim** — a derivação demora, e gravar
+o HEAD final afirma ter olhado commit que chegou durante o trabalho. E o marcador só avança sobre o
+que foi de fato reconciliado: cobriu duas sub-áreas de cinco, o marcador fica onde está.
+
+Os três casos são o mesmo erro em lugares diferentes — **marcador otimista vale menos que marcador
+nenhum**, porque troca "não sei" por "está em dia". É a E.5 (*capability errada é pior que
+incompleta*) aplicada ao metadado em vez de ao requisito.
+
+**Implementado em:** `spec` (lê e avisa, antes do critério de parada) · `baseline` (escreve os dois
+campos, e ganhou o caminho "domínio sinalizado" — percorrer o range em vez de cobrir o que falta) ·
+`pr-close` (mantém sob condição, reporta marcador parado no sumário) · **E.2 atualizada**.
+
+---
+
+### I.38 — ⭐ `baseline --auditar`: o percurso inverso, do documento pro código ✅ (12-08-2026)
+
+Pedido do usuário, na sequência da I.37: *"tem um baseline para forçar uma nova auditoria pra ver
+se continua válido e o que novo entrou na capability?"*.
+
+**O que faltava.** A I.37 fez a capability envelhecer *em voz alta*, e o `complementar` sabe achar
+o que **entrou**. Nenhum dos dois acha o que **deixou de valer**: o `complementar` lê o documento
+só pra saber o que pular, e o detector depende de commit nos `paths`. Requisito que apodreceu sem
+tocar os `paths` — mudou dependência, config, ou o domínio vizinho — sobrevive intacto e com cara
+de contrato. *"O que entrou de novo"* estava coberto; *"o que ainda vale"*, não.
+
+**Auditar percorre ao contrário:** de cada `C<N>` pra evidência que o sustenta hoje. Três estados
+— **confirmado** (só reaponta o `[Origem]`), **contradito** (achado, com os dois textos lado a
+lado), **órfão** (pergunta: removido, renomeado, ou você não achou?).
+
+**Terceiro momento da mesma peça, não peça nova** — I.19 e I.36 pela terceira vez. O conhecimento
+de boot é idêntico (promessa × acidente, formato, `C<N>`, lotes, guardrails); só o alvo do percurso
+muda. Separar em `capability-audit` duplicaria a tabela promessa × acidente, que é o coração da
+peça — e, pela I.35, ainda reivindicaria mais um nome curto.
+
+**As quatro decisões que valem o registro:**
+
+1. **Os cenários apodrecem antes do requisito.** "DEVE recusar upload acima de 10 MB" continua
+   verdadeiro em espírito quando o limite virou 20 MB — quem mente é o `Quando → então`, e é
+   exatamente ele que a `spec` lê como fato. A auditoria é **cenário a cenário**, com o número na
+   mão; requisito no atacado passaria por cima do único lugar onde o erro mora.
+2. **A origem decide o que se pode fazer com o achado.** `[Origem: derivado]` corrige sob
+   confirmação; `[Origem: spec · PR]` **não se toca** — leitura de código não tem autoridade sobre
+   contrato entregue. Vira achado, e o usuário decide entre regressão (é bug, vira mudança) e
+   dessincronização (é `MODIFIED` de uma spec futura). É a assimetria de "Se a capability já
+   existe", agora requisito a requisito.
+3. **Órfão confirmado vai pra `## Removido` sem PR** — `[Removido: auditoria de DD-MM-YYYY · sem
+   evidência …]`. A auditoria descobre que sumiu e **não sabe por qual mudança**; preencher um PR
+   ali seria falsificar rastro no único campo que existe pra rastrear. **E.2 estendida.**
+4. **Os dois percursos não se misturam num lote.** Rodar auditar e complementar na mesma sessão é o
+   que responde o pedido inteiro do usuário ("o que continua válido **e** o que entrou"), mas em
+   passadas separadas — senão o usuário perde o fio de qual pergunta está respondendo, e o buraco
+   novo compete com a revalidação pela mesma atenção.
+
+**Ordem de ataque, porque a sessão pode acabar antes:** requisitos tocados pelo range do marcador →
+`[Origem: derivado]` → o resto. Interrupção no meio já entregou o mais provável. E o marcador só
+avança se o domínio inteiro foi auditado — parcial não avança, mesma regra da I.37.
+
+**O custo que a peça assume, e mitiga:** auditar é N buscas dirigidas, uma por requisito. Por isso
+é `--auditar` explícito, nunca de passagem — e o lote de 3 a 5 dispara os `Explore` **numa mensagem
+só**, que é o que torna a passada viável em capability grande.

@@ -19,6 +19,16 @@ com `[Origem]` obrigatório · comportamento observável nunca implementação �
 área de comportamento (não módulo) · preferir encaixar em capability existente · nunca criar
 domínio novo sem confirmação · nunca commitar (`thoughts/` é gitignored).
 
+**Extensões do v10, não herdadas** — nenhuma das duas tem equivalente no v9, onde a capability
+divergia do código em silêncio:
+
+- O par `verificado-ate` + `paths` no frontmatter (11-08-2026, `REFACTOR-v10.md` I.37) — o detector
+  de staleness que a `spec` lê e o `pr-close` mantém. Nasceu de um furo apontado pelo usuário:
+  *"e se vier de outra pessoa? nós mantemos spec apenas local"*.
+- O momento **`--auditar`** e a procedência `[Removido: auditoria de DD-MM-YYYY · …]` (12-08-2026,
+  I.38), pedidos por ele na sequência: *"tem um baseline para forçar uma nova auditoria pra ver se
+  continua válido e o que novo entrou na capability?"*.
+
 ### Divergência consciente com o OpenSpec
 
 O OpenSpec **recusa** povoamento retroativo por princípio:
