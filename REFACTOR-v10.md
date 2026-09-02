@@ -305,6 +305,8 @@ Onda 3 — classificação errada.
       reference v9).
 - [x] **`pr-draft`** ✅ `skills/pr-draft/` (31-07-2026) — do `pr-draft.v9` (310L), **com o modo
       `sync` junto**, como no v9. Cheguei a separar em `pr-sync` e voltei atrás — ver I.22.
+      **Ganhou `stack` e `restack` em 19-08-2026** — a cadeia de PRs do `tasks.md` nasce empilhada
+      via `gh stack`, e o rebase em cascata funciona com worktree. Ver I.40.
 
 ### Onda 3 — periferia
 
@@ -1742,3 +1744,63 @@ proteção de branch, `gh repo delete`, `gh release delete` e push forçado — 
 API). O hook trava o agente nesta máquina; não trava mais ninguém, nem outra sessão sem o toolkit.
 Proteção de branch no GitHub foi oferecida e não foi escolhida agora — quando for, é o complemento
 natural deste item.
+
+---
+
+### I.40 — ⭐ Stacked PRs: `pr-draft stack` + `restack`, e o que a worktree quebra ✅ (19-08-2026)
+
+**O desconforto que abriu o item:** o `plan` divide bem em PRs, e o `pr-draft` abria **um por vez** —
+o time via um PR isolado, e o resto do desenho aparecia depois, sem contexto. O pedido do usuário foi
+empilhar os PRs previstos no `tasks.md` de uma vez, criar as worktrees e receber os comandos na ordem
+correta.
+
+**O fato que mudou o desenho:** não existe `git stack` nativo. Existe a extensão oficial
+**`gh stack`** — [stacked PRs do GitHub, public preview desde 30-07-2026](https://github.blog/changelog/2026-07-30-stacked-pull-requests-are-now-in-public-preview/)
+— e ela **já estava instalada** na máquina do usuário (`gh 2.97.0` + `gh stack v0.1.0`). O pedido era
+viável; o que não era óbvio é onde ele colide com o toolkit.
+
+**Quatro achados, todos medidos num repo sandbox — não inferidos da doc:**
+
+1. **`gh stack init b1 b2 b3` adota branches existentes** e monta a cadeia (`main ← b1 ← b2 ← b3`),
+   e funciona **offline, sem remote**. É o que permite criar as branches com commit e mensagem
+   controlados *antes* de empilhar, em vez de aceitar o que a extensão gera.
+2. **`gh stack submit` sem flag abre uma TUI de tela única** — inoperável por agente. `--auto`
+   dispensa o editor **e cria os PRs em draft** (`--open` é que tira do draft). Títulos e corpos
+   auto-gerados são placeholder: o corpo curado entra depois, por `gh pr edit --body-file`, um por
+   camada. Isso preserva integralmente a regra do corpo público desta peça.
+3. **⚠️ Worktree por PR quebra o cascade rebase.** Com as branches presas em worktrees:
+   `✗ could not start rebase of feat/two onto feat/one: fatal: 'feat/two' is already used by worktree at …`.
+   A extensão rebaseia por checkout, e git não deixa duas árvores na mesma branch. Pior: **de dentro
+   da worktree o `gh stack` não vê a stack** — o metadado vive em `$GIT_DIR/gh-stack`, e na worktree
+   `$GIT_DIR` é `.git/worktrees/<nome>/`; a resposta é *"current branch is not part of a stack"*, que
+   parece stack perdida e não é. O contorno **funciona e foi testado**: cascade manual de baixo pra
+   cima, `git -C <worktree> rebase <parent>`, com a stack continuando reconhecida pelo `view`.
+4. **⚠️ `gh stack merge` mergeia a cadeia inteira num comando — e passava livre.** O `tk7-guard` só
+   casava `gh pr merge` e `gh api …/merge`, e `Bash(gh *)` no allow anula o deny (I.39). Era o
+   incidente da I.39 multiplicado por N PRs, esperando acontecer.
+
+**As quatro decisões (do usuário, com o panorama na tela antes):**
+
+1. **Modo `stack` dentro do `pr-draft`**, não peça nova. As regras de corpo público, título, branch e
+   roadmap já vivem ali — peça própria ganharia leading word (Parte C.4a) e pagaria em duplicação.
+   A peça vai a 4 modos: kickoff · `stack` · `restack` · `sync`.
+2. **Nenhuma worktree automática.** O modo abre a cadeia e **entrega os comandos `/tk7:worktree` na
+   ordem**, com o aviso que importa: PR empilhado é PR dependente, e abrir os N terminais de uma vez
+   deixa as camadas de cima escrevendo sobre base que ainda vai mudar. Mantém a I.27 (nenhuma peça
+   invoca outra) sem duplicar a lógica de permissões e memória da `worktree`.
+3. **Modo `restack` worktree-aware:** sem worktree, `gh stack sync` no root; com worktree, o cascade
+   manual de baixo pra cima. O rebase é local; o `push --force-with-lease` que publica é **do
+   usuário** — o guard barra, e barrar aqui é o comportamento certo.
+4. **Só o `merge` entrou no guard** (`gh stack merge`, + deny declarativo no `permissions.json`).
+   `unstack` e `modify` ficaram de fora: não mergeiam nem apagam código, e `modify` tem `--abort`.
+   Suíte do guard: **31 casos, 0 falhas** — incluindo `gh stack init/submit/view/sync/rebase` e
+   `git -C <wt> rebase` como falsos-positivos que precisam passar.
+
+**Duas pendências escritas de propósito:**
+
+- **[A VERIFICAR]** se `gh stack submit` (push + API, sem checkout aparente) passa com as branches
+  presas em worktrees. Só dá pra medir contra um remote real; o sandbox não tinha.
+- **`gh stack sync` faz `push --force-with-lease --atomic` por dentro**, e o guard não vê o interior
+  do `gh` — barra `git push --force` e deixa passar o force da extensão. Não é furo do mesmo tamanho
+  do `merge` (reescreve branch de PR próprio, não muda o `main` de ninguém), mas é assimetria real.
+  Barrar ou não é decisão do usuário; fica registrado, não resolvido em silêncio.

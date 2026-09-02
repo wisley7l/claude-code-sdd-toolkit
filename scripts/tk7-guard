@@ -40,6 +40,12 @@ REGRAS = (
         "`gh api .../merge` é a porta lateral do `gh pr merge` — mesma consequência",
     ),
     (
+        "merge de stack de PRs",
+        re.compile(r"\bgh\s+stack\s+merge\b", re.I),
+        "`gh stack merge` mergeia a cadeia inteira de PRs num comando — é o `gh pr merge` "
+        "multiplicado, e a decisão continua sendo do time",
+    ),
+    (
         "proteção de branch",
         re.compile(r"\bgh\s+api\b[^\n]*?\bprotection\b[^\n]*?" + WRITE_METHOD, re.I),
         "mudar proteção de branch afeta todo mundo que empurra código",

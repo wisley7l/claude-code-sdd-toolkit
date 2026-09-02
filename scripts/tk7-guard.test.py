@@ -20,6 +20,9 @@ BLOQUEIA = [
     ("push -C com force", "git -C /tmp/x push --force"),
     ("escondido em composto", "npm test && gh pr merge 427"),
     ("repo delete", "gh repo delete o/r --yes"),
+    ("gh stack merge", "gh stack merge"),
+    ("gh stack merge por numero", "gh stack merge 7"),
+    ("stack merge escondido em composto", "gh stack view --short && gh stack merge"),
 ]
 
 PASSA = [
@@ -34,6 +37,11 @@ PASSA = [
     ("roadmap", "roadmap move 004 --to concluido --pr 427"),
     ("grep na palavra merge", "grep -rn merge skills/"),
     ("ls", "ls -la"),
+    ("stack init", "gh stack init feat/a feat/b feat/c"),
+    ("stack submit draft", "gh stack submit --auto"),
+    ("stack view", "gh stack view --json"),
+    ("stack sync", "gh stack sync --prune"),
+    ("stack rebase", "gh stack rebase --no-trunk"),
     ("rebase de worktree", "git -C .worktrees/feat-b rebase feat/a"),
 ]
 

@@ -71,3 +71,14 @@ comportamento não tinha rede.
 O `tasks.md` agrupa tarefas **por bloco de PR** (I.13). Quando o plano prevê mais de um PR, esta
 peça sabe qual bloco este PR fecha — no v9 isso dependia de casar o slug da branch com o item de
 roadmap certo, com desempate por pergunta. Agora é leitura direta do artefato.
+
+## Os modos `stack` e `restack` (19-08-2026)
+
+Construção própria. A única dependência externa é a extensão oficial **`gh stack`**
+(`github/gh-stack`, stacked PRs do GitHub em public preview desde 30-07-2026), **chamada como CLI —
+nada de código dela foi copiado ou adaptado**, então não há obrigação de atribuição a cumprir aqui.
+Registrado só porque é dependência opcional: sem a extensão, o modo `stack` degrada pro kickoff
+um-a-um em vez de improvisar a cadeia com `--base`.
+
+O desenho dos dois modos saiu de fatos medidos contra a extensão instalada, não da documentação —
+ver **I.40** no `REFACTOR-v10.md`, que registra os quatro achados e o que cada um forçou.

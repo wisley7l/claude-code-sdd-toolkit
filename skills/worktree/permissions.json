@@ -144,6 +144,8 @@
       "Bash(git --git-dir=* checkout -- *)",
       "Bash(gh pr merge)",
       "Bash(gh pr merge *)",
+      "Bash(gh stack merge)",
+      "Bash(gh stack merge *)",
       "Bash(gh api *merge*)",
       "Bash(gh api *protection*)",
       "Bash(gh api -X *)",
