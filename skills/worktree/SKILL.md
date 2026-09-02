@@ -1,9 +1,9 @@
 ---
 name: worktree
-description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce com as permissões do projeto aplicadas (commit e push sob confirmação, destrutivos bloqueados) e com a memória centralizada no repositório principal. Ao remover, oferece apagar a branch local que ficou pra trás. Use pra trabalhar em várias branches em paralelo.
+description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce cercada (commit e push sob confirmação, destrutivos negados, merge de PR e push forçado barrados pelo hook tk7-guard) e com a memória centralizada no repositório principal. Ao remover, oferece apagar a branch local que ficou pra trás. Use pra trabalhar em várias branches em paralelo.
 disable-model-invocation: true
 argument-hint: <nome-da-branch> | remove <nome>
-allowed-tools: Read Write AskUserQuestion Bash(git worktree*) Bash(git remote*) Bash(git fetch*) Bash(git branch*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(git ls-remote*) Bash(ls *) Bash(mkdir *) Bash(cp *) Bash(ln -s *) Bash(unlink *) Bash(readlink *) Bash(cat *) Bash(date*)
+allowed-tools: Read Write AskUserQuestion Bash(git worktree*) Bash(git remote*) Bash(git fetch*) Bash(git branch*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(git ls-remote*) Bash(ls *) Bash(mkdir *) Bash(cp *) Bash(ln -s *) Bash(unlink *) Bash(readlink *) Bash(cat *) Bash(date*) Bash(command -v *)
 ---
 
 # worktree
@@ -35,13 +35,26 @@ já está ocupado, diga e pergunte se é pra navegar até a existente.
 
 Três coisas nascem junto com ela, nesta ordem:
 
-**1. As permissões.** Copie `${CLAUDE_SKILL_DIR}/permissions.json` **integralmente**, sem editar,
-para `<worktree>/.claude/settings.local.json`. É o que faz a sessão nova nascer cercada: commit e
-push pedem confirmação, comandos destrutivos são negados, o resto do trabalho flui.
+**1. As permissões e o guard.** Copie `${CLAUDE_SKILL_DIR}/permissions.json` **integralmente**, sem
+editar, para `<worktree>/.claude/settings.local.json`. É o que faz a sessão nova nascer cercada:
+commit e push pedem confirmação, comandos destrutivos são negados, o resto do trabalho flui.
 
 Esse arquivo é a fonte única — nunca reconstrua as regras de memória, nem "adapte" pro projeto. Se
 ele não estiver acessível, **crie a worktree assim mesmo e diga que as permissões não foram
 aplicadas**: worktree sem cerca o usuário resolve; worktree com cerca inventada, não.
+
+Ele traz junto um **hook `PreToolUse`** que chama o `tk7-guard` — a parte da cerca que não depende
+de adivinhar a forma do comando. Regra de permissão enumera sintaxe (`gh pr merge`), e sintaxe se
+contorna (`gh api …/merge-async -X PUT`, que foi como um merge indesejado passou); o guard lê o
+comando inteiro e barra merge de PR, deleção pela API e push forçado em qualquer forma.
+
+**Confira que ele existe** — `command -v tk7-guard`. Hook que aponta pra comando ausente **falha
+aberto**: o Claude Code segue com a chamada e a worktree parece protegida sem estar. Ausente, diga
+na entrega, com o conserto numa linha:
+
+```bash
+<caminho do toolkit>/scripts/install-tk7-guard.sh
+```
 
 Se já existir um `settings.local.json` na worktree (veio commitado na branch), guarde uma cópia em
 `<worktree>/thoughts/permissions.bak.json` antes de sobrescrever.
@@ -68,8 +81,8 @@ descubra em vez de montar: `ls ~/.claude/projects/ | grep <nome-da-branch>`.
 
 **3. `.worktrees/` no `.gitignore`** do root, se ainda não estiver.
 
-Ao terminar, informe: caminho absoluto, branch e base, se as permissões foram aplicadas, e como
-entrar — `cd <caminho> && claude`. A sessão nova já lê o settings ao iniciar; não há reload.
+Ao terminar, informe: caminho absoluto, branch e base, se as permissões foram aplicadas, **se o
+guard está no PATH**, e como entrar — `cd <caminho> && claude`. A sessão nova já lê o settings ao iniciar; não há reload.
 
 ## Remover
 

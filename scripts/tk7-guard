@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""
+tk7-guard — hook PreToolUse que barra ação irreversível de repositório.
+
+Lê o JSON do hook no stdin, olha `tool_input.command` e sai com 2 (bloqueio) quando
+o comando faz algo que ninguém desfaz sozinho: mergear PR, apagar repositório ou
+release, mexer em proteção de branch, forçar push.
+
+Existe porque `permissions.deny` enumera *formas*, e forma se contorna. O incidente
+que originou o script: `gh pr merge` estava negado, e o merge saiu por
+`gh api repos/OWNER/REPO/pulls/N/merge-async -X PUT`, que nenhuma regra previa.
+Aqui a checagem é sobre o comando inteiro, em qualquer forma.
+
+Bloqueio é duro de propósito: são ações que o time inteiro vê, e a decisão é do
+humano — que continua podendo rodar o mesmo comando no próprio terminal.
+
+Uso (em settings.json / settings.local.json):
+
+    "hooks": {
+      "PreToolUse": [
+        { "matcher": "Bash", "hooks": [{ "type": "command", "command": "tk7-guard" }] }
+      ]
+    }
+"""
+import json
+import re
+import sys
+
+WRITE_METHOD = r"(?:-X\s*|--method[\s=]*)(?:PUT|POST|PATCH|DELETE)"
+
+REGRAS = (
+    (
+        "merge de PR",
+        re.compile(r"\bgh\s+pr\s+merge\b", re.I),
+        "quem mergeia é o time, não o agente",
+    ),
+    (
+        "merge de PR pela API",
+        re.compile(r"\bgh\s+api\b[^\n]*?/merge(?:-async)?\b", re.I),
+        "`gh api .../merge` é a porta lateral do `gh pr merge` — mesma consequência",
+    ),
+    (
+        "proteção de branch",
+        re.compile(r"\bgh\s+api\b[^\n]*?\bprotection\b[^\n]*?" + WRITE_METHOD, re.I),
+        "mudar proteção de branch afeta todo mundo que empurra código",
+    ),
+    (
+        "proteção de branch",
+        re.compile(r"\bgh\s+api\b[^\n]*?" + WRITE_METHOD + r"[^\n]*?\bprotection\b", re.I),
+        "mudar proteção de branch afeta todo mundo que empurra código",
+    ),
+    (
+        "deleção pela API",
+        re.compile(r"\bgh\s+api\b[^\n]*?(?:-X\s*|--method[\s=]*)DELETE\b", re.I),
+        "deleção via API não passa por confirmação nenhuma do GitHub",
+    ),
+    (
+        "deleção de repositório",
+        re.compile(r"\bgh\s+repo\s+delete\b", re.I),
+        "não tem desfazer",
+    ),
+    (
+        "deleção de release",
+        re.compile(r"\bgh\s+release\s+delete\b", re.I),
+        "release apagada leva junto quem já dependia dela",
+    ),
+    (
+        "push forçado",
+        re.compile(r"\bgit\s+(?:-[^\s]+\s+[^\s]+\s+)*push\b[^\n]*?(?:--force\b|--force-with-lease\b|\s-f\b)", re.I),
+        "push forçado reescreve história que outras pessoas já puxaram",
+    ),
+    (
+        "push forçado (refspec com +)",
+        re.compile(r"\bgit\s+(?:-[^\s]+\s+[^\s]+\s+)*push\b[^\n]*?\s\+[\w./-]+:", re.I),
+        "`+ref:ref` é force push com outra sintaxe",
+    ),
+)
+
+
+def analisa(comando):
+    for nome, regex, motivo in REGRAS:
+        if regex.search(comando):
+            return nome, motivo
+    return None
+
+
+def main():
+    try:
+        evento = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError):
+        return 0
+    entrada = evento.get("tool_input") or {}
+    comando = entrada.get("command")
+    if not isinstance(comando, str) or not comando.strip():
+        return 0
+    achado = analisa(comando)
+    if not achado:
+        return 0
+    nome, motivo = achado
+    print(
+        f"tk7-guard bloqueou: {nome}.\n"
+        f"Motivo: {motivo}.\n"
+        f"Não tente outra forma do mesmo comando — a decisão é do usuário, "
+        f"que roda isso no próprio terminal ou pela interface do GitHub. "
+        f"Diga a ele o que você ia fazer e por quê, e siga com o resto do trabalho.",
+        file=sys.stderr,
+    )
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

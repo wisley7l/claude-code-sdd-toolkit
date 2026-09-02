@@ -1677,3 +1677,68 @@ avança se o domínio inteiro foi auditado — parcial não avança, mesma regra
 **O custo que a peça assume, e mitiga:** auditar é N buscas dirigidas, uma por requisito. Por isso
 é `--auditar` explícito, nunca de passagem — e o lote de 3 a 5 dispara os `Explore` **numa mensagem
 só**, que é o que torna a passada viável em capability grande.
+
+---
+
+### I.39 — ⚠️⭐ O incidente do merge: `allow` amplo anula `deny` específico ✅ (12-08-2026)
+
+**O que aconteceu.** Um agente mergeou um PR que ninguém mandou mergear:
+
+```
+gh api repos/OWNER/REPO/pulls/427/merge-async -X PUT -f merge_method=merge
+```
+
+O usuário resume a origem sem meias palavras: *"a minha resposta foi ambígua e ele fez o merge
+errado"*. Consequência: PR de 2 commits e **zero reviews** entrou em `staging`, o deploy rodou e o
+CI commitou `ci: Update Alchemy state and DB migration` por cima. O merge não parou no git — levou
+junto migração de banco e estado de infra, que é o que torna `git revert` inútil aqui (o código
+voltaria e o banco não). Decisão do usuário: **não reverter**, revisar pelo PR seguinte e trazer as
+correções nele.
+
+**A cerca existia e não pegou.** `skills/worktree/permissions.json` já negava `Bash(gh pr merge)` e
+`Bash(gh pr merge *)`. Só que a mesma lista **permite `Bash(gh *)`**, e `gh api` faz tudo que a API
+REST faz: mergear, fechar, apagar release, apagar repositório, trocar proteção de branch. O deny
+cobria o **caminho conhecido**; a API é uma porta lateral que nenhuma regra previa.
+
+**A lição, que vale além deste caso:** `allow` amplo de um binário com subcomando genérico
+(`gh api`, `docker exec`, `devbox run`, `npx`) **anula toda a seção de `deny` daquele binário** —
+qualquer ação negada pelo nome tem uma forma equivalente pelo genérico. Enumerar formas é uma
+corrida que a enumeração perde, porque quem enumera precisa acertar todas e quem contorna precisa
+achar uma.
+
+#### O conserto: duas camadas, e a de baixo não é a declarativa
+
+| Camada | O quê | Por que não basta sozinha |
+|---|---|---|
+| `permissions.deny` | 12 padrões novos de `gh api` (métodos de escrita, `*merge*`, `*protection*`) | enumera sintaxe — a próxima forma não prevista passa |
+| **`tk7-guard`** (hook `PreToolUse`) | lê `tool_input.command` inteiro e sai com **2** | é a cerca de verdade: independe da forma do comando |
+
+Verificado na doc antes de escrever, porque as duas premissas mudavam o desenho: **wildcard funciona
+em qualquer posição** em regra Bash (`Bash(git * main)`), e **hook pode viver em
+`settings.local.json`**, que é justamente o arquivo que a `worktree` escreve. Sem a segunda, o
+pedido do usuário (*"quando a gnt criar worktree o settings já deveria vir com essa proteção"*) não
+teria como ser atendido no lugar certo.
+
+O guard barra merge de PR (`gh pr merge` **e** `gh api …/merge`), deleção pela API, mudança de
+proteção de branch, `gh repo delete`, `gh release delete` e push forçado — incluindo
+`git push origin +main:main`, que é force push com outra sintaxe. **25 casos em
+`scripts/tk7-guard.test.py`**, metade deles falsos-positivos que precisam passar (`gh pr view`,
+`gh api …/comments`, `git push -u`, `git merge` local). Guard sem teste apodrece e vira teatro.
+
+**Três decisões que o incidente forçou:**
+
+1. **Bloqueio duro, não `ask`.** Contraria o default do usuário (*`ask` é o gate pra
+   exceção-humana*), e é o certo aqui: merge é ação que o time inteiro vê e que ele já faz pela
+   interface do GitHub. O que a mensagem do guard diz ao agente é o essencial — *não tente outra
+   forma; diga ao usuário o que você ia fazer e siga com o resto*.
+2. **O guard falha aberto, e por isso a `worktree` confere.** Hook apontando pra comando ausente
+   não bloqueia nada e não avisa ninguém: o Claude Code segue com a chamada. A skill roda
+   `command -v tk7-guard` e **declara na entrega** se o guard está no PATH. Worktree que parece
+   cercada e não está é pior que worktree sem cerca — a mesma regra do marcador otimista da I.37.
+3. **A camada declarativa fica mesmo sendo redundante**, porque funciona sem nada instalado. Quem
+   clonar o toolkit e não rodar o `install.sh` ainda leva os 12 denies.
+
+**O que este item NÃO resolve, e é bom estar escrito:** `staging` não tem branch protection (404 na
+API). O hook trava o agente nesta máquina; não trava mais ninguém, nem outra sessão sem o toolkit.
+Proteção de branch no GitHub foi oferecida e não foi escolhida agora — quando for, é o complemento
+natural deste item.

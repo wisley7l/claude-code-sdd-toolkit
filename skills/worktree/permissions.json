@@ -144,6 +144,17 @@
       "Bash(git --git-dir=* checkout -- *)",
       "Bash(gh pr merge)",
       "Bash(gh pr merge *)",
+      "Bash(gh api *merge*)",
+      "Bash(gh api *protection*)",
+      "Bash(gh api -X *)",
+      "Bash(gh api --method *)",
+      "Bash(gh api * -X PUT*)",
+      "Bash(gh api * -X POST*)",
+      "Bash(gh api * -X PATCH*)",
+      "Bash(gh api * -X DELETE*)",
+      "Bash(gh api * -XPUT*)",
+      "Bash(gh api * -XDELETE*)",
+      "Bash(gh api * --method *)",
       "Bash(gh pr close *)",
       "Bash(gh release create *)",
       "Bash(gh release delete *)",
@@ -169,6 +180,19 @@
       "Bash(artisan migrate:fresh *)",
       "Bash(rails db:drop *)",
       "Bash(rails db:reset *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tk7-guard"
+          }
+        ]
+      }
     ]
   }
 }

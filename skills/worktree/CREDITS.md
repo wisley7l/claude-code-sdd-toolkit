@@ -87,6 +87,16 @@ momento exato em que a branch fica órfã. Quando o `prune` for portado, vale ci
   unitários não-commitados do v9 morreu. No v10 o teste vive onde o projeto manda.
 - **Backup/restore do settings** com pasta dedicada — virou uma linha (`permissions.bak.json`).
 
+## O `tk7-guard` (12-08-2026)
+
+Extensão do v10, sem equivalente no v9. Nasceu de um merge indesejado que um agente fez com
+`gh api repos/…/pulls/427/merge-async -X PUT` — forma que o `deny` de `Bash(gh pr merge)` não previa
+e que o `allow` de `Bash(gh *)` liberava. O pedido do usuário foi por onde a proteção deve chegar:
+*"quando a gnt criar worktree o settings já deveria vir com essa proteção"*.
+
+O `permissions.json` passou a carregar um hook `PreToolUse`, e a peça confere se o comando existe
+antes de prometer que a worktree está cercada. Registro completo em `REFACTOR-v10.md`, I.39.
+
 ## Preservado do v9, sem mudança
 
 O protocolo do symlink de auto-memory, incluindo os quatro casos (não existe, symlink pro root,
