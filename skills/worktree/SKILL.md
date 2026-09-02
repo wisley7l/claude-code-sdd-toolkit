@@ -1,9 +1,9 @@
 ---
 name: worktree
-description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce com as permissões do projeto aplicadas (commit e push sob confirmação, destrutivos bloqueados) e com a memória centralizada no repositório principal. Use pra trabalhar em várias branches em paralelo.
+description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce com as permissões do projeto aplicadas (commit e push sob confirmação, destrutivos bloqueados) e com a memória centralizada no repositório principal. Ao remover, oferece apagar a branch local que ficou pra trás. Use pra trabalhar em várias branches em paralelo.
 disable-model-invocation: true
 argument-hint: <nome-da-branch> | remove <nome>
-allowed-tools: Read Write AskUserQuestion Bash(git worktree*) Bash(git remote*) Bash(git fetch*) Bash(git branch*) Bash(git status*) Bash(git rev-parse*) Bash(git ls-remote*) Bash(ls *) Bash(mkdir *) Bash(cp *) Bash(ln -s *) Bash(unlink *) Bash(readlink *) Bash(cat *) Bash(date*)
+allowed-tools: Read Write AskUserQuestion Bash(git worktree*) Bash(git remote*) Bash(git fetch*) Bash(git branch*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(git ls-remote*) Bash(ls *) Bash(mkdir *) Bash(cp *) Bash(ln -s *) Bash(unlink *) Bash(readlink *) Bash(cat *) Bash(date*)
 ---
 
 # worktree
@@ -86,11 +86,27 @@ Sem argumento, liste as worktrees e pergunte qual. Depois, nesta ordem:
    e pergunte se move pro root, descarta ou cancela.
 4. **`git worktree remove`** — `--force` só depois de confirmação explícita.
 
-**A branch local fica.** Remover a worktree não apaga a branch, e apagar branch não é trabalho desta
-peça. Não remova o diretório `~/.claude/projects/<worktree>/`: o harness guarda histórico de sessões
+5. **A branch local** — pergunte se apaga. Quem remove a worktree quase sempre já entregou o
+   trabalho, e a branch fica como resíduo; mas apagar é decisão dele, e manter é resposta legítima.
+
+   Use `git branch -d`, nunca `-D` de saída — a recusa do git é a rede de segurança, não obstáculo a
+   contornar. Se ele recusar, mostre o que existe só ali antes de perguntar de novo:
+
+   ```bash
+   git log --oneline <default>..<branch>
+   ```
+
+   A recusa tem dois significados opostos: trabalho de verdade que nunca foi entregue, ou um PR
+   mergeado por **squash**, em que os commits foram reescritos e o git não reconhece mais o
+   parentesco. Com a lista na tela o usuário separa os dois em um segundo; sem ela, ou perde
+   trabalho ou guarda lixo. `-D` só depois dessa segunda confirmação.
+
+   A branch **remota** não é assunto desta peça, nem quando o usuário manda apagar a local.
+
+**Não remova o diretório `~/.claude/projects/<worktree>/`**: o harness guarda histórico de sessões
 ali, e a perda seria silenciosa.
 
-Ao terminar, diga o que foi removido, que a branch continua existindo, e liste as worktrees restantes.
+Ao terminar, diga o que foi removido, o que aconteceu com a branch, e liste as worktrees restantes.
 
 ## Sempre
 

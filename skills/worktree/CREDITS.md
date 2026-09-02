@@ -43,6 +43,41 @@ regras de memória ou "adaptar pro projeto", porque permissão inventada é pior
 O usuário não confirmou — perguntei duas vezes e o assunto seguiu. Se ele liga e desliga o modo no
 root, o toggle volta como peça própria e este arquivo continua sendo a fonte.
 
+## ⭐ A branch local deixou de ser intocável (03-08-2026)
+
+Pedido do usuário: *"no comando worktree quando remover ao finalizar acho q deveria ter um
+askquestion se quer deletar a a branch local"*.
+
+O v10 dizia "**a branch local fica** [...] apagar branch não é trabalho desta peça". Isso não era
+decisão tomada: era herança literal do `git-remove-worktree.v9`, cuja seção *Importante* trazia
+"**Nunca** deletar a branch local (apenas a worktree)". Nasceu como guardrail e sobreviveu por
+inércia — este arquivo não tinha uma linha justificando.
+
+O que derruba o guardrail é o contexto de uso, e veio do usuário: *"quando ele é solicitado para
+excluir uma worktree o trabalho já tá praticamente feito, falta apenas excluir a branch localmente"*.
+Remover worktree não é ato isolado, é o fim do ciclo — a branch órfã é resíduo, e obrigar um segundo
+comando pra varrer resíduo previsível é atrito sem contrapartida.
+
+**Por que não investigar antes de perguntar.** A primeira versão do desenho consultava o PR via `gh`
+pra saber se era seguro apagar. Foi descartado: o `git branch -d` **já** recusa branch não mergeada,
+então a rede de segurança existe de graça e só aparece quando é necessária — investigar antes seria
+pagar em toda remoção por um risco que se manifesta em poucas. Evita também acrescentar `Bash(gh *)`
+a uma peça que vive de git puro.
+
+**O que a recusa do `-d` exige.** Ela é ambígua de um jeito perigoso: significa *ou* trabalho nunca
+entregue *ou* PR mergeado por **squash**, em que os commits foram reescritos e o parentesco se
+perdeu. Como os dois casos pedem respostas opostas e o repo do usuário faz squash merge, a recusa
+nunca pode virar um "não dá" — ela abre um `git log --oneline <default>..<branch>` na tela, e aí a
+distinção que o git não consegue fazer leva um segundo pra quem escreveu os commits. `-D` só depois
+dessa segunda confirmação.
+
+**Fica de fora:** a branch remota, mesmo com o usuário mandando apagar a local. Apagar coisa do
+servidor a partir de uma peça de worktree é alcance que ninguém pediu.
+
+**Sobreposição conhecida:** o `git-prune-branches` do v9 (55L, ainda não portado) varre branches
+locais cuja remota sumiu. Não é duplicação — o gatilho é outro: lá é faxina em lote depois, aqui é o
+momento exato em que a branch fica órfã. Quando o `prune` for portado, vale citar um no outro.
+
 ## O que saiu
 
 - **Marker `thoughts/modo-livre/active`** — servia pra outras peças detectarem o modo (o
