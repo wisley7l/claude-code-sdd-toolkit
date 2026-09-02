@@ -313,8 +313,11 @@ Onda 3 — classificação errada.
       PR próprio. Briefing antes de qualquer achado, promessa × entrega (com "não prometido" como
       estado de primeira classe), sabatina antes do veredito, preview editável e **um** submit
       review com comentários inline. Consome `lenses.md` do `imp-review` por referência, sem cópia.
-- [ ] `research` ← `busca` · `diagnosing-bugs` ← `investiga` · `verifica` (manter) ·
-      `pr-draft` · `prototype` (novo) · `ask-*` roteador (novo)
+- [x] **`test-qa`** ✅ `skills/test-qa/` (07-08-2026) — absorve o `verifica` (90L) e vai além:
+      exploração adversarial sobre a aplicação rodando, com `lenses.md` (7 lentes — 4 de API, 3 de
+      tela). Fecha a dívida de verificação manual que o `test-plan` cria (E.5). Ver I.36.
+- [ ] `research` ← `busca` · `diagnosing-bugs` ← `investiga` ·
+      `prototype` (novo) · `ask-*` roteador (novo)
 - [ ] Decidir o destino de: `quick-task`, `complexidade`, `worktree-detect`, `sync-tests`,
       `sdd-plan-eco`
 - [ ] Portar sem drama: git-*, `modo-livre`, `status-deps`, `pr-report`, `conciso`, `structure-cache`
@@ -1465,3 +1468,48 @@ o estado atual.
 
 **Regra que fica:** nome de peça não disputa nome curto com o ecossistema. Vale para as peças
 existentes também — reler a lista com essa lente antes do próximo nome.
+
+---
+
+### I.36 — ⭐ `test-qa`: a peça que fecha a dívida de verificação ✅ (07-08-2026)
+
+Pedido do usuário: *"quero poder pedir para ele para fazer testes por mim [...] se for uma rota ele vai
+testar tudo que puder, para tentar encontra possiveis bugs [...] listar os bugs inconsitencias erros de
+escita comportortamenteos insperados"*.
+
+A peça ocupa o slot que a Onda 3 reservava pro `verifica` — mas o `verifica` v9 era **checklist
+derivada do IMP**, e o que ele descreveu é **exploração adversarial**: atacar a entrada procurando o
+que ninguém previu. São coisas diferentes, e a segunda o v9 nunca teve.
+
+**O encaixe que ninguém tinha notado:** a E.5, endurecida em 31-07, diz que o piso de verificação é
+*"verificação manual executada pelo usuário, com evidência registrada — e isso é dívida, não pronto"*.
+O `test-plan` **cria** essa dívida e nenhuma peça a **fechava**. É o primeiro item da rodada quando
+existe mudança associada — o resto da peça é a exploração em cima.
+
+**Quatro decisões contra o desenho original, todas escolhidas por ele:**
+
+1. **Uma peça, dois momentos** (com mudança na pasta / alvo avulso). `verifica` sai da fila. Mesmo
+   recurso, mesmo conhecimento de boot, mesmos guardrails — I.19 e I.22 outra vez.
+2. **O main sobe o ambiente; subagente só explora.** O desenho original tinha um agente dedicado que
+   subia os servidores e sinalizava. Subagente termina quando devolve o resultado: o processo fica sem
+   dono pro teardown e o marcador `<root>/thoughts/.env-em-uso` (I.16) fica órfão. O paralelismo foi
+   pra exploração, que é onde vale.
+3. **Achados na tela e no `notes.md`.** `thoughts/qa/` seria o sexto lugar onde uma mudança mora — a
+   I.12 fez virar um, e a I.25 já tinha matado `thoughts/reviews/` porque relatório salvo é convite a
+   não ler. Ele mesmo hesitou no pedido (*"talvez dentro dos changes né, para seguir o padrão"*).
+4. **Nome `test-qa`**, contra o `qa-sweep` que propus pelo risco da I.35. Ele fechou par simétrico com
+   `test-plan` — argumento melhor que os três da minha lista: um decide o que a mudança garante, o
+   outro vai ver se garante mesmo.
+
+**O escalonamento por recurso compartilhado apareceu de novo, com outro recurso.** Na I.16 a unidade
+era o `Test env:` da tarefa; aqui é o **navegador** (um só — lentes de tela serializam) e o **dado**
+(lentes sobre a mesma entidade se corrompem). Mesma lógica, gatilho diferente. Sinal de que o
+princípio é da arquitetura, não daquela peça.
+
+**Risco que o usuário não levantou e a peça trata:** "testar tudo que puder numa rota" é fuzzing, e em
+banco compartilhado isso vira lixo no ambiente de todo mundo. Prefixo obrigatório no dado criado,
+listagem do que ficou e oferta de limpeza.
+
+**A armadilha do grau `duvida`.** Comportamento não especificado que parece errado vira **pergunta**,
+nunca bug. Sem essa separação a peça viraria lista de opinião com aparência de defeito — o mesmo vício
+que a `spec` combate, um passo mais tarde no ciclo.
