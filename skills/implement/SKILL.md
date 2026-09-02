@@ -170,7 +170,7 @@ subagente genérico com o mesmo nome — a passada é ganho, não gate.
 Você **não invoca** o review — nenhuma peça deste toolkit invoca outra. Termine mostrando o estado
 e peça:
 
-> Tarefas concluídas, suíte verde, 47 testes. Rode **`/tk7:code-review`** sobre o que está
+> Tarefas concluídas, suíte verde, 47 testes. Rode **`/tk7:imp-review`** sobre o que está
 > staged — seis lentes independentes, e o review não é meu porque acabei de escrever este código.
 
 Deixe isso como a última linha, não como sugestão no meio de um resumo. E não commite antes: review

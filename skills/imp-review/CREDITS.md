@@ -1,4 +1,4 @@
-# Créditos — skill `code-review`
+# Créditos — skill `imp-review`
 
 > Não carregado no contexto do agente: fica ao lado do `SKILL.md` e não é referenciado por ele.
 > Ver `NOTICE.md` na raiz para o protocolo.
@@ -26,6 +26,40 @@ Foi ele quem separou as águas, descrevendo o uso real:
 Daí os **dois momentos** numa peça só, detectados pelo estado do PR — mesma estrutura que o
 `pr-ready` v9 já tinha (dois modos automáticos), e que estava certa; errado era ter três peças
 fazendo pedaços disso.
+
+## ⭐ Nasceu `code-review`, virou `imp-review` (04-08-2026)
+
+A colisão que a G.5 previa (item 6: *"`code-review` colide com skill bundled — decidir se substitui
+ou usa outro nome"*) aconteceu exatamente como escrito. O que ninguém previu foi **por onde ela
+apareceria**: não ao usar a nossa peça, mas ao usar a bundled a partir de outro projeto.
+
+> `Fase 1: /code-review --effort medium`
+> `● Skill(code-review)` → `Error: Skill code-review cannot be used with Skill tool due to
+> disable-model-invocation`
+
+Um comando de outro projeto do usuário orquestra várias passadas de review, e a primeira fase dele
+chama **a bundled `/code-review`** — está escrito no próprio arquivo, `(built-in)`. O nome curto
+resolveu pra esta peça, que é `disable-model-invocation: true` de propósito (review é decisão de
+quem está no volante, não algo que o modelo dispara). O comando dele morreu no erro e a bundled
+nunca rodou.
+
+⚠️ **Isso contradiz a doc oficial**, que afirma: *"Plugin skills use a `plugin-name:skill-name`
+namespace, so they cannot conflict with other levels"* — e, logo antes, que uma skill de projeto
+substitui a bundled de mesmo nome. Na prática o **atalho de nome curto** do plugin ganhou da
+bundled. Fato observado em execução, contra a doc: o namespace protege a peça de ser *substituída*,
+não impede que ela *sequestre* o nome curto de outra.
+
+Repare no formato do dano: **não é a nossa peça que fica inacessível** (`/tk7:code-review` sempre
+funcionaria), é a peça *dos outros*. O namespace protege quem o carrega, não quem é atropelado por
+ele. Um nome genérico num plugin instalado globalmente é reivindicação sobre todos os projetos da
+máquina, e ninguém consultou os outros projetos.
+
+`imp-review` resolve porque diz o que a peça de fato faz — revisar a **implementação**, o passo do
+ciclo entre o verde e o `pr-ready` — e é isso que a distingue do `pr-review`, que revisa o PR de
+outra pessoa. O par de nomes ficou simétrico e o nome curto voltou a ser de quem chegou antes.
+
+**Fica valendo como regra**, não como conserto pontual: nome de peça aqui não disputa nome curto
+com o ecossistema. Vale reler a lista de peças com essa lente antes de cada nome novo.
 
 ## ⭐ Correção que muda comportamento volta pro `implement`
 

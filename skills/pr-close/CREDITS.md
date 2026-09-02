@@ -80,7 +80,7 @@ e deixa follow-up ou alterações opcionais a se fazer sem mergear, então o pr-
 quando o pr esta aprovado"*.
 
 O gate original era só `MERGED`, herdado do v9 — e com isso o toolkit **não tinha peça nenhuma** pro
-estado "aprovado com opcional pendente". O `code-review` valida se pontos foram atendidos, o
+estado "aprovado com opcional pendente". O `imp-review` valida se pontos foram atendidos, o
 `pr-ready` re-solicita revisão, mas ninguém tratava o follow-up que a aprovação deixou.
 
 O que se perdia era uma **janela**, não só um registro. O próprio `pr-audit` já dizia: *"o revisor

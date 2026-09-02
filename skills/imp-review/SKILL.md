@@ -1,12 +1,12 @@
 ---
-name: code-review
+name: imp-review
 description: Revisa a implementação com lentes independentes — conformidade, bugs, segurança, nomenclatura, queries e testes — e mostra os achados pra você decidir. Depois que o time comenta, valida se cada pedido foi de fato atendido. Corrige o pequeno e devolve ao implement o que mexe em comportamento.
 disable-model-invocation: true
 argument-hint: [número do PR | branch | vazio = o que está em curso]
 allowed-tools: Read Edit Write Grep Glob Agent Skill AskUserQuestion Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git add*) Bash(git worktree list*) Bash(gh *) Bash(npm *) Bash(npx *) Bash(pnpm *) Bash(bun *) Bash(bunx *) Bash(node *) Bash(go *) Bash(lizard *) Bash(ls *) Bash(structure-cache *) Bash(structure-cache)
 ---
 
-# code-review
+# imp-review
 
 Olha o código com olhos que quem implementou não tem — inclusive quando quem implementou foi você,
 minutos atrás. Roda em dois momentos, e detecta qual pelo estado do PR:

@@ -43,7 +43,7 @@ do código e não bloqueia. É o invariante mais forte do toolkit (Parte E.5 do 
   peças, ou Onda 2.
 - **Concorrência de I/O** (~15 linhas de instrução sobre `await` sequencial, hoist e N+1) — bom
   conteúdo no lugar errado. Virou checagem da lente de Bugs em `review-lenses.md`: é coisa que se
-  pega revisando, não instrução que se segue enquanto escreve. Hoje vive em `../code-review/lenses.md`.
+  pega revisando, não instrução que se segue enquanto escreve. Hoje vive em `../imp-review/lenses.md`.
 
 ## Decisões do usuário (31-07-2026)
 
@@ -98,13 +98,13 @@ o usuário deixaria de olhar.
 
 Cheguei a escrever três lentes próprias (segurança, bugs, testes) em `review-lenses.md`, herdadas do
 review interno do v9 (`executor-plan-review.md`). **Removidas em 31-07-2026**, quando o usuário
-descreveu o papel do `code-review`: *"revisar toda a implementação feita caso não tenha feito review,
+descreveu o papel do `imp-review`: *"revisar toda a implementação feita caso não tenha feito review,
 ter as lentes para revisar tudo."*
 
-Duas peças com painel de review é a `duplication` que a Parte C manda caçar — e o `code-review` tem
+Duas peças com painel de review é a `duplication` que a Parte C manda caçar — e o `imp-review` tem
 seis lentes contra as três daqui. As checagens do v9 foram preservadas lá, incluindo as três de
 concorrência (serialização desperdiçada, hoist inseguro, fan-out de query) que vieram do corpo do
 `/executor-plan`.
 
-O `implement` **invoca** o `code-review` sobre o staged. Mesmo padrão do `plan` → `test-plan`: quem
+O `implement` **invoca** o `imp-review` sobre o staged. Mesmo padrão do `plan` → `test-plan`: quem
 faz não revisa a si mesmo.

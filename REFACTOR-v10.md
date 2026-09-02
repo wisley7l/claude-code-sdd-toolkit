@@ -174,7 +174,7 @@ decidir peça por peça.
 | Skill | O que faz | Utilidade |
 |---|---|---|
 | `tdd` | Ciclo red-green-refactor. | ⭐ Extrair do `executor-plan`. **Preservar nosso red verificável** (E.5) |
-| `code-review` | Avaliação de dupla perspectiva: padrões + aderência à spec. | ⭐ Substituto do `/sdd-review` |
+| `imp-review` | Avaliação de dupla perspectiva: padrões + aderência à spec. | ⭐ Substituto do `/sdd-review` |
 | `diagnosing-bugs` | reproduce → isolate → hypothesize → test → verify. | Alto — comparar com `/investiga` |
 | `research` | Investiga tópicos com fontes confiáveis e documenta. | Alto — substituto do `/busca` |
 | `prototype` | Implementação **descartável** pra validar decisão de design. | Alto — não temos. Cobre o buraco entre `--explore` e implementar de verdade |
@@ -272,12 +272,12 @@ recupera a mão já na segunda peça, não no fim.
       de references) e absorve o `tdd`, que não vira peça própria: dividir não ganharia nem custo
       de invocação nem de sequência (Parte C.4). Com `worker.md` (subagente de uma tarefa) e
       `review-lenses.md`. **Um modo só** — `--step` morreu como flag.
-- [x] **`code-review`** ✅ `skills/code-review/` (31-07-2026) — consolida `sdd-review` (373L+221L),
+- [x] **`imp-review`** ✅ `skills/imp-review/` (31-07-2026; renomeado em I.35) — consolida `sdd-review` (373L+221L),
       `pair-review` (157L) e a validação de alinhamento do `pr-ready`. Com `lenses.md` (6 lentes).
 - [x] **`pr-ready`** ✅ `skills/pr-ready/` (31-07-2026) — o que sobrou do `pr-ready.v9` (251L):
       gate de verde e handoff.
 - [x] ~~**`pair-review`**~~ — **não recriado.** Existia porque o `sdd-review` era batch; com achados
-      na tela (I.14) a conversa acontece sozinha. O que tinha de único foi pro `code-review`.
+      na tela (I.14) a conversa acontece sozinha. O que tinha de único foi pro `imp-review`.
 
 ### Onda 2 — ⚠️ os que carregam dados vivos (ler Parte E antes)
 
@@ -312,7 +312,7 @@ Onda 3 — classificação errada.
       revisar o PR de **outra pessoa**. Todo o v9 (`sdd-review`, `pair-review`, `pr-ready`) assumia
       PR próprio. Briefing antes de qualquer achado, promessa × entrega (com "não prometido" como
       estado de primeira classe), sabatina antes do veredito, preview editável e **um** submit
-      review com comentários inline. Consome `lenses.md` do `code-review` por referência, sem cópia.
+      review com comentários inline. Consome `lenses.md` do `imp-review` por referência, sem cópia.
 - [ ] `research` ← `busca` · `diagnosing-bugs` ← `investiga` · `verifica` (manter) ·
       `pr-draft` · `prototype` (novo) · `ask-*` roteador (novo)
 - [ ] Decidir o destino de: `quick-task`, `complexidade`, `worktree-detect`, `sync-tests`,
@@ -394,7 +394,7 @@ virava command namespaced e poluía a lista.
 3. References viram arquivos irmãos do `SKILL.md`; a cascata de fallback morre.
 4. Orquestração de subagente vira `context: fork` onde couber, em vez de prosa mandando spawnar.
 5. Reescrever em modo *standing instructions*, não em passos numerados.
-6. ⚠️ `code-review` colide com skill bundled — decidir se substitui ou usa outro nome.
+6. ✅ **Resolvido em I.35** — `code-review` colidia por nome curto; virou `imp-review`.
 
 ---
 
@@ -1425,3 +1425,43 @@ fechamento inteiro e "corrigir depois se o PR mudar".
 
 Lição de método: **buraco de cobertura aparece no uso, não na revisão da peça.** Três leituras da
 `pr-close` não pegaram; a primeira tentativa de usar, sim.
+
+---
+
+### I.35 — ⚠️ `code-review` → `imp-review`: nome curto é reivindicação global ✅ (04-08-2026)
+
+Fecha o **item 6 da G.5** (*"`code-review` colide com skill bundled — decidir se substitui ou usa
+outro nome"*). A previsão estava certa; o que ninguém previu foi **por onde a colisão apareceria** —
+não ao usar a nossa peça, mas ao usar a bundled a partir de outro projeto, cujo comando de review
+orquestrado chama `/code-review` na primeira fase:
+
+```
+Fase 1: /code-review --effort medium
+● Skill(code-review)
+Error: Skill code-review cannot be used with Skill tool due to disable-model-invocation
+```
+
+A chamada resolveu pra nossa peça — que é `disable-model-invocation: true` de propósito (E.5,
+*usuário no volante*) — e morreu no erro. A bundled nunca rodou.
+
+⚠️ **Isso contradiz a doc oficial de skills**, que diz: *"Plugin skills use a
+`plugin-name:skill-name` namespace, so they cannot conflict with other levels"*, e que uma skill de
+projeto substitui a bundled homônima. Na prática, o **atalho de nome curto** do plugin ganhou da
+bundled. Fato observado em execução, contra a doc — o namespace impede que a peça seja
+*substituída*, não que ela *sequestre* o nome curto de outra.
+
+**O dano é assimétrico, e é isso que importa registrar.** A nossa peça nunca ficou inacessível:
+`/tk7:code-review` sempre funcionou. Quem ficou inacessível foi a peça *dos outros*. O namespace
+protege quem o carrega e não protege quem é atropelado por ele — G.5 e I.9 só olharam para o
+primeiro lado. **Um nome genérico num plugin instalado globalmente é reivindicação sobre todos os
+projetos da máquina**, e ninguém consultou os outros projetos.
+
+`imp-review` diz o que a peça faz — revisar a **implementação**, o passo entre o verde e o
+`pr-ready` — e forma par simétrico com `pr-review`, que revisa o PR de outra pessoa. Renomeado o
+diretório e todas as referências cruzadas (`implement`, `pr-ready`, `pr-review`, READMEs, `CLAUDE.md`,
+`install.sh`), inclusive o caminho compartilhado `${CLAUDE_SKILL_DIR}/../imp-review/lenses.md`.
+Citações literais do usuário nos `CREDITS.md` ficaram intactas: elas registram o que foi dito, não
+o estado atual.
+
+**Regra que fica:** nome de peça não disputa nome curto com o ecossistema. Vale para as peças
+existentes também — reler a lista com essa lente antes do próximo nome.

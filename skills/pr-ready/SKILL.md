@@ -17,7 +17,7 @@ Dois momentos, detectados pelo estado do PR:
 - **Depois do review do time** — você já corrigiu o que pediram: verde → corpo → **re-solicita a
   revisão de quem pediu mudanças**.
 
-**Você não avalia código aqui.** Isso é do `code-review`, e ele deve ter rodado antes — inclusive,
+**Você não avalia código aqui.** Isso é do `imp-review`, e ele deve ter rodado antes — inclusive,
 no segundo momento, para confirmar que cada ponto do time foi atendido. Se ainda houver pendência
 conhecida, volte pra lá: entregar com pendência aberta gasta o tempo de quem revisa.
 
@@ -68,7 +68,7 @@ achar, pergunte** — comando de teste inventado produz um verde que não signif
 
 Vermelho é pendência, não obstáculo a contornar:
 
-- Falha que uma correção resolve → volte ao `code-review` com o teste quebrado como ponto de partida.
+- Falha que uma correção resolve → volte ao `imp-review` com o teste quebrado como ponto de partida.
   A origem da pendência é o teste, não um achado inventado.
 - Flaky, infra, ou algo maior → pare e reporte. **Nunca entregue com vermelho.**
 
@@ -126,7 +126,7 @@ um check que reiniciou — **volte pro `--watch`** antes de oferecer qualquer it
 
 - **Re-solicitar revisão** de quem pediu mudanças? O PR normalmente já saiu do draft — aqui é só
   notificar de novo quem revisou, não escolher alguém diferente.
-- Ofereça os **rascunhos de resposta** das threads que o `code-review` levantou, prontos pra você
+- Ofereça os **rascunhos de resposta** das threads que o `imp-review` levantou, prontos pra você
   colar. Esta peça **não posta no PR**.
 
 Comando negado por permissão vira guia comando a comando, com os valores reais preenchidos. Sem

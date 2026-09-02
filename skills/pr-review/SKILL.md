@@ -12,7 +12,7 @@ O PR é de outra pessoa e quem assina a revisão é você. A skill faz o trabalh
 que achou, e sabatina você sobre o que só você decide. **O veredito é seu, e o texto que vai pro
 GitHub passa pelos seus olhos antes de sair.**
 
-Isto é o oposto do `code-review`: lá você é o autor procurando o próprio furo, e a regra é jamais
+Isto é o oposto do `imp-review`: lá você é o autor procurando o próprio furo, e a regra é jamais
 escrever no PR. Aqui você é o revisor, e o produto final é justamente o comentário.
 
 ## Delimitar
@@ -31,7 +31,7 @@ gh pr view <N> --json number,title,body,author,headRefOid,baseRefName,files,comm
 gh pr diff <N>
 ```
 
-**PR seu próprio** → é o `code-review` que serve, e o GitHub recusa aprovação do próprio PR. Diga e
+**PR seu próprio** → é o `imp-review` que serve, e o GitHub recusa aprovação do próprio PR. Diga e
 pare. **Rascunho ainda em draft** → confirme com o usuário antes de gastar análise.
 
 ## 1. Briefing — entender antes de julgar
@@ -75,12 +75,12 @@ conferir, e vale pedir a descrição antes de revisar o resto.
 
 ## 3. As lentes
 
-Reaproveitam integralmente as do `code-review` — foram escritas na voz de quem não implementou o
+Reaproveitam integralmente as do `imp-review` — foram escritas na voz de quem não implementou o
 código, que é exatamente a sua posição aqui. Lance **numa única resposta**,
 `subagent_type: general-purpose`, `model: opus` para bugs, segurança, queries e testes, `sonnet`
 para conformidade e nomenclatura:
 
-> Leia `${CLAUDE_SKILL_DIR}/../code-review/lenses.md` e assuma a lente **<nome>**. Diff e arquivos
+> Leia `${CLAUDE_SKILL_DIR}/../imp-review/lenses.md` e assuma a lente **<nome>**. Diff e arquivos
 > completos: `<conteúdo>`. Constitution: `<CLAUDE.md e ARCHITECTURE.md>`. Você é read-only, não
 > aprova nada, e o código é de outra pessoa.
 

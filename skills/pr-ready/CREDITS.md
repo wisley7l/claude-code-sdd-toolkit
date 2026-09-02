@@ -30,7 +30,7 @@ que ele tinha de próprio: **o gate de verde e o handoff**.
 
 O nome ficou porque o usuário já o usa, e porque descreve o que a peça faz.
 
-## Por que separado do `code-review`
+## Por que separado do `imp-review`
 
 Gatilhos distintos (I.22 — divida por gatilho ou sequência, nunca por tamanho): "revisa isso" e
 "manda pro time" são pedidos diferentes, em momentos diferentes. E o segundo tem **gates
@@ -43,13 +43,13 @@ marcar o revisor."*
 ## O que saiu
 
 - **O loop de correção** (Passo 3 do v9: avalia → corrige via `quick-task` → re-avalia até zero
-  must-fix, freado por progresso). Duas razões: a avaliação virou responsabilidade do `code-review`,
+  must-fix, freado por progresso). Duas razões: a avaliação virou responsabilidade do `imp-review`,
   e a correção que muda comportamento agora volta pro `implement` com TDD. Um loop que corrige
   sozinho até o painel calar é exatamente o placar que a I.14 manda cortar — o usuário via
   *"aprovado em k rodadas"* em vez dos achados.
 - **`Skill sdd-review` embutida** (Passo 2b) — a peça invocava o review e extraía o veredito do
   relatório. Agora o review roda antes, por decisão do usuário, e esta peça assume que rodou.
-- **Validação do alinhamento com o review do time** (Passo 2a) → foi pro `code-review`, que é onde
+- **Validação do alinhamento com o review do time** (Passo 2a) → foi pro `imp-review`, que é onde
   se avalia se um pedido foi atendido.
 
 ## Preservado do v9, e é o coração da peça

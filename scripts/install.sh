@@ -7,7 +7,7 @@
 #
 #   1. `roadmap`         — motor do vault de roadmap        (skill roadmap, plan, pr-draft, pr-close)
 #   2. `memory-audit`    — diagnóstico do auto-memory       (skill memory)
-#   3. `structure-cache` — índice de estrutura + atalho `sc` (skill plan, code-review, pr-audit)
+#   3. `structure-cache` — índice de estrutura + atalho `sc` (skill plan, imp-review, pr-audit)
 #   4. pré-autorização desses comandos no settings.json
 #
 # Sem sudo, idempotente, e nunca sobrescreve binário que não seja nosso.

@@ -8,8 +8,8 @@
 **Peça nova, sem antecessor no v9.** Todo o v9 — `sdd-review`, `pair-review`, `pr-ready` — assumia
 que o PR era do usuário. Revisar código de terceiro nunca teve peça.
 
-Sem atribuição de terceiros. O motor de análise é o `lenses.md` do `code-review`, compartilhado por
-referência em vez de copiado; a procedência daquele arquivo está em `skills/code-review/CREDITS.md`.
+Sem atribuição de terceiros. O motor de análise é o `lenses.md` do `imp-review`, compartilhado por
+referência em vez de copiado; a procedência daquele arquivo está em `skills/imp-review/CREDITS.md`.
 
 ## O pedido do usuário (31-07-2026)
 
@@ -22,18 +22,18 @@ referência em vez de copiado; a procedência daquele arquivo está em `skills/c
 Duas coisas nesse pedido não existiam em nenhuma peça do toolkit, nem no `/review` built-in: o
 **briefing antes do julgamento**, e a **conferência de promessa contra entrega**.
 
-## ⭐ Por que não virou modo do `code-review`
+## ⭐ Por que não virou modo do `imp-review`
 
 Os dois testes de granularidade da Parte C passam, mas o que decide é que as peças se contradizem:
 
-| | `code-review` | `pr-review` |
+| | `imp-review` | `pr-review` |
 |---|---|---|
 | Papel | autor procurando o próprio furo | revisor de código alheio |
 | Âncora | SPEC / `tasks.md` / `notes.md` locais | body do PR + issue vinculada |
 | Review humano | contexto pré-existente, "não duplique" | você **é** o humano |
 | Saída | "nunca comente no PR" | o comentário é o produto |
 
-A regra mais dura do `code-review` — jamais escrever no PR — passaria a valer em metade do arquivo.
+A regra mais dura do `imp-review` — jamais escrever no PR — passaria a valer em metade do arquivo.
 Isso é o failure mode **Negation** somado a condicional em quase toda seção.
 
 ## ⭐ Briefing antes de qualquer achado
@@ -103,10 +103,10 @@ cognitive load, que é o custo certo aqui.
 
 ## Reaproveitado sem alteração
 
-`lenses.md` do `code-review`, cru. Ele já abre com *"Você não implementou este código: avalie do
+`lenses.md` do `imp-review`, cru. Ele já abre com *"Você não implementou este código: avalie do
 zero, sem supor que as decisões foram tomadas por boa razão"* — escrito na voz do revisor externo
 antes de existir um. Nenhuma menção a SPEC ou artefato SDD local.
 
-Compartilhado por caminho relativo (`${CLAUDE_SKILL_DIR}/../code-review/lenses.md`) em vez de
+Compartilhado por caminho relativo (`${CLAUDE_SKILL_DIR}/../imp-review/lenses.md`) em vez de
 copiado. Duas cópias das mesmas seis lentes divergiriam na primeira correção. Se surgir uma
 terceira peça consumidora, vale promover o arquivo a lugar neutro.
