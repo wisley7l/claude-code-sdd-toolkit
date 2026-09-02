@@ -1804,3 +1804,47 @@ viável; o que não era óbvio é onde ele colide com o toolkit.
   do `gh` — barra `git push --force` e deixa passar o force da extensão. Não é furo do mesmo tamanho
   do `merge` (reescreve branch de PR próprio, não muda o `main` de ninguém), mas é assimetria real.
   Barrar ou não é decisão do usuário; fica registrado, não resolvido em silêncio.
+
+### I.41 — ⭐ `test-plan` invertido: ele lista, as lentes criticam ✅ (25-08-2026)
+
+**A queixa:** *"não sei se o test-plan está me agradando, me parece que ele tá crescendo demais os
+testes e talvez poderia aproveitar, e eu tô perdendo a mão nos testes — acho que aqui talvez eu
+devesse ter mais autonomia e a IA menos."*
+
+Três defeitos de desenho, todos localizáveis no `SKILL.md` de 31-07:
+
+1. **Três geradores, nenhum podador.** As lentes só somavam. A Adversarial era instruída a *não
+   repetir happy path* — logo, tudo que ela devolvia era caso adicional. A única redução prevista
+   era "deduplique casos equivalentes": matava repetição, nunca caso de baixo valor.
+2. **Cobrir era default; cortar era exceção com pedágio.** A regra da E.5 exige pergunta pra deixar
+   requisito sem verificação. Todo o atrito ficava do lado de tirar, nenhum do lado de pôr.
+3. **Reuso era rodapé.** O campo `reusa` existia no JSON, mas o inventário só alimentava a contagem
+   baseline. Nada mandava abater caso contra teste que já cobria aquilo, nem preferir estender
+   arquivo existente a criar um novo.
+
+E o quarto, que é o que ele chamou de perder a mão: **a autonomia dele era de veto, não de autoria.**
+Ele chegava numa tela com N casos prontos e ✅/⚠️/❓ e carimbava. O trabalho que faz aprender o
+sistema — escolher quais cenários importam — já tinha acontecido antes de ele chegar.
+
+**A inversão (escolha dele, entre três desenhos):** a skill levanta o terreno e **para**. Tela 1 não
+contém um único caso de teste — só o que existe hoje, o que já cobre a mudança (abate), o que dá pra
+reusar, e os requisitos nus. Ele escreve o rascunho de uma vez, em texto corrido. Só então as lentes
+rodam, e rodam **sobre a lista dele**, com três blocos de saída: `descoberto`, `redundante`, `caro`.
+Dois desses três reduzem a suíte.
+
+**Escolhas dele que contrariam o meu default:**
+- **Rascunho de uma vez**, não requisito por requisito — ele quer ver o conjunto enquanto pensa.
+  Escape hatch: `"R3: me sugere"` proponho só aquele.
+- **Crítica sem teto de quantidade**, priorizada por impacto — o panorama do risco é dele. Mitigação
+  que sobreviveu: **todo achado nasce fora da matriz** e entra só com um sim. Ele não corta de uma
+  lista pronta, ele puxa pra dentro.
+
+**O que não mudou, de propósito:** o contrato de saída (`## Testes` com tipo, ambiente, gate e
+contagem). `plan` quebra tarefas herdando dela e `implement` roda o gate contra ela — o processo de
+chegar na matriz mudou inteiro, o formato dela não podia. A E.5 também ficou: reexaminada, ela não
+é a causa da inflação (o piso dela é verificação manual, que comprime). Ganhou um parágrafo dizendo
+o que ela **não** pede: nem teste automatizado, nem mais de um caso, nem borda.
+
+**Marca de origem nova na matriz:** `[usuário]` e `[lente]` por caso. PR a PR, dá pra ver quanto da
+suíte ele decidiu e quanto a máquina empurrou. E a contagem `+K` virou explicitamente **piso, não
+meta**.

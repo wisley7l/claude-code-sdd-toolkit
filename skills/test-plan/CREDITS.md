@@ -49,3 +49,18 @@ Aqui é o oposto em três eixos: a cobertura é decidida **antes** da quebra de 
 pelo usuário** e não pelo agente, e **bloqueia**. Este é o ponto em que o toolkit é
 deliberadamente mais forte que a referência, e o motivo está na Parte E.5 do `REFACTOR-v10.md`:
 red verificável e test count protection são invariantes que nenhuma das fontes tem.
+
+## Redesenho de 25-08-2026 — a ordem invertida
+
+A skill escrita em 31-07 gerava a cobertura e pedia carimbo. O usuário voltou com a queixa que
+motivou a inversão: *"tá crescendo demais os testes, talvez poderia aproveitar, e eu tô perdendo a
+mão nos testes."*
+
+Agora a skill levanta o terreno e para. Ele escreve o rascunho de uma vez; as três lentes viram
+crítica da lista dele, com saída em `descoberto` / `redundante` / `caro` — dois dos três blocos
+reduzem a suíte. Achado de crítica nasce fora da matriz e entra só com um sim dele.
+
+O contrato de saída não mudou (`plan` e `implement` dependem dele). A regra da E.5 também ficou:
+reexaminada, ela não é a causa da inflação — o piso dela é verificação manual, que comprime.
+
+Análise completa em I.41 do `REFACTOR-v10.md`.
