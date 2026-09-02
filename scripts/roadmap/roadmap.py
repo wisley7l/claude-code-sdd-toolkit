@@ -22,6 +22,7 @@ Uso (de qualquer lugar dentro do repo/worktree):
   roadmap status [--json]                             # contagens, sinais, desbloqueados
   roadmap list [--status X] [--json]                  # itens
   roadmap check                                       # exit 1 se houver ciclo ou órfão
+  roadmap sync [--aplicar]                            # vault × PRs reais do GitHub
   roadmap board [-a] [--live SEG]                     # espelho HTML em <vault>/board.html
 
 Toda mutação regenera o hub. Todo comando é idempotente.
@@ -130,7 +131,9 @@ class Item:
 
     @property
     def pr(self) -> str:
-        return (self.fm.get("pr") or "").strip()
+        """Só o número. O campo foi gravado de cinco jeitos (`"#251"`, `#251`, `251`, `""`, vazio) —
+        normalizar na leitura conserta todo consumidor de uma vez, sem reescrever arquivo nenhum."""
+        return (self.fm.get("pr") or "").strip().strip('"\'').lstrip("#").strip()
 
     @property
     def is_next(self) -> bool:
@@ -560,6 +563,126 @@ def cmd_check(root: Path, _a) -> int:
 
 # ---------------------------------------------------------------- cli
 
+# ---------------------------------------------------------------- sync
+
+def prs_do_github(root: Path, limite: int = 800) -> dict[str, dict]:
+    """Estado de todo PR do repo, numa chamada só.
+
+    Um `gh pr view` por item custaria uma chamada por PR — com centenas de itens, ninguém roda.
+    Em lote é uma chamada e o comando fica usável, que é o que faz a reconciliação acontecer.
+    """
+    cmd = ["gh", "pr", "list", "--state", "all", "--limit", str(limite),
+           "--json", "number,state,title,mergedAt,updatedAt,url"]
+    try:
+        r = subprocess.run(cmd, cwd=root, capture_output=True, text=True, timeout=120)
+    except FileNotFoundError:
+        die("`gh` não está instalado — sem ele não dá pra consultar o GitHub")
+    except subprocess.SubprocessError as e:
+        die(f"falha ao consultar o GitHub: {e}")
+    if r.returncode != 0:
+        die(f"`gh pr list` falhou: {r.stderr.strip()[:200]}")
+    return {str(pr["number"]): pr for pr in json.loads(r.stdout or "[]")}
+
+
+def diagnostico(root: Path, prs: dict[str, dict]) -> dict:
+    """Compara vault × GitHub. Só lê — mover é decisão de quem chamou."""
+    items = load_items(root)
+    fechar, mortos, sumidos, orfaos_pr = [], [], [], []
+
+    com_item = set()
+    for i in items:
+        num = i.pr.lstrip("#").strip()
+        if not num:
+            continue
+        com_item.add(num)
+        pr = prs.get(num)
+        if pr is None:
+            sumidos.append((i, num))
+            continue
+        if pr["state"] == "MERGED" and i.status != "concluido":
+            fechar.append((i, pr))
+        elif pr["state"] == "CLOSED" and i.status != "concluido":
+            mortos.append((i, pr))
+
+    for num, pr in sorted(prs.items(), key=lambda kv: -int(kv[0])):
+        if pr["state"] == "OPEN" and num not in com_item:
+            orfaos_pr.append(pr)
+
+    return {
+        "fechar": fechar, "mortos": mortos, "sumidos": sumidos, "orfaos_pr": orfaos_pr,
+        "sem_pr": [i for i in items if i.status == "em-progresso" and not i.pr],
+        "total": len(items),
+    }
+
+
+def cmd_sync(root: Path, a) -> int:
+    d = diagnostico(root, prs_do_github(root))
+
+    if a.json:
+        print(json.dumps({
+            "fechar": [{"nnn": i.nnn, "pr": p["number"], "titulo": i.titulo,
+                        "de": i.status, "mergeado": (p["mergedAt"] or "")[:10]}
+                       for i, p in d["fechar"]],
+            "pr_morto": [{"nnn": i.nnn, "pr": p["number"], "titulo": i.titulo,
+                          "status": i.status} for i, p in d["mortos"]],
+            "pr_inexistente": [{"nnn": i.nnn, "pr": n} for i, n in d["sumidos"]],
+            "em_progresso_sem_pr": [{"nnn": i.nnn, "titulo": i.titulo} for i in d["sem_pr"]],
+            "pr_aberto_sem_item": [{"pr": p["number"], "titulo": p["title"]}
+                                   for p in d["orfaos_pr"]],
+        }, ensure_ascii=False, indent=2))
+        return 0
+
+    print(f"Roadmap · {d['total']} itens vs GitHub")
+    print()
+    if d["fechar"]:
+        print(f"  ✅ PR mergeado, item fora de concluido/  ({len(d['fechar'])})")
+        for i, pr in d["fechar"]:
+            print(f"     {i.nnn:5} {i.status:13} #{pr['number']:<6} "
+                  f"{(pr['mergedAt'] or '')[:10]:12} {i.titulo[:44]}")
+    if d["mortos"]:
+        print()
+        print(f"  ⚠  PR fechado sem merge — o PR morreu, o item talvez não ({len(d['mortos'])})")
+        for i, pr in d["mortos"]:
+            print(f"     {i.nnn:5} {i.status:13} #{pr['number']:<6} {'':12} {i.titulo[:44]}")
+    if d["sem_pr"]:
+        print()
+        print(f"  ⚠  em-progresso sem PR anotado ({len(d['sem_pr'])})")
+        for i in d["sem_pr"]:
+            print(f"     {i.nnn:5} {i.titulo[:60]}")
+    if d["sumidos"]:
+        print()
+        print(f"  ⚠  PR anotado que o GitHub não conhece ({len(d['sumidos'])})")
+        for i, n in d["sumidos"]:
+            print(f"     {i.nnn:5} #{n}")
+    if d["orfaos_pr"]:
+        print()
+        print(f"  ◻  PR aberto sem item no roadmap ({len(d['orfaos_pr'])})")
+        for pr in d["orfaos_pr"][:12]:
+            print(f"     #{pr['number']:<6} {pr['title'][:62]}")
+        if len(d["orfaos_pr"]) > 12:
+            print(f"     … e mais {len(d['orfaos_pr']) - 12}")
+
+    if not a.aplicar:
+        print()
+        if d["fechar"]:
+            print(f"  Nada movido. `roadmap sync --aplicar` move os {len(d['fechar'])} "
+                  f"mergeados pra concluido/.")
+            print("  O resto é decisão sua: PR morto pode ser prioridade suspensa, não item morto.")
+        else:
+            print("  Nada a mover.")
+        return 0
+
+    for i, pr in d["fechar"]:      # só o mergeado se move sozinho: é o único fato indiscutível
+        i.path.rename(vault(root) / "concluido" / i.path.name)
+        print(f"  movido: {i.nnn} → concluido (#{pr['number']})")
+    if d["fechar"]:
+        regen_hub(root)
+        regen_board(root)
+        print()
+        print(f"  {len(d['fechar'])} itens movidos. O resto continua como estava.")
+    return 0
+
+
 def cmd_board(root: Path, a) -> int:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import board
@@ -634,6 +757,11 @@ def main(argv: list[str]) -> int:
 
     sub.add_parser("check", help="exit 1 se houver ciclo ou órfão")
 
+    psy = sub.add_parser("sync", help="compara o vault com o estado real dos PRs no GitHub")
+    psy.add_argument("--aplicar", action="store_true",
+                     help="move pra concluido/ os itens cujo PR já mergeou (só esses)")
+    psy.add_argument("--json", action="store_true")
+
     pb = sub.add_parser("board", help="espelho HTML do vault, pra abrir no navegador")
     pb.add_argument("-o", "--out", default=None, help="default: <vault>/board.html")
     pb.add_argument("--live", type=int, metavar="SEG", default=0,
@@ -647,7 +775,7 @@ def main(argv: list[str]) -> int:
         die(f"vault não existe em {vault(root)} — rode `roadmap init`")
     return {"init": cmd_init, "add": cmd_add, "dep": cmd_dep, "move": cmd_move, "set": cmd_set,
             "hub": cmd_hub, "status": cmd_status, "list": cmd_list, "check": cmd_check,
-            "board": cmd_board}[a.cmd](root, a)
+            "board": cmd_board, "sync": cmd_sync}[a.cmd](root, a)
 
 
 if __name__ == "__main__":
