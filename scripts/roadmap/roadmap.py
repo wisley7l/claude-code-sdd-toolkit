@@ -42,7 +42,9 @@ ROADMAP_SUBDIR = Path("thoughts") / "roadmap"
 HUB_NAME = "ROADMAP.md"
 LEGACY_HUB = Path("thoughts") / "ROADMAP.md"
 
-_ITEM_RE = re.compile(r"^(\d{3})-(.+)\.md$")
+# `019a` é sub-item de `019`, não outro `019`: a letra faz parte do id do nó.
+_ITEM_RE = re.compile(r"^(\d{3}[a-z]?)-(.+)\.md$")
+_NNN_RE = re.compile(r"^(\d{1,3})([a-z]?)$", re.I)
 _WIKILINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]*)?\]\]")
 _DEPENDE_RE = re.compile(r"^\*\*Depende de:\*\*.*$", re.M)
 
@@ -118,7 +120,8 @@ class Item:
 
     def __init__(self, path: Path, status: str, fm: dict, body: str):
         self.path, self.status, self.fm, self.body = path, status, fm, body
-        self.nnn = path.name[:3]
+        m = _ITEM_RE.match(path.name)
+        self.nnn = m.group(1) if m else path.name[:3]
         self.slug = path.stem
 
     @property
@@ -176,14 +179,23 @@ def load_items(root: Path) -> list[Item]:
     return sorted(items, key=lambda i: i.nnn)
 
 
+def norm_nnn(bruto: str) -> str:
+    """`19a`, `019A`, `#19` → `019a`. O sufixo é parte do id, e nunca vira outro item."""
+    m = _NNN_RE.match(bruto.strip().lstrip("#"))
+    return f"{int(m.group(1)):03d}{m.group(2).lower()}" if m else bruto.strip()
+
+
 def find(items: list[Item], nnn: str) -> Item | None:
-    nnn = nnn.strip().lstrip("#").zfill(3)
-    return next((i for i in items if i.nnn == nnn), None)
+    alvo = norm_nnn(nnn)
+    return next((i for i in items if i.nnn == alvo), None)
 
 
 def next_nnn(items: list[Item]) -> str:
-    """max + 1 sobre TODAS as pastas. Nunca reusa — é o id estável do nó no grafo."""
-    return f"{max((int(i.nnn) for i in items), default=0) + 1:03d}"
+    """max + 1 sobre TODAS as pastas. Nunca reusa — é o id estável do nó no grafo.
+
+    A letra do sub-item não conta: depois de `019e` o próximo item novo é `020`, não `020e`.
+    """
+    return f"{max((int(i.nnn[:3]) for i in items), default=0) + 1:03d}"
 
 
 # ---------------------------------------------------------------- grafo
@@ -192,7 +204,10 @@ def resolve(items: list[Item], link: str) -> Item | None:
     """Wikilink resolve por nome de arquivo; aceita também só o NNN."""
     link = link.strip()
     hit = next((i for i in items if i.slug == link), None)
-    return hit or (find(items, link[:3]) if re.match(r"^\d{3}", link) else None)
+    if hit:
+        return hit
+    m = re.match(r"^(\d{3}[a-z]?)", link)      # `[[019a-slug]]` resolve pro sub-item certo
+    return find(items, m.group(1)) if m else None
 
 
 def duplicados(items: list[Item]) -> list[tuple[str, list[str]]]:
