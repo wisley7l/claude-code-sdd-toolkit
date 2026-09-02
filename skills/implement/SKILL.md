@@ -104,7 +104,12 @@ Ambiente de teste nunca é produção. Efeito colateral real só contra sandbox.
 Um grupo paralelo vira uma única resposta com **todas** as chamadas `Agent` juntas — lançar uma,
 esperar, lançar a próxima serializa e o paralelismo evapora.
 
-Cada subagente (`subagent_type: general-purpose`) recebe:
+Cada subagente vai com `subagent_type: general-purpose` e **`model: sonnet`**. A tarefa chega
+decidida — o `plan` fechou o como, o `test-plan` fechou a verificação, o `worker.md` fecha o
+protocolo; o que sobra é executar bem, e pra isso Sonnet basta. O julgamento fica desta ponta,
+que valida o que volta e roda no modelo da sessão.
+
+O subagente recebe:
 
 > Leia `${CLAUDE_SKILL_DIR}/worker.md` e siga exatamente. Sua tarefa é **T\<N\>**, e apenas ela:
 > `<bloco da tarefa, literal do tasks.md>`

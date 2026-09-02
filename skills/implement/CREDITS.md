@@ -76,6 +76,31 @@ do código e não bloqueia. É o invariante mais forte do toolkit (Parte E.5 do 
   teremos agora."* Quando existir, some a pergunta e sobra o caminho livre — o desenho atual não
   precisa mudar.
 
+## ⭐ Worker é Sonnet, orquestrador é a sessão (03-08-2026)
+
+Decisão do usuário: *"acho q para escrever código o sonnet é suficiente"*.
+
+Antes disso a peça não declarava modelo em lugar nenhum — nem no frontmatter, nem nas chamadas
+`Agent`. O efeito era invisível e caro: quem escolhia era a sessão, então entrar em Opus fazia
+**cada worker paralelo** ser Opus. Quatro grupos independentes, quatro Opus executando um `tasks.md`
+que já estava decidido.
+
+A divisão que ficou segue a natureza do trabalho, não a hierarquia: **executar é Sonnet, julgar é a
+sessão.** O worker recebe tarefa fechada — o `plan` decidiu o como, o `test-plan` decidiu a
+verificação, o `worker.md` fixa o protocolo (red verificável incluso). Não sobra decisão de projeto
+pra tomar, sobra execução, e ela precisa de disciplina, não de potência. Já a validação do que
+volta — gate, contagem de testes, red que falhou pelo motivo certo, desvio do plano — é onde o
+falso-verde passa despercebido, e essa ponta segue no modelo da sessão.
+
+Fica coerente com as três peças que já pediam `model: opus` explicitamente (`spec` no adversário,
+`imp-review` na dúvida sobre correção, `pr-close` na destilação): **em toda elas o Opus está no
+julgamento, nunca na execução.** O `implement` era o furo desse padrão, por omissão.
+
+**Não estendido de propósito:** os subagentes `Explore` de `spec`, `baseline` e `test-plan` fazem
+varredura de codebase e continuam sem modelo declarado. Varredura também não é julgamento e
+provavelmente merece o mesmo tratamento, mas a decisão foi sobre escrever código — expandir por
+conta própria seria decidir no lugar do usuário.
+
 ## Dependência externa, não incorporação
 
 O `code-simplifier` é agent do plugin oficial **`code-simplifier@claude-plugins-official`**
