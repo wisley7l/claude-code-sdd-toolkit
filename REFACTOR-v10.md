@@ -318,6 +318,11 @@ Onda 3 — classificação errada.
 - [x] **`test-qa`** ✅ `skills/test-qa/` (07-08-2026) — absorve o `verifica` (90L) e vai além:
       exploração adversarial sobre a aplicação rodando, com `lenses.md` (7 lentes — 4 de API, 3 de
       tela). Fecha a dívida de verificação manual que o `test-plan` cria (E.5). Ver I.36.
+- [x] **`glossary`** ✅ `skills/glossary/` (25-08-2026) — **peça nova, sem antecessor no v9.**
+      Dicionário pessoal global (`~/.claude/thoughts/glossario.md`) que o usuário consulta e que
+      cresce sozinho quando o agente usa termo novo. Nasceu de queixa de densidade de jargão nas 16
+      skills (`lente` 84×, `red/green` 53×, `gate` 48×). **O usuário recusou a tradução do jargão** —
+      traduzir esconde o termo e ele continuaria sem entender PR e doc de fora. Ver I.42.
 - [ ] `research` ← `busca` · `diagnosing-bugs` ← `investiga` ·
       `prototype` (novo) · `ask-*` roteador (novo)
 - [ ] Decidir o destino de: `quick-task`, `complexidade`, `worktree-detect`, `sync-tests`,
@@ -1848,3 +1853,36 @@ o que ela **não** pede: nem teste automatizado, nem mais de um caso, nem borda.
 **Marca de origem nova na matriz:** `[usuário]` e `[lente]` por caso. PR a PR, dá pra ver quanto da
 suíte ele decidiu e quanto a máquina empurrou. E a contagem `+K` virou explicitamente **piso, não
 meta**.
+
+### I.42 — ⭐ `glossary`: o jargão se aprende, não se traduz ✅ (25-08-2026)
+
+Na mesma conversa da I.41: *"ainda usa muito termo técnico que eu não estou acostumado, gate, nit
+entre vários outros, isso torna leitura muito densa"* — e em seguida: *"e tá sendo em tudo
+ultimamente"*.
+
+A contagem nas 16 skills: `lente` 84 · `red/green` 53 · `gate` 48 · `baseline` 20 · `nit` 5, mais
+`must-fix`, `flaky`, `fixture`, `dedup`, `trade-off`, `overhead`. Quase tudo veio da referência em
+inglês, entrou sem tradução e virou vocabulário da casa.
+
+**Eu propus traduzir tudo. Ele recusou, e o argumento dele é melhor:** traduzir esconde o termo. Ele
+continuaria sem entender PR, documentação e conversa de fora, que usam `gate` e `nit` de qualquer
+jeito. *"Monta uma tabela pra eu usar como dicionário e a gente ir alimentando isso, daí acho que
+consigo ir aprendendo os termos."*
+
+**A peça:** `~/.claude/thoughts/glossario.md`, arquivo único e **global** — não por projeto, senão
+`gate` seria explicado três vezes e o vocabulário ficaria picado. Nasceu com 22 verbetes, cada um com
+a frase real da skill onde o termo aparece. `🆕` marca o que entrou e ele ainda não leu, o que
+transforma arquivo de consulta em coisa que dá pra estudar aos poucos.
+
+**Cresce dos dois lados:** quando ele pergunta, e quando o agente usa termo que ainda não está lá —
+grava e avisa numa linha, sem parar o assunto pra dar aula. O segundo gatilho é o que faz volume sem
+depender de ele lembrar de perguntar, e vale em qualquer projeto: vive na auto-memory
+(`feedback_jargao_registra_no_glossario`), não só nesta skill.
+
+**Skill e memória coexistem de propósito.** A memória carrega o gatilho (uma frase, custo baixo em
+todo contexto); a skill carrega o procedimento — consulta, listagem, marcar lido, como escrever um
+verbete bom. Procedimento em memória seria peso morto em toda conversa.
+
+**Aberto:** a densidade também é ritmo de escrita, não só vocabulário — frase de três andares com
+dois apartes no meio. Foi levantado, não resolvido. A memória registra a diretriz pra prosa dirigida
+a ele; os `SKILL.md` continuam como estão.
