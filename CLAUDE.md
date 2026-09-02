@@ -4,8 +4,8 @@
 
 Este repo está **em reconstrução**. Todo o toolkit v9 (24 commands, 4 skills, 17 references,
 READMEs) foi **deprecado em 30-07-2026**. O ciclo central e as peças que tocam dados vivos já
-nasceram (Ondas 0 a 2, mais `pr-review` da Onda 3); falta a periferia — pesquisa, diagnóstico de
-bug, verificação e o `setup`.
+nasceram (Ondas 0 a 2, mais `pr-review` e `test-qa` da Onda 3); falta a periferia — pesquisa,
+diagnóstico de bug, protótipo e o `setup`.
 
 👉 **Leia [`REFACTOR-v10.md`](./REFACTOR-v10.md) antes de qualquer coisa.** É o mapa do refactor:
 inventário do v9, mapa da referência adotada, regras do v10, fila de reconstrução e —
@@ -21,8 +21,8 @@ e `~/.claude/skills/`.
 .claude-plugin/plugin.json   # manifesto — o repo É o plugin `tk7`
 skills/                      # AS PEÇAS VIVAS. o scanner varre aqui — nada morto dentro
   grilling/  spec/  baseline/  plan/  test-plan/  implement/
-  worktree/  pr-draft/  code-review/  pr-review/  pr-ready/
-  pr-close/  pr-audit/  roadmap/  memory/
+  worktree/  pr-draft/  imp-review/  test-qa/  pr-review/  pr-ready/
+  pr-close/  pr-audit/  roadmap/  memory/  glossary/
 REFACTOR-v10.md              # o mapa. começa aqui.
 NOTICE.md + LICENSES/        # atribuições de terceiros + protocolo
 deprecated/                  # TODO o v9: commands-v9/ skills-v9/ READMEs, CLAUDE.v9

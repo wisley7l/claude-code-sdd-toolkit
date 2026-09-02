@@ -67,10 +67,10 @@ quatro vezes e divergiria na primeira edição.
 As peças ficam sob o namespace do plugin: **`/tk7:spec`**, `/tk7:plan`, e assim por diante.
 O nome curto (`/spec`) também funciona **enquanto não houver outra skill com esse nome**.
 
-Três peças daqui têm nome igual ao de algo que já vem com o Claude Code — `plan`, `code-review` e
-`memory` (esta última é comando embutido). Nesses casos use o nome completo: `/tk7:plan`,
-`/tk7:code-review` e `/tk7:memory`. Plugin skills têm namespace próprio e não substituem as
-originais, então `/code-review` e `/memory` continuam chamando as nativas.
+Duas peças daqui têm nome igual ao de algo que já vem com o Claude Code — `plan` e `memory`
+(esta última é comando embutido). Nesses casos use o nome completo: `/tk7:plan` e `/tk7:memory`.
+Plugin skills têm namespace próprio e não substituem as originais, então `/memory` continua
+chamando a nativa.
 
 ## O ciclo
 
@@ -78,10 +78,10 @@ originais, então `/code-review` e `/memory` continuam chamando as nativas.
    spec  →  plan  →  test-plan  →  pr-draft  →  worktree
                                         │
                                         ▼
-              implement  ⇄  code-review  →  pr-ready  →  merge  →  close
-                                 ▲              │                     │
-                                 └── o time comenta ──┘        capability · roadmap
-                                                                memória · dívida
+              implement  →  test-qa  ⇄  imp-review  →  pr-ready  →  merge  →  close
+                                            ▲              │                     │
+                                            └── o time comenta ──┘        capability · roadmap
+                                                                            memória · dívida
 ```
 
 | Peça | O que faz |
@@ -92,14 +92,15 @@ originais, então `/code-review` e `/memory` continuam chamando as nativas.
 | **`pr-draft`** | Abre o PR em draft antes da primeira linha de código. Com `sync`, reescreve o corpo depois da implementação como prévia pra quem revisa. |
 | **`worktree`** | Cria e remove worktrees isoladas. A worktree nasce com as permissões aplicadas e a memória centralizada no repositório principal. |
 | **`implement`** | Executa as tarefas com TDD. Delega as independentes a subagentes em paralelo e valida cada retorno. Fecha com a passada de simplificação — o *refactor* do ciclo, com a suíte rodando de novo depois. Faz `git add`, nunca commita sozinho. |
-| **`code-review`** | Seis lentes independentes — conformidade, bugs, segurança, nomenclatura, queries e testes. Depois que o time comenta, valida se cada ponto foi de fato atendido. |
+| **`test-qa`** | Sobe a aplicação e vai atrás de defeito: executa a verificação que ficou pendente no plano e explora o que foi tocado — rota atacada pela entrada, tela percorrida inteira — listando bug, inconsistência, erro de escrita e comportamento inesperado, cada um com reprodução. Derruba o que subiu e nunca aponta pra produção. |
+| **`imp-review`** | Seis lentes independentes — conformidade, bugs, segurança, nomenclatura, queries e testes. Depois que o time comenta, valida se cada ponto foi de fato atendido. |
 | **`pr-review`** | O outro lado: revisar o PR **de outra pessoa**. Explica a mudança antes de julgá-la, confere o que o PR prometeu contra o que entregou, sabatina você sobre o que só você decide, e monta um submit review com comentários inline — que passa pelos seus olhos antes de sair. |
 | **`pr-ready`** | Confirma que está verde, atualiza o corpo do PR, e faz o handoff: sair do draft e marcar quem revisa — cada um sob sua confirmação. |
 | **`pr-close`** | Fecha o ciclo sob PR mergeado — arquiva a mudança, promove o comportamento pra capability viva, conclui o item do roadmap, colhe a dívida e destila os aprendizados. Com o PR só aprovado, colhe os follow-ups enquanto ainda dá pra corrigir dentro do PR. |
 | **`pr-audit`** | Resgata a dívida que os reviews deixaram para trás: varre PRs mergeados, confere ponto por ponto no código de hoje e alimenta uma issue perene com o que continua aberto. |
 | **`roadmap`** | A visão de cima — um item por PR previsto, num vault Obsidian onde dependência é wikilink e o grafo é nativo. Sincroniza o status pelo estado real dos PRs e mostra o que está desbloqueado agora. |
 | **`memory`** | Escreve e cura a memória do projeto — aprendizados, bugs já resolvidos, decisões. Audita quanto da memória de fato age, já que só o índice é carregado, e nunca apaga nota sem você mandar. |
-| **`baseline`** | Deriva a **capability** de um domínio a partir dos testes e do código que já existem — para adotar o toolkit num projeto que já tem história. |
+| **`baseline`** | Deriva a **capability** de um domínio a partir dos testes e do código que já existem — para adotar o toolkit num projeto que já tem história. Com `--auditar`, revalida requisito por requisito o que já está escrito. |
 | **`grilling`** | Entrevista para decisões que são suas: uma pergunta por vez, cada uma com recomendação explícita. As outras peças a chamam quando encontram decisão cara de reverter. |
 
 ## O que o toolkit garante

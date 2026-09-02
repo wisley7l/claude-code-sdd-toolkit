@@ -67,10 +67,10 @@ four times and drift on the first edit.
 The pieces live under the plugin namespace: **`/tk7:spec`**, `/tk7:plan`, and so on. The bare
 name (`/spec`) works too, **as long as no other skill claims it**.
 
-Three pieces here share a name with something that ships with Claude Code — `plan`, `code-review`,
-and `memory` (that last one is a built-in command). Use the full name for those: `/tk7:plan`,
-`/tk7:code-review`, and `/tk7:memory`. Plugin skills are namespaced and never shadow the
-originals, so `/code-review` and `/memory` still reach the built-in ones.
+Two pieces here share a name with something that ships with Claude Code — `plan` and `memory`
+(that last one is a built-in command). Use the full name for those: `/tk7:plan` and `/tk7:memory`.
+Plugin skills are namespaced and never shadow the originals, so `/memory` still reaches the
+built-in one.
 
 ## The cycle
 
@@ -78,10 +78,10 @@ originals, so `/code-review` and `/memory` still reach the built-in ones.
    spec  →  plan  →  test-plan  →  pr-draft  →  worktree
                                         │
                                         ▼
-              implement  ⇄  code-review  →  pr-ready  →  merge  →  close
-                                 ▲              │                     │
-                                 └─ the team comments ─┘      capability · roadmap
-                                                                memory · debt
+              implement  →  test-qa  ⇄  imp-review  →  pr-ready  →  merge  →  close
+                                            ▲              │                     │
+                                            └─ the team comments ─┘      capability · roadmap
+                                                                           memory · debt
 ```
 
 | Piece | What it does |
@@ -92,14 +92,15 @@ originals, so `/code-review` and `/memory` still reach the built-in ones.
 | **`pr-draft`** | Opens the PR in draft before the first line of code exists. With `sync`, rewrites the body after implementation as a preview for whoever reviews it. |
 | **`worktree`** | Creates and removes isolated worktrees. A new worktree comes up with permissions applied and its memory centralized in the main repository. |
 | **`implement`** | Runs the tasks with TDD. Delegates independent ones to parallel subagents and validates every result. Closes with the simplification pass — the *refactor* step, with the suite run again afterward. Stages files, never commits on its own. |
-| **`code-review`** | Six independent lenses — conformance, bugs, security, naming, queries, and tests. Once the team comments, it checks whether each point was actually addressed. |
+| **`test-qa`** | Boots the app and hunts for defects: runs the verification the plan left pending and explores what the change touched — routes attacked through their input, screens walked end to end — listing bugs, inconsistencies, copy errors, and unexpected behavior, each with steps to reproduce. Tears down whatever it started, and never points at production. |
+| **`imp-review`** | Six independent lenses — conformance, bugs, security, naming, queries, and tests. Once the team comments, it checks whether each point was actually addressed. |
 | **`pr-review`** | The other side: reviewing **someone else's** PR. It explains the change before judging it, checks what the PR promised against what it delivered, grills you on what only you can decide, and assembles a single submit review with inline comments — which you see before anything is posted. |
 | **`pr-ready`** | Confirms the PR is green, refreshes its body, and hands it off: leaving draft and requesting a reviewer, each one gated on your confirmation. |
 | **`pr-close`** | Closes the loop once the PR is merged — archives the change, promotes the delivered behavior into the living capability, completes the roadmap item, harvests debt, and distills learnings. When the PR is merely approved, it harvests the follow-ups while fixing inside the PR is still cheap. |
 | **`pr-audit`** | Rescues the debt reviews left behind: sweeps merged PRs, checks each point against today's code, and feeds a perennial issue with whatever is still open. |
 | **`roadmap`** | The view from above — one item per planned PR, in an Obsidian vault where a dependency is a wikilink and the graph is native. Syncs status against the real state of the PRs and shows what's unblocked right now. |
 | **`memory`** | Writes and curates the project's memory — learnings, bugs already solved, decisions. Audits how much of it actually acts, since only the index is ever loaded, and never deletes a note unless you say so. |
-| **`baseline`** | Derives a domain's **capability** from the tests and code already in place — for adopting the toolkit in a codebase that has history. |
+| **`baseline`** | Derives a domain's **capability** from the tests and code already in place — for adopting the toolkit in a codebase that has history. With `--auditar`, it revalidates what is already written, requirement by requirement. |
 | **`grilling`** | An interview for the decisions that are yours: one question at a time, each with an explicit recommendation. Other pieces call it when they hit a decision that's expensive to reverse. |
 
 ## What the toolkit guarantees
