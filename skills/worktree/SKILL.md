@@ -1,7 +1,7 @@
 ---
 name: worktree
-description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce cercada (commit e push sob confirmação, destrutivos negados, merge de PR e push forçado barrados pelo hook tk7-guard) e com a memória centralizada no repositório principal. Ao remover, oferece apagar a branch local que ficou pra trás. Use pra trabalhar em várias branches em paralelo.
-disable-model-invocation: true
+description: Cria e remove git worktrees isoladas a partir da branch default. A worktree nasce cercada (commit e push sob confirmação, destrutivos negados, merge de PR e push forçado barrados por hook) e com a memória centralizada no repositório principal. Ao remover, oferece apagar a branch local que ficou pra trás. Use quando ele pedir pra criar, montar, remover ou apagar uma worktree, ou pra trabalhar em outra branch em paralelo sem largar a atual.
+when_to_use: Gatilhos do usuário — "cria uma worktree", "monta uma worktree pra <branch>", "quero mexer nisso em paralelo", "remove/apaga a worktree", "limpa a worktree do <branch>", "já mergeou, pode tirar a worktree". Gatilhos seus — você ia rodar `git worktree add` ou `git worktree remove` na mão, ou a worktree de uma mudança já encerrada ficou pra trás.
 argument-hint: <nome-da-branch> | remove <nome>
 allowed-tools: Read Write AskUserQuestion Bash(git worktree*) Bash(git remote*) Bash(git fetch*) Bash(git branch*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(git ls-remote*) Bash(ls *) Bash(mkdir *) Bash(cp *) Bash(ln -s *) Bash(unlink *) Bash(readlink *) Bash(cat *) Bash(date*) Bash(command -v *)
 ---

@@ -103,3 +103,22 @@ O protocolo do symlink de auto-memory, incluindo os quatro casos (não existe, s
 symlink pra outro destino, diretório real) e a regra que mais importa: na remoção é **`unlink`,
 nunca `rm -r`** — seguir o symlink apagaria o `memory/` do root inteiro. E não remover o diretório
 `~/.claude/projects/<worktree>/`, onde o harness guarda histórico de sessões.
+
+## Passou a ser model-invoked (10-09-2026)
+
+Pedido do usuário: *"acho q algumns gatilhos que devemos atualziar nas skill na de worktre sempre
+que pedir para criar e remover uma worktree precisava ativa-la"*.
+
+Nasceu com `disable-model-invocation: true` porque cria e remove diretórios — a doc recomenda
+user-invoked pra workflows com side effect. O que essa régua não pesou é que **o side effect é o
+pedido**: quando ele diz "cria uma worktree", a alternativa a ativar a skill não é não fazer nada, é
+eu rodar `git worktree add` na mão e perder as três coisas que nascem junto (permissões + guard,
+symlink de memória, `.gitignore`). Aí a cerca não existe justamente na sessão nova, que é onde ela
+importa.
+
+O custo pago é context load da description em todo turno; em troca, `cognitive load` zero num pedido
+que ele faz em linguagem natural, não pelo nome da peça. As confirmações continuam todas dentro do
+corpo — nada aqui vira automático, só deixa de depender dele lembrar o nome do comando.
+
+Detalhe de implementação saiu da description pelo mesmo motivo (custo por turno): o nome
+`tk7-guard` não ajuda o roteamento e continua no corpo, onde é acionável.

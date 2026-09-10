@@ -1,7 +1,7 @@
 ---
 name: pr-close
-description: Fecha o ciclo de uma mudança DEPOIS que o PR foi mergeado — não mergeia nem fecha PR nenhum. Arquiva os artefatos, promove o comportamento pra capability viva, conclui o item do roadmap, colhe a dívida e destila os aprendizados. Com o PR aprovado mas ainda aberto, colhe os follow-ups na janela em que ainda dá pra corrigir dentro do PR. Um de cada vez, sob confirmação.
-disable-model-invocation: true
+description: Fecha o ciclo de uma mudança DEPOIS que o PR foi mergeado — não mergeia nem fecha PR nenhum. Arquiva os artefatos, promove o comportamento pra capability viva, conclui o item do roadmap, colhe a dívida e destila os aprendizados. Com o PR aprovado mas ainda aberto, colhe os follow-ups na janela em que ainda dá pra corrigir dentro do PR. Um de cada vez, sob confirmação. Use quando ele disser que o PR mergeou ou foi aprovado.
+when_to_use: Gatilhos do usuário — "o PR mergeou", "mergearam", "entrou na main", "aprovaram o PR", "PR aprovado", "fecha o ciclo", "terminei essa mudança". Gatilhos seus — um `gh pr view` mostrou `MERGED` ou aprovação numa mudança que tem pasta em `thoughts/`, ou você ia arquivar artefato, marcar item de roadmap ou anotar aprendizado na mão depois de um merge.
 argument-hint: [<NNN-slug> | --pr <N> | vazio = varre o que mergeou ou foi aprovado]
 allowed-tools: Read Write Edit Grep Glob Agent AskUserQuestion Bash(roadmap:*) Bash(roadmap) Bash(memory-audit:*) Bash(git worktree list*) Bash(git status*) Bash(git log*) Bash(git rev-parse*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(mv *) Bash(find *) Bash(cat *)
 ---

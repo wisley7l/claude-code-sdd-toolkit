@@ -121,3 +121,18 @@ mudança **no formato em que ela nasceu**. Par SPEC+PLAN antigo vai pra `specs/c
 Motivo: converter no fim do ciclo é risco sem ganho. A mudança está terminando, ninguém vai reler
 aqueles arquivos, e um erro de conversão só apareceria muito depois. O formato novo vale pro que
 nasce daqui pra frente.
+
+## Passou a ser model-invoked (10-09-2026)
+
+Pedido do usuário, no mesmo turno em que abriu o assunto na `worktree`: *"e a de close talvez sempre
+que falar que pr foi mergeado ou aprovado"*.
+
+O gatilho é o mais nítido do toolkit — "mergeou" / "aprovaram" é um evento, não uma preferência de
+fluxo — e é exatamente o momento em que a peça existe pra rodar. User-invoked deixava o fechamento
+depender de ele lembrar o nome da skill logo depois do merge, que é quando a atenção já foi pra
+próxima mudança; **premature completion** é o failure mode que essa peça combate, e o gatilho manual
+era um jeito de reintroduzi-lo.
+
+Escreve em dados vivos (E.1 roadmap, E.2 capability, E.4 memória), então o que protege segue sendo o
+corpo, não a invocação: um passo de cada vez, sob confirmação, e `CLOSED` sem merge não arquiva.
+Ativar a skill é ler estado e propor; nada é escrito sem OK.
