@@ -87,3 +87,61 @@ subtração:
 avaliação e sim entrar nela — *"as avaliações não precisam ser excluídas, eu entrar mais nesse
 processo é mais para agregar"*. O que se corta é o veredito e o loop, não a perspectiva. Mesma
 correção já aplicada na `spec` ("adversário, não juiz").
+
+## Contrato e passos na tarefa (02-09-2026)
+
+*"queria que me mostrasse meio que um passo a passo do código que vão implementar. não o código em
+si, mas dizer vamos criar uma função tal que recebe parâmetros tais vindos de tal."*
+
+Ele cogitou peça nova e perguntou se o lugar era o `plan` ou o `implement`. Ficou aqui: quem tem
+`structure-cache`, `Explore` e Context7 no `allowed-tools` é esta peça, e o executor descobrindo a
+origem dos parâmetros na hora de executar é o executor decidindo design. Peça própria não passaria
+pela Parte C.4 — o `plan` já para pra aprovação, que é o momento em que ele quer ver o desenho.
+
+**Escolhas dele:** contrato e passos **dentro da tarefa** (não em seção separada do `plan.md`, que
+obrigaria a cruzar dois arquivos e abriria espaço pra divergência), e **com a sequência de chamadas**
+— apesar do risco de pseudocódigo, que foi apontado antes da escolha.
+
+O risco virou desenho em vez de discussão: teto de 5 passos como **sinal de tarefa grande demais**
+(o `plan` propõe dividir), passo declarado como **intenção** que o codebase sobrepõe, e — a parte
+que só funciona por causa da I.43 — **o test-writer do `implement-strict` não recebe os passos**.
+Teste que conhece a ordem das chamadas quebra em refactor que não mudou nada de fora.
+
+A lente de **Executabilidade** ganhou o contrato como material: assinatura com tipo que não existe,
+origem apontando pra função que não devolve aquilo, erro que o chamador de cima não trata. Era a
+pergunta que ela queria fazer e não tinha onde.
+
+Registro completo em I.44 do `REFACTOR-v10.md`.
+
+## O mapa dos PRs (10-09-2026)
+
+Pedido do usuário: *"na skill de criação de tasks seria legal ele fazer um mapa no final de prs que
+pode ser em paralelo e prs que deve seguir uma pilha, é como se a gnt desenhasse uma
+pipeline/fluxo da ordem que os prs são criados"*.
+
+A informação **já existia** e era jogada fora: a fronteira de PR decide os slices, o
+`roadmap add --dep` grava as arestas, e nada nunca mostrava o resultado junto. Quem lia o
+`tasks.md` via os blocos em sequência e não tinha como saber que dois deles podiam abrir na mesma
+tarde, em worktrees separadas.
+
+**A regra da onda veio dele, corrigindo o primeiro desenho.** A proposta inicial tratava paralelo
+como "PR sem dependência" e empilhava o resto; ele apontou o caso que isso erra: *"isso se tivesse
+um pr5 que dependesse de pr1 e pr3 por exemplo ele deveria ser paralelo ao pr4"*. Está certo —
+paralelismo não é ausência de dependência, é **estar livre no mesmo momento**. Daí a definição
+que ficou: `onda = 1 + a maior onda entre as dependências`, e tudo que cai na mesma onda corre
+junto, mesmo vindo de pilhas diferentes. Sem isso o mapa subestima o paralelismo justamente nos
+planos grandes, que são os que mais precisam dele.
+
+**Por que texto e não mermaid.** Coerente com a decisão já registrada no `roadmap.py` ("o grafo é
+nativo do Obsidian, não se gera mermaid"): a tabela + as ondas leem igual no terminal, no Obsidian
+e na view HTML, que abre sem CDN e sem lib. Diagrama ASCII foi oferecido e não escolhido; a
+manutenção na mão quando o plano muda era o contra.
+
+**Compatibilidade com a view de changes:** o parser de `tasks.md` (`changes.py`) agrupa por
+qualquer `##` e descarta no fim os blocos sem tarefa — `## Mapa dos PRs` cai nesse filtro e não
+vira PR previsto fantasma. A view não *mostra* o mapa; mostrá-la na aba Tarefas exigiria mexer no
+parser, e ficou de fora.
+
+**Caminho crítico como número na tela:** a pilha mais longa entra no fechamento porque é o que
+responde "quantos merges em série isso custa" — o insumo da decisão dele de cortar mais fino ou
+seguir assim.

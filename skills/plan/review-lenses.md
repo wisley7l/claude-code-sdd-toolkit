@@ -32,6 +32,16 @@ gate que não roda no projeto, dependência entre tarefas faltando ou apontando 
 agrupamento de PR que quebra a ordem (PR 1 precisando de código que só nasce no PR 2), contagem
 de arquivos que não bate com os paths listados.
 
+E o **contrato** de cada tarefa, que é onde o plano fica verificável: assinatura com tipo que não
+existe no projeto, origem de parâmetro apontando pra uma função que não devolve aquilo
+(`arquivo:linha`), erro propagado numa forma que o chamador de cima não trata, efeito colateral que
+a tarefa não menciona mas o passo exige. Tarefa que cruza fronteira sem contrato nenhum é achado.
+
+Nos **passos**, duas coisas só: passo que descreve implementação em vez de intenção (`if`, laço,
+variável local — o codebase decide isso, não o plano), e lista longa demais pra uma tarefa, que é
+sintoma de tarefa que faz duas coisas. Não critique a ordem escolhida: ela é intenção, e quem
+executa segue o codebase quando ele contradiz.
+
 **Segurança** — só o que a mudança realmente toca: dado não confiável validado antes do uso,
 authz no caminho novo, segredo ou dado sensível indo pra log, idempotência e ordering onde há
 retry ou webhook, dinheiro em tipo que não é float, condição de corrida em estado compartilhado.

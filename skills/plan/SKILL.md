@@ -1,6 +1,6 @@
 ---
 name: plan
-description: Escreve o plano técnico de uma mudança já especificada — o COMO. Pesquisa o codebase, fecha as decisões técnicas com fonte, e quebra em tarefas agrupadas por PR, cada uma herdando sua verificação. Não escreve código nem re-especifica comportamento.
+description: Escreve o plano técnico de uma mudança já especificada — o COMO. Pesquisa o codebase, fecha as decisões técnicas com fonte, e quebra em tarefas agrupadas por PR, cada uma com contrato, passos e verificação. Não escreve código nem re-especifica comportamento.
 disable-model-invocation: true
 argument-hint: <pasta da mudança em thoughts/changes/, ou nada pra usar a mais recente>
 allowed-tools: Read Grep Glob Write Edit Agent AskUserQuestion Bash(ls *) Bash(mkdir *) Bash(git log*) Bash(git diff*) Bash(git worktree list*) Bash(gh *) Bash(structure-cache *) Bash(structure-cache) Bash(roadmap:*) Bash(roadmap) WebFetch mcp__context7__resolve-library-id mcp__context7__query-docs
@@ -79,11 +79,19 @@ esse arquivo que muda de estado durante a execução, enquanto o `plan.md` fica 
 ```markdown
 # Tarefas — <slug>
 
+## Mapa dos PRs
+<a tabela e as ondas — ver "O mapa dos PRs">
+
 ## PR 1 · <título do slice> — 6 arquivos
 > Fecha R1, R2. Não depende de nada.
 
 - [ ] **T1 · R1** — <o que entrega, uma frase>
       `src/refund/calc.ts` · reusa `test/factories/order.ts`
+      **Contrato:** `calcRefund(order: Order, amount: Money) → Result<Refund, RefundError>`
+        · `order` ← `OrderRepo.byId` (`src/http/refund.ts:34`) · `amount` ← body, validado no schema
+        · efeito: nenhum · erro: `RefundError` propagado pro handler
+      **Passos:** 1. soma os estornos anteriores do pedido · 2. valida `amount` contra o saldo
+        · 3. monta o `Refund` · 4. devolve o `Result`
       **Verificação:** unit · env `none` · `npm test refund` · 12 → 17 testes
       **Pronto quando:** <condição checável>
 
@@ -104,6 +112,38 @@ O que governa a quebra:
 - **A verificação nasce junto com o código.** "Vai ser testado na tarefa seguinte" é como a
   cobertura evapora — se a tarefa cria código que só é verificável depois de outra, junte as
   duas.
+
+## O contrato e os passos
+
+É aqui que o usuário revisa **o desenho** antes de ele custar execução — e é o insumo que o
+`implement` trava com ele antes de delegar qualquer tarefa. Sem isso, quem escreve o teste fixa a
+assinatura por via indireta, e o design chega decidido por um subagente.
+
+**Contrato** — obrigatório em toda tarefa que cria ou muda algo que **cruza fronteira**: função
+exportada, endpoint, tipo ou schema, migração, evento publicado. Traz:
+
+- a **assinatura completa** — nome, parâmetros com tipo, retorno;
+- a **origem de cada parâmetro**, com `arquivo:linha`. É afirmação sobre o codebase, então vale o
+  zero inferência: sem fonte verificada, entra `[A VERIFICAR]` e **não** sustenta tarefa;
+- o **efeito colateral** (o que grava, o que chama) e o **erro que propaga**, na forma que o
+  projeto já usa — `Result`, exceção ou retorno nulo, o que estiver no vizinho.
+
+Helper interno não tem contrato: a tarefa diz o arquivo e basta. Contrato pra tudo infla o
+`tasks.md` e a parte que importa se perde no meio.
+
+**Passos** — a sequência de chamadas e decisões **observáveis de fora**, no máximo **5**.
+
+- Cada passo nomeia **o que** acontece ("valida `amount` contra o saldo"), não como.
+- **Fora:** `if`/`else` escrito, laço, `try`/`catch`, nome de variável local, ordem de guard. Isso
+  é implementação, e o código vizinho manda mais nela do que você.
+- **Passou de 5 → a tarefa é grande demais.** Proponha a divisão em vez de escrever doze passos: o
+  teto é sinal de quebra, não cota a preencher.
+- Os passos são **intenção, não roteiro.** Quem executa segue o codebase quando ele contradiz, e
+  anota o desvio. Desvio de passo é registro; desvio de **contrato** ou de **comportamento** é
+  parada dura na execução.
+
+Tarefa sem código novo — config, migração pura, deleção — não tem contrato nem passos: escreva
+`n/a` e siga. Campo preenchido por obrigação é ruído que ensina o leitor a pular a seção.
 - **Toda tarefa carrega a contagem esperada** (`12 → 17 testes`). É o que impede a suíte de
   encolher em silêncio num rebase ou refactor.
 - **Tarefa sem verificação de espécie alguma** só existe se o `test-plan` já levou a pergunta ao
@@ -126,17 +166,52 @@ limite de requisito coeso ou de camada.
 **Propor é seu; dividir é dele.** Mostre a fronteira sugerida e deixe a decisão com o usuário —
 inclusive a de seguir grande. Estreitar a spec, se for o caso, é decisão dela, não daqui.
 
+## O mapa dos PRs
+
+Fronteira fechada, desenhe **a ordem em que eles nascem**. Vai no topo do `tasks.md`, antes do
+primeiro bloco de PR — é o que o usuário olha pra saber o que já pode abrir hoje, e o que só faz
+sentido depois de um merge.
+
+A onda de um PR é **1 + a maior onda entre as suas dependências**. Todo PR da mesma onda nasce
+junto, em worktrees separadas — **inclusive PRs de pilhas diferentes**: um PR que espera o 1 e o 3
+cai na mesma onda de um que espera só o 3, porque os dois estão livres no mesmo momento.
+
+```markdown
+## Mapa dos PRs
+
+| PR | Depende de | Onda |
+|---|---|---|
+| PR 1 · calc de estorno | — | 1 |
+| PR 2 · schema do endpoint | — | 1 |
+| PR 3 · handler HTTP | PR 1, PR 2 | 2 |
+| PR 4 · feature flag | PR 3 | 3 |
+| PR 5 · métrica de estorno | PR 1, PR 3 | 3 |
+
+- **Onda 1 — paralelo:** PR 1, PR 2
+- **Onda 2:** PR 3
+- **Onda 3 — paralelo:** PR 4, PR 5
+- **Pilha mais longa:** PR 1 → PR 3 → PR 4 · 3 merges em série (o PR 5 empata)
+```
+
+- **Liste todas as dependências de cada PR**, não só a mais recente. Faltando uma, a onda sai
+  otimista e o `--dep` do roadmap nasce incompleto — o PR abre e trava na primeira compilação.
+- **A pilha mais longa é o caminho crítico.** É o número que responde "quantos merges em série
+  isso custa", e é o que faz o usuário decidir se vale cortar mais fino ou seguir assim.
+- **Ciclo é fronteira errada**, não desafio de ordenação: dois PRs que precisam um do outro são um
+  PR só, ou o corte foi na camada errada. Volte na fronteira antes de escrever o mapa.
+- Uma onda larga é boa notícia, e vale dizer em quantas worktrees ela cabe.
+
 ## O roadmap, um item por PR
 
-Fronteira de PR fechada, cada bloco vira um item — é **um item por PR**, não por mudança:
+Mapa fechado, cada bloco vira um item — é **um item por PR**, não por mudança:
 
 ```bash
 roadmap add "<título do PR 1>" --change <NNN-slug>
 roadmap add "<título do PR 2>" --change <NNN-slug> --dep <NNN do PR 1>
 ```
 
-A dependência entre slices é literal: se o PR 2 usa código que só existe depois do PR 1, ele
-`--dep` do PR 1. Slices realmente paralelos não ganham aresta — dependência inventada bloqueia
+O `--dep` de cada item sai da coluna **Depende de** do mapa, uma aresta por dependência — a
+dependência é literal: se o PR 2 usa código que só existe depois do PR 1, ele `--dep` do PR 1. Slices realmente paralelos não ganham aresta — dependência inventada bloqueia
 trabalho que podia estar rodando, e ninguém percebe.
 
 Comando ausente → o projeto não usa roadmap, ou falta rodar `scripts/install-roadmap.sh`. Diga numa
@@ -166,10 +241,12 @@ Antes de mostrar, confira você mesmo — e é isto que vai pra tela no fechamen
 
 1. **Todo requisito tem tarefa; toda tarefa tem requisito.**
 2. **Toda tarefa tem verificação e contagem**, herdadas da matriz.
-3. **Toda decisão técnica tem fonte**, ou está marcada `[A VERIFICAR]` e não sustenta tarefa.
-4. **Dependência entre tarefas está explícita** e o agrupamento de PR a respeita.
-5. **Nenhum bloco de PR passa de 13 arquivos** sem a pergunta ter sido feita.
-6. **Nada de comportamento novo.** Requisito que não está na spec não nasce aqui.
+3. **Toda tarefa que cruza fronteira tem contrato**, com a origem de cada parâmetro referenciada em
+   `arquivo:linha` — e nenhuma passa de 5 passos sem a divisão ter sido proposta.
+4. **Toda decisão técnica tem fonte**, ou está marcada `[A VERIFICAR]` e não sustenta tarefa.
+5. **Dependência entre tarefas está explícita** e o agrupamento de PR a respeita.
+6. **Nenhum bloco de PR passa de 13 arquivos** sem a pergunta ter sido feita.
+7. **Nada de comportamento novo.** Requisito que não está na spec não nasce aqui.
 
 ## O plano
 
@@ -210,7 +287,7 @@ a exigir nova verificação. Se o rumo mudou porque o **comportamento** mudou, a
 ## Ao terminar
 
 Mostre em tela: a abordagem em duas linhas, as decisões técnicas com suas fontes, os PRs previstos
-com contagem de arquivos, a cobertura de teste antes → depois, a dívida aceita, as suposições que
+com contagem de arquivos, **as ondas do mapa e a pilha mais longa**, a cobertura de teste antes → depois, a dívida aceita, as suposições que
 você assumiu, e os achados das lentes. Feche com:
 
 > **Você ficaria confortável se isto fosse construído exatamente assim, e nada além?**
