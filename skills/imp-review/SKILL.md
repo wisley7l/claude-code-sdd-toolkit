@@ -51,6 +51,12 @@ as duas leituras e deixe a decisão com o usuário.
 **Não duplique o que um humano já apontou.** Repetir o achado dele infla o resultado e afoga o que
 só você viu. Registre como já apontado, e diga se confirma, refuta ou complementa.
 
+**Review humano longo não se lê aqui.** Corpo denso — mais de uns dois mil caracteres, mecanismo
+antes do sintoma, referências dentro das frases — é trabalho de tradução, não de leitura: cada ponto
+tem que virar sintoma, gatilho e traço verificado no head antes de valer como contrato. Isso é o
+**`/tk7:triage`**, e o usuário roda antes de vir pra cá. Você continua daqui com os pontos já
+destrinchados, checando se a correção atendeu cada um.
+
 ## As lentes
 
 Lance **numa única resposta** (turnos separados serializam) — `subagent_type: general-purpose`,
