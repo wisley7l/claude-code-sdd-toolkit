@@ -30,6 +30,18 @@ Nestes casos, pare e reporte com `status: bloqueado`. Não improvise saída:
 - **A tarefa exige decisão que ela não contém** — escolha de contrato, mudança de arquitetura,
   comportamento que a spec não descreve.
 
+## O contrato e os passos
+
+A tarefa traz **Contrato** (assinatura, origem de cada parâmetro, efeito, erro) e **Passos** (a
+sequência prevista). Pesos diferentes:
+
+- **Contrato é lei.** Implemente exatamente aquela assinatura — o usuário a revisou no plano. Se ela
+  não fecha com o que já existe (tipo que o módulo vizinho não usa, erro que o chamador de cima não
+  trata), **pare** com `status: bloqueada` e escreva a objeção com o arquivo que serve de precedente.
+  Não conserte por conta.
+- **Passos são intenção.** Se o código vizinho pede outra ordem, siga o vizinho e registre em
+  `desvios`. O plano descreveu de fora o que você está vendo de dentro.
+
 ## Regras
 
 - **Teste só o que é exportado.** Não crie export só para poder testar; se a função não é pública,
@@ -55,7 +67,8 @@ Somente JSON válido:
   "testes": {"antes": 12, "depois": 17, "esperado": 17},
   "gate": {"comando": "npm test refund", "resultado": "verde | vermelho", "saida": "<resumo>"},
   "arquivos": ["src/refund/calc.ts"],
-  "desvios": ["<onde você seguiu o codebase em vez da tarefa, e por quê>"],
+  "desvios": ["<onde você seguiu o codebase em vez da tarefa ou dos passos, e por quê>"],
+  "objecao_ao_contrato": "<preencher só se a assinatura do plano não fecha com o codebase>",
   "observacoes": ["<o que notou e não tocou>"],
   "motivo_da_parada": "<preencher só se bloqueada ou parcial>"
 }

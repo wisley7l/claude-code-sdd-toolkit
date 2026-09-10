@@ -42,6 +42,23 @@ reescreva o teste, e só siga com um red legítimo na mão.
 A única dispensa do red é a tarefa que o `test-plan` já marcou como verificação manual, com o
 usuário tendo aprovado. Você não cria essa exceção aqui; registra a que já existe.
 
+## O contrato manda; os passos são intenção
+
+A tarefa vem do `plan` com **Contrato** (assinatura, origem de cada parâmetro, efeito, erro) e
+**Passos** (a sequência, no máximo cinco). Os dois não têm o mesmo peso, e confundir isso é o jeito
+mais fácil de estragar a execução:
+
+- **Contrato é lei.** O usuário revisou aquela assinatura no plano. Mudá-la durante a execução é
+  desfazer a decisão dele em silêncio — se ela não fecha com o codebase, é **parada dura** com a
+  objeção e o arquivo que serve de precedente na mão.
+- **Passos são intenção.** Quando o código vizinho contradiz a ordem prevista, **siga o codebase** e
+  anote o desvio no `notes.md`. Desvio de passo é registro, não parada: o plano descreveu de fora o
+  que só se enxerga de dentro.
+
+Tarefa que chega sem contrato veio de um plano anterior a este formato. Derive a assinatura do
+codebase e da spec, e **trave com o usuário numa pergunta só** antes de delegar o lote — não deixe
+o subagente escolher.
+
 ## Paradas duras
 
 Param a execução em qualquer circunstância, e vão pro usuário com o que você tem:
@@ -54,6 +71,8 @@ Param a execução em qualquer circunstância, e vão pro usuário com o que voc
   código está errado. Mostre o que quebrou e por quê.
 - **Ambiente que o plano exige não sobe** — não substitua por mock. O plano pediu integração ou
   e2e porque unit não responderia a pergunta.
+- **Contrato que não fecha** — a assinatura que o plano travou colide com o que já existe. A
+  decisão é do usuário, sempre.
 - **Comportamento fora da spec** — se a tarefa só fecha entregando algo que a spec não pede, isso
   é lacuna da spec, não licença pra inventar.
 - **Encruzilhada com solução não óbvia** — investigue a cadeia inteira antes de propor, e traga
@@ -112,7 +131,10 @@ que valida o que volta e roda no modelo da sessão.
 O subagente recebe:
 
 > Leia `${CLAUDE_SKILL_DIR}/worker.md` e siga exatamente. Sua tarefa é **T\<N\>**, e apenas ela:
-> `<bloco da tarefa, literal do tasks.md>`
+> `<bloco da tarefa, literal do tasks.md — inclusive Contrato e Passos>`
+> O **Contrato** é lei: implemente exatamente aquela assinatura, e se ela não fechar com o codebase,
+> pare e objete. Os **Passos** são intenção: código vizinho que contradiz ganha, e o desvio vai no
+> retorno.
 > Constitution: `<conteúdo de CLAUDE.md e ARCHITECTURE.md>`
 > Convenções de teste: `<síntese>`. Ambiente: `<none, ou o que já está de pé e como alcançá-lo>`.
 
