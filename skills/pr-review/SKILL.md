@@ -131,6 +131,46 @@ concreto — com a base que o sustenta (`arquivo:linha` de um padrão do projeto
 `CLAUDE.md`, ou doc oficial). Sugestão de código cabe em bloco `suggestion`, que o autor aplica com
 um clique. Nit vai marcado como nit, para o autor saber o que é opcional.
 
+### O corpo é onde o review engorda
+
+O inline tem limite natural — duas ou três linhas, um arquivo, uma linha. O corpo não tem nenhum, e
+é ali que o review viaja: mecanismo antes do sintoma, `arquivo:linha` no meio da frase, quarenta
+palavras por período. Quem recebe é quem paga, e paga na hora de consertar.
+
+**Cada achado do corpo tem quatro faixas, nesta ordem:**
+
+```
+### <o que quebra, na língua de quem usa o sistema — não o nome da função>
+
+Quem sente: <uma linha>  ·  Gatilho: <uma linha>  ·  Alcance: <uma linha>
+
+    <traço: a sequência do gatilho até o sintoma, uma chamada ou decisão por linha,
+     com setas mostrando causa e indentação mostrando aninhamento>
+
+Correção: <uma frase — e o que não resolve, quando alguém tentaria o óbvio>
+Refs: arquivo:linha · arquivo:linha
+```
+
+A régua, que vale pro corpo inteiro:
+
+- **Frase de até ~25 palavras.** Passou disso, provavelmente são dois fatos — quebre em dois.
+- **Um aparte por frase.** Aparte dentro de subordinada é o que faz perder o sujeito antes do verbo.
+- **Nenhuma referência dentro de frase.** Cada `arquivo:linha` no meio do texto é uma decisão de
+  abrir ou continuar; elas são a prova, não a mensagem, e moram na linha de `Refs`.
+- **O achado abre pelo sintoma.** Mecanismo primeiro é como escreve quem descobriu; sintoma
+  primeiro é como lê quem vai corrigir. Você está escrevendo pro segundo.
+- **Sub-achados do mesmo mecanismo** entram como `a.` `b.` `c.` sob um achado só, não como quatro
+  itens soltos que parecem quatro problemas.
+
+O traço não é enfeite: metade dos achados de review é sobre **ordem de execução e estado**, e isso é
+ilegível em prosa por construção. Três fatos que só fazem sentido juntos — o campo está desmontado,
+o erro é escrito antes de montar, a escrita substitui a lista inteira — em parágrafo obrigam o leitor
+a reconstruir a sequência de cabeça. Em cinco linhas indentadas, o defeito salta e a correção
+aparece sozinha.
+
+**Dois mil caracteres de corpo já pedem revisão da forma.** Rigor não é densidade: o mesmo achado
+cabe em menos, e o que sobra de espaço vira achado que ninguém teria lido.
+
 Monte o JSON num arquivo de trabalho — ancorado no `headRefOid` capturado lá no início:
 
 ```json
