@@ -21,8 +21,10 @@ e `~/.claude/skills/`.
 .claude-plugin/plugin.json   # manifesto — o repo É o plugin `tk7`
 skills/                      # AS PEÇAS VIVAS. o scanner varre aqui — nada morto dentro
   grilling/  spec/  baseline/  plan/  test-plan/  implement/
+  implement-strict/
   worktree/  pr-draft/  imp-review/  test-qa/  pr-review/  pr-ready/
   pr-close/  pr-audit/  roadmap/  memory/  glossary/
+  triage/
 REFACTOR-v10.md              # o mapa. começa aqui.
 NOTICE.md + LICENSES/        # atribuições de terceiros + protocolo
 deprecated/                  # TODO o v9: commands-v9/ skills-v9/ READMEs, CLAUDE.v9

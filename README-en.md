@@ -80,21 +80,23 @@ built-in one.
                                         ▼
               implement  →  test-qa  ⇄  imp-review  →  pr-ready  →  merge  →  close
                                             ▲              │                     │
-                                            └─ the team comments ─┘      capability · roadmap
+                                        triage ←─ the team comments        capability · roadmap
                                                                            memory · debt
 ```
 
 | Piece | What it does |
 |---|---|
 | **`spec`** | Writes the behavior the change delivers — the **what**, never the how. Testable requirements with scenarios that actually exercise them, plus the delta against what the system already promises. An adversary reads it before you do. |
-| **`plan`** | The **how**: researches the codebase, settles technical decisions with sources, and breaks the work into tasks grouped by the PRs they'll become. |
+| **`plan`** | The **how**: researches the codebase, settles technical decisions with sources, and breaks the work into tasks grouped by the PRs they'll become — each carrying the contract of what gets written (signature, where every parameter comes from, what it propagates) and the intended sequence, so you review the design before it costs an execution. |
 | **`test-plan`** | Decides **what the change guarantees** — test type, environment, cases, and what's left without a safety net. A session where you cut and prioritize; the agent does the legwork and proposes. |
 | **`pr-draft`** | Opens the PR in draft before the first line of code exists. With `sync`, rewrites the body after implementation as a preview for whoever reviews it. |
 | **`worktree`** | Creates and removes isolated worktrees. A new worktree comes up with permissions applied and its memory centralized in the main repository. |
 | **`implement`** | Runs the tasks with TDD. Delegates independent ones to parallel subagents and validates every result. Closes with the simplification pass — the *refactor* step, with the suite run again afterward. Stages files, never commits on its own. |
+| **`implement-strict`** | The same execution with roles split apart: one subagent writes only the test, another writes only the code, and the boundary is verified in the diff. Since production code still doesn't exist at handoff time, the orchestrator runs the red itself — a false green becomes an observed fact again, not a report. Costs two handoffs per task; worth it where test discipline matters more than speed. |
 | **`test-qa`** | Boots the app and hunts for defects: runs the verification the plan left pending and explores what the change touched — routes attacked through their input, screens walked end to end — listing bugs, inconsistencies, copy errors, and unexpected behavior, each with steps to reproduce. Tears down whatever it started, and never points at production. |
 | **`imp-review`** | Six independent lenses — conformance, bugs, security, naming, queries, and tests. Once the team comments, it checks whether each point was actually addressed. |
 | **`pr-review`** | The other side: reviewing **someone else's** PR. It explains the change before judging it, checks what the PR promised against what it delivered, grills you on what only you can decide, and assembles a single submit review with inline comments — which you see before anything is posted. |
+| **`triage`** | For whatever arrives dense and needs a call from you: the review the team left on your PR, or the report a command just printed. Every point becomes symptom, trigger, and execution trace, verified against the code rather than the prose, and ships as a local page (`file://`, nothing published) sorted into what holds, what does not, and what to fix first — decisions as cards with both costs spelled out, counts in the header. Fires on its own, without you invoking it. |
 | **`pr-ready`** | Confirms the PR is green, refreshes its body, and hands it off: leaving draft and requesting a reviewer, each one gated on your confirmation. |
 | **`pr-close`** | Closes the loop once the PR is merged — archives the change, promotes the delivered behavior into the living capability, completes the roadmap item, harvests debt, and distills learnings. When the PR is merely approved, it harvests the follow-ups while fixing inside the PR is still cheap. |
 | **`pr-audit`** | Rescues the debt reviews left behind: sweeps merged PRs, checks each point against today's code, and feeds a perennial issue with whatever is still open. |

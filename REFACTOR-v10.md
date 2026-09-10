@@ -1886,3 +1886,211 @@ verbete bom. Procedimento em memória seria peso morto em toda conversa.
 **Aberto:** a densidade também é ritmo de escrita, não só vocabulário — frase de três andares com
 dois apartes no meio. Foi levantado, não resolvido. A memória registra a diretriz pra prosa dirigida
 a ele; os `SKILL.md` continuam como estão.
+
+### I.43 — ⭐ `implement-strict`: papéis separados, e o red que volta a ser executado ✅ (02-09-2026)
+
+*"queria testar outra abordagem para ver no que dá (…) dois agentes separados, um totalmente focado
+em criar os testes e outro totalmente focado em código, o que escreve teste não opina em código e o
+que escreve código não opina em testes."*
+
+Não é insatisfação com o `implement` — é experimento deliberado, e as duas peças coexistem. A Parte
+C.4(a) autoriza: gatilho próprio.
+
+**O ganho real, que não estava na pergunta.** O `implement` declara um limite (I.18): o orquestrador
+**não** re-executa o red do subagente, porque quando o retorno chega o código já existe e desfazer
+custaria a execução inteira. Cortando o ciclo no meio, **no momento do handoff a produção ainda não
+existe** — então o red é rodado pelo orquestrador e o falso-verde deixa de ser relato verificado na
+forma e volta a ser fato observado. Esse é o argumento mais forte a favor da variante, e vale mais
+que a disciplina de papéis que a motivou.
+
+**A colisão que precisou de desenho: "escrever teste é escolher assinatura".** Um test-writer solto
+fixa a API por via indireta e o code-writer herda design que o usuário nunca aprovou. Resolvido em
+duas partes — o **contrato travado antes do primeiro teste** (do plano quando ele traz; derivado e
+travado numa pergunta quando não), e o **esqueleto** como única incursão do test-writer na produção:
+assinatura mais `não implementado`, nada além. O esqueleto também resolve o conflito entre "TDD à
+risca" e "falha por import não é red" — sem ele, o primeiro red de um módulo novo é `cannot find
+module`, indistinguível de caminho errado; com ele, a falha prova que o teste **alcança** o alvo.
+
+**A fronteira é verificada, não pedida.** `git status --porcelain` depois de cada retorno: diff do
+test-writer com lógica de produção, ou do code-writer com qualquer arquivo de teste, é parada dura —
+e os workers não fazem `git add`, justamente pra o diff ficar legível. Se quem implementa pode mexer
+no teste, o teste deixa de ser cobrança e passa a ser negociação, e a negociação ganha no aperto.
+
+**As quatro decisões do usuário:**
+
+| Decisão | Escolha | Alternativa recusada |
+|---|---|---|
+| Fronteira do handoff | **por tarefa** | batch total (todos os testes → todo o código) acumularia suposições de API contra código inexistente |
+| Dono do ambiente | **orquestrador puro** | script `env.sh` (era a recomendação, pela lição H.5) e agente dedicado |
+| Quem fixa o contrato | **o plano, antes de tudo** | test-writer fixando; code-writer renegociando |
+| Nome | **`implement-strict`** | `tdd` (era a recomendação: leading word pré-treinada e livre) |
+
+⏳ **Duas pendências sem bloqueio:** (1) o `tasks.md` do `plan` não emite campo `contrato:` — por
+isso a peça deriva e pergunta; se o padrão pegar, o `plan` passa a emitir e a pergunta some.
+(2) Ambiente em prosa é mais frágil que `env.sh` com exit code — foi escolha consciente de não pagar
+o custo agora, e o desenho não muda se o script nascer depois.
+
+**Sobre o nome:** apontei que sufixo descritivo é o vício que matou o `sdd-*` no v9 e que `tdd`
+estava livre. Ele manteve `implement-strict`. Fica registrado como decisão dele — e renomear depois
+é trivial, porque a peça é user-invoked e ninguém depende do gatilho automático.
+
+### I.44 — ⭐ O plano ganha contrato e passos; o teste não vê os passos ✅ (02-09-2026)
+
+*"queria que me mostrasse meio que um passo a passo do código que vão implementar. não o código em
+si, mas dizer vamos criar uma função tal que recebe parâmetros tais vindos de tal para fazer isso."*
+
+Ele cogitou peça nova e perguntou se ficava no `plan` ou no `implement`. **É campo, não peça** — e é
+a pendência que a I.43 tinha deixado aberta (`contrato:` no `tasks.md`), agora com escopo maior.
+
+**Fica no `plan`, exibido pelo `implement`.** Três razões: quem tem ferramenta de pesquisa é o
+`plan` (`structure-cache`, `Explore`, Context7 no `allowed-tools`), e o `implement` descobrindo a
+origem dos parâmetros na hora de executar é o executor decidindo design; as três lentes do `plan`
+passam a criticar assinatura concreta em vez de prosa de abordagem, o que afia a de Executabilidade
+de graça; e é o insumo que as duas peças de execução já precisavam. Peça própria exigiria ganho por
+invocação ou sequência (Parte C.4) e não há — o `plan` já para pra aprovação, que é o momento em que
+ele quer ver isso.
+
+**Formato, escolhido por ele:** `Contrato:` e `Passos:` **dentro da tarefa**, no `tasks.md`, junto de
+Verificação e Pronto quando — não numa seção separada do `plan.md`, que obrigaria a cruzar dois
+arquivos por tarefa e abriria espaço pra divergência silenciosa.
+
+**Contrato** — só onde **cruza fronteira** (exportado, endpoint, tipo/schema, migração, evento):
+assinatura, **origem de cada parâmetro com `arquivo:linha`** (é afirmação sobre o codebase, então
+vale o zero inferência), efeito colateral e erro propagado na forma que o projeto usa. Helper
+interno não tem contrato — contrato pra tudo infla o arquivo e a parte que importa se perde.
+
+**Passos** — a sequência de chamadas e decisões observáveis, **teto de 5**. Ele escolheu incluir a
+sequência sabendo do risco que eu apontei: pseudocódigo apodrece, porque o codebase manda mais na
+ordem do que o plano. Três mitigações no desenho, em vez de re-litigar a escolha:
+
+1. **Passo é intenção, não roteiro.** Codebase que contradiz ganha e o desvio vira registro no
+   `notes.md`. Só é parada dura o desvio de **contrato** ou de **comportamento**.
+2. **Teto de 5 é sinal de quebra, não cota.** Sequência mais longa significa tarefa que faz duas
+   coisas — o `plan` propõe dividir em vez de escrever doze passos. O risco vira diagnóstico.
+3. **⭐ O test-writer não recebe os passos.** Só o code-writer. Teste que conhece a ordem das
+   chamadas testa implementação: quebra em refactor que não mudou nada de fora, e teste que quebra
+   sem bug ensina o time a desconfiar da suíte. A separação de papéis da I.43 é o que torna essa
+   proteção executável — no `implement` normal, o mesmo subagente vê as duas coisas e a mitigação
+   depende da instrução, não da estrutura.
+
+**Pesos diferentes, escrito nas duas peças de execução:** contrato é lei (o usuário o revisou;
+mudar em silêncio é desfazer decisão dele → parada dura com objeção e precedente na mão), passo é
+intenção (segue o vizinho, anota o desvio). Confundir os dois é o jeito mais fácil de estragar a
+execução — ou o agente trava a cada divergência trivial, ou reescreve a API sem avisar.
+
+**Fica de fora do formato:** ordem de `if`, laço, `try`/`catch`, nome de variável local, ordem de
+guard. Tarefa sem código novo (config, migração pura, deleção) escreve `n/a` — campo preenchido por
+obrigação ensina o leitor a pular a seção.
+
+### I.45 — ⭐ `triage`: o review recebido se traduz, e a primeira peça model-invoked ✅ (02-09-2026)
+
+*"to recebendo uns review e eles tão ficando muito denso na leitura, talvez pq eu precise ver esse
+erros em pseudo codigo, tem hora que não estou entendendo nada"* — com um caso real na mesa: 2.083
+palavras num corpo de review só.
+
+**O diagnóstico não foi qualidade.** Os pontos conferiam no head do PR. Era forma: 91 frases, média
+de 23 palavras, 9 frases com 40+ palavras, **40 referências `arquivo:linha` dentro da prosa**, e
+nenhum cabeçalho por item. Review é escrito por quem **descobriu** (mecanismo → sintoma) e lido por
+quem vai **corrigir** (sintoma → mecanismo).
+
+**As quatro faixas de todo achado:** título na língua de quem usa o sistema · quem sente, gatilho,
+alcance · **traço** (a sequência do gatilho ao sintoma, uma chamada por linha) · correção, incluindo
+o que **não** resolve. Referências saem da prosa e vão pro pé do card.
+
+**⭐ Por que o traço é obrigatório:** metade dos achados de review é sobre **ordem de execução e
+estado**, e isso é ilegível em prosa por construção. O caso que provou tinha três fatos que só
+fazem sentido juntos — o campo está desmontado, o erro é escrito antes de montar, a escrita
+substitui a lista inteira. Em parágrafo o leitor reconstrói a sequência de cabeça; em cinco linhas
+indentadas o defeito salta e a correção aparece sozinha.
+
+**⚠️ Model-invoked, a terceira do toolkit** — junto de `glossary` e `grilling`; as outras dezesseis
+são `disable-model-invocation: true`. Aqui o usuário pediu o gatilho: *"pr-review pode ter o gatinho pq eu sempre começo a conversa
+falando recebemos um review"*. Pela Parte C.2 é decisão explícita e paga context load em todo turno
+— o que justifica é o custo real ser o inverso: cognitive load de lembrar que a peça existe
+exatamente no momento em que ela serve. A description é curta e ancorada em "review recebido no PR
+dele", pra não disparar quando ele está revisando o PR de outra pessoa.
+
+**Peça própria, não branch do `imp-review`** — ganho pelos dois critérios da C.4. Por invocação, o
+gatilho acima (habilitar model-invocation numa description que já cobre três trabalhos dispararia
+torto e custaria mais). Por sequência, entender vem **antes** de corrigir: a seção "Quando o time já
+comentou" do `imp-review` é `Pediu / No código / Leitura`, que pressupõe correção feita.
+
+**A fronteira ficou em três:** `triage` entende o que chegou e prioriza · `imp-review` checa se a
+correção atendeu e rascunha a resposta · `pr-review` é o outro lado, e ganhou a régua de forma no
+mesmo dia pro problema não nascer de novo. Nenhuma invoca a outra (I.27); cada uma nomeia a seguinte.
+
+**Verificação contra o head, não contra a working tree** — `gh api contents?ref=<headRefOid>`. A
+working tree costuma estar em outra branch, e ler o arquivo errado pra concluir que o revisor errou é
+o pior resultado possível da peça.
+
+**A entrega é página publicada**, com três linhas no terminal (contagem, as três prioridades, o
+link). Coerente com a diretriz que a auto-memory já registrava pra doc denso: relido no terminal, um
+review de 2.000 palavras continua sendo 2.000 palavras.
+
+#### I.45.a — Adendo no mesmo dia: relatório de comando é a segunda entrada do `triage`
+
+*"da para ter tbm quando eu executar um comando do projeto ele devolve as resposta geralmente
+assim… de ser menos densa?"* — o caso foi o `/fullreview` do projeto (7 fases, output de ~2 mil
+caracteres). Eu comecei a desenhar um template de flags **dentro** do `fullreview.md`, e ele cortou:
+*"gostei do que vc apresentou no triage não daria para ser igual?"*
+
+**Ele estava certo.** O `fullreview.md` é arquivo versionado e revisado pelo time, num repo de
+trabalho, e a peça que faz esse trabalho já existia. Virou **branch de entrada** — Parte C, caminhos
+diferentes conforme o gatilho — em vez de peça nova ou formato copiado.
+
+**O que muda entre as entradas é só onde o fato se confirma:** review de PR contra o head
+(`contents?ref=<sha>`), relatório de comando contra o **working tree** e o `git diff`, porque o
+comando acabou de mexer ali. O procedimento é o mesmo de propósito.
+
+**⭐ A descoberta: densidade inversa à necessidade de decisão.** No relatório real, o que tinha
+template era o bloco de contagens e o status do gate — a parte que **não** pede decisão. As 7 flags,
+a única coisa que exigia ação dele, não tinham template nenhum: a spec do comando só dizia "liste
+cada um e ofereça a ação ao usuário", e improviso sai em prosa. A regra que ficou: **contagem no
+cabeçalho, decisão em card**, com a faixa de quatro campos obrigatórios — a escolha, o custo de cada
+lado, e a recomendação. Escolha sem os dois lados escritos é decisão devolvida sem material, que é o
+que a memória `decisao-de-produto-e-do-usuario` já pedia, agora aplicado à forma.
+
+**E a fonte:** relatório que sai denso **toda vez** é fonte pra consertar, não pra traduzir sempre.
+A peça nomeia o arquivo que gera o resumo e o que faltou nele — template pro que pede decisão,
+`AskUserQuestion` no lugar da pergunta aberta — e para aí. A edição é do usuário, porque o arquivo é
+do time.
+
+#### I.45.b — A página do `triage` é local, não publicada ✅ (02-09-2026)
+
+*"ele pode até chamar o artifact-desing mas eu não queria qe fizesse a postagem na antraopic
+deixasse local mesmo e so desse o link para abrir no navegador"*
+
+Eu havia publicado a primeira página como Artifact, e **a auto-memory já dizia o contrário** —
+`doc-humano-view-html-gerada`, de 01-09-2026: *"Página local em `file://`, não Artifact"*. A
+correção veio dele, não da memória.
+
+**Onde o arquivo mora:** `<root>/thoughts/board/triage/<alvo>.html`, dentro de `thoughts/board/`,
+que o `scripts/roadmap/board.py:32` já define como *"todas as views derivadas moram aqui, longe do
+dado"* — gitignored, e com **nome estável por alvo**, porque o caminho é o que se fixa no navegador
+(a rodada seguinte sobrescreve, não cria `-v2`).
+
+**O que muda tecnicamente sem o Artifact**, e está escrito no `format.md`: a casca é sua
+(`<!doctype>`, `<head>`, viewport, favicon como data-URI de SVG); CSS **sempre** embutido, porque
+`file://` não garante folha externa — a mesma razão que o `board.py` já registrava; fonte externa é
+bônus com stack de sistema atrás; e tema só por `prefers-color-scheme`, já que `data-theme` é do
+viewer do Artifact e ali não existe.
+
+⚠️ **Correção do usuário no mesmo dia — o nome era pelo comando, e comando não é alvo.**
+*"/fullreview.html impede de fazer mais de um fullreview por vez"*. Ele está certo, e o efeito é
+pior do que colisão: `<root>` é o repositório **principal**, então todas as worktrees escrevem no
+mesmo diretório — dois `fullreview` em worktrees diferentes se sobrescreveriam em silêncio. O
+esquema passou a ser **`<alvo>-<origem>.html`**, alvo primeiro porque é ele que discrimina:
+`pr-465-review.html`, `pr-465-fullreview.html`, `feat-estorno-fullreview.html` (sem PR, slug da
+branch). Mesma origem no mesmo alvo continua sobrescrevendo — rodar de novo na mesma branch produz o
+estado de agora, não uma segunda opinião — e nunca há `-v2` nem timestamp, porque o caminho é o que
+se fixa no navegador.
+
+**A razão que vale além da preferência:** review de código e relatório de execução carregam caminho
+de arquivo, trecho de código e defeito **não corrigido** de repositório privado. Publicar isso é
+mandar pra fora o mapa do que está aberto. A `artifact-design` continua sendo carregada — composição
+e tipografia valem igual fora do Artifact; só o publicar não se aplica.
+
+⚠️ **Erro corrigido no mesmo dia:** eu havia escrito em I.45 que o `triage` era a *primeira* peça
+model-invoked. Falso — `glossary` e `grilling` já eram. Foi consertado aqui, no README e no CREDITS.
+Afirmação errada em doc de toolkit é exatamente o que o próprio `triage` prioriza como "envenena
+trabalho futuro".
