@@ -1,6 +1,6 @@
 ---
 name: test-plan
-description: Você decide o que a mudança garante. Lista os comportamentos que quer cobertos; a skill critica sua lista — o que ficou descoberto, o que já existe pronto e dá pra reusar, o que vai custar caro. Não escreve teste nenhum e não propõe cobertura antes de você.
+description: Fecha o que a mudança garante. A skill propõe a matriz de cobertura com o motivo de cada caso escrito — o que quebra sem ele — e você revisa caso a caso, cortando o que não quer. Três lentes criticam a proposta depois. Não escreve teste nenhum.
 disable-model-invocation: true
 argument-hint: <pasta da mudança em thoughts/changes/, ou nada pra usar a mais recente>
 allowed-tools: Read Grep Glob Write Edit Agent AskUserQuestion Bash(ls *) Bash(git log*) Bash(git worktree list*) Bash(structure-cache *) Bash(structure-cache)
@@ -11,13 +11,23 @@ allowed-tools: Read Grep Glob Write Edit Agent AskUserQuestion Bash(ls *) Bash(g
 Fecha **o que esta mudança garante** — antes de qualquer tarefa ser quebrada e antes de qualquer
 teste existir. Você não escreve teste aqui; escreve a decisão sobre quais vão existir.
 
-**A ordem é: ele lista, você critica.** Quem escolhe os cenários aprende o sistema; quem carimba
-lista pronta não aprende e perde a mão. Você levanta o terreno — o que já existe, o que dá pra
-reusar, o que a mudança toca — e para. O primeiro conjunto de comportamentos sai da cabeça dele,
-não da sua. Só depois disso você critica o que ele escreveu.
+**A ordem é: você propõe, ele corta.** Escrever a lista do zero custava a ele o trabalho que esta
+skill existe pra fazer — mas revisar lista pronta só é revisão de verdade se cada linha disser
+**por que existe**. Sem isso vira carimbo, e carimbo é pior que a lista que ele escreveria.
 
-**Você nunca propõe cobertura antes do rascunho dele.** Nem "pra adiantar", nem "só um exemplo",
-nem em mudança pequena. A tela de partida não contém um único caso de teste.
+**Por isso a regra que sustenta todo o resto: nenhum caso entra na matriz sem a linha do que
+quebra sem ele** — concreta, no sistema dele, não "garante o comportamento". Caso cujo motivo
+você não consegue escrever não é caso: é volume, e some antes de chegar à tela.
+
+É também o filtro que substitui a antiga trava. A suíte não incha porque o inchaço não passa
+pelo motivo escrito.
+
+**Leia `${CLAUDE_SKILL_DIR}/../triage/prosa.md` antes da Tela 1.** Ela governa como se escreve o
+motivo, e é o que separa revisão de carimbo. A seção "A pergunta" dela governa **cada caso que
+você leva a ele** — na revisão da Tela 1, nos achados da Tela 2, na pergunta do requisito sem
+verificação. "Abate", "terreno", "matriz", "lente" e "ambiente" são o vocabulário desta peça, pra
+você; na tela ele vê "já existe no código", "o que o projeto já testa hoje", "a lista de casos",
+"um revisor olhando só X" e "o que precisa estar de pé pra rodar".
 
 ## A regra que não cede
 
@@ -61,48 +71,74 @@ valor da tela de partida:
 Delegue a varredura a um subagente `Explore` quando for ampla, **repetindo no prompt dele** a
 diretiva de consultar o `structure-cache` antes de grepar. Subagente não herda estas instruções.
 
-## Tela 1 — o terreno, e nenhuma proposta
+## Tela 1 — o terreno, e a matriz proposta
 
-Quatro blocos, e nenhum caso de teste em lugar nenhum:
+O terreno primeiro, a proposta depois — ele precisa do que já existe pra julgar o que você sugere:
 
 1. **O que temos hoje** — componente, quem testa, o que cobre, contagem. Baseline total.
 2. **O que já cobre esta mudança** — teste existente que ataca comportamento que esta mudança toca,
    com `arquivo:linha`. É o abate: comportamento que aparece aqui não precisa de caso novo.
 3. **O que dá pra reusar** — fixtures, factories, helpers e o arquivo onde caso novo caberia, com
    paths. Cada linha com uma nota do que ela poupa.
-4. **Os requisitos da spec, nus** — R1, R2, R3, o texto de cada um, e nada ao lado. Nem tipo, nem
-   caso, nem sugestão. A coluna de cobertura está vazia porque é ele que preenche.
+4. **A matriz proposta** — um caso por linha, cada um com **o que quebra sem ele**.
 
 Marque também as lacunas pré-existentes, separadas — não são desta mudança e não entram no escopo
 a menos que ele peça.
 
 Números reais, vindos do inventário. Sem dado, escreva `?` em vez de estimar.
 
-Feche pedindo o rascunho, e diga que é de uma vez:
+### A linha do "sem ele, quebra"
 
-> Escreve de uma vez o que você quer garantir — do seu jeito, texto corrido, na ordem que vier.
-> Não precisa dizer tipo nem ambiente, isso eu traduzo. Requisito que você quiser pular, escreve
-> "R3: me sugere" e eu proponho só esse.
+É a coluna que faz a revisão ser possível, e a única difícil de escrever. Ela diz **o que passa a
+acontecer no sistema** se o caso não existir — no vocabulário de quem usa, com o dado concreto:
 
-Depois desse pedido, **pare de verdade**. Não antecipe, não exemplifique com um caso "pra ilustrar
-o formato", não responda a pergunta dele com uma lista pronta. Se ele pedir sugestão pra um
-requisito específico, proponha só aquele — e só aquele.
+```
+❌ "garante o cálculo de estorno"          ← repete o título do caso
+❌ "cobre o caminho de erro"               ← não diz o erro nem o que ele causa
+❌ "boa prática, aumenta a confiança"      ← não é consequência, é opinião
 
-## O rascunho dele, e o que você faz com ele
+✅ "estorno de 150 num pedido de 100 passa e vira saldo credor no cliente"
+✅ "gateway cai, o pedido fica pago e sem refund registrado — ninguém percebe até o fechamento"
+```
 
-O que chega é texto humano: cenário descrito em prosa, meio-caso, coisa fora de ordem, dois itens
-que são o mesmo. Seu trabalho é traduzir sem inflar.
+Se só sai a versão da esquerda, **o caso não entra**. Não force: some da proposta e, se você achar
+mesmo que falta, ele reaparece pela crítica, onde a lente precisa provar a consequência.
 
-**O que você pode fazer:** dar nome ao caso, escolher o tipo pela natureza do comportamento,
-determinar o ambiente e o comando do gate, apontar o arquivo onde ele cai, ligar o caso ao
-requisito, e apontar a fixture que o barateia.
+### O que você não pode fazer
 
-**O que você não pode fazer:** acrescentar caso que ele não pediu, desdobrar um caso dele em três
-"pra ficar completo", ou promover a tipo mais caro do que o comportamento exige. Caso que você acha
-que falta não entra agora — vai pra crítica, no bloco certo, e volta a ele como decisão.
+- **Desdobrar um comportamento em três casos "pra ficar completo".** Um comportamento, um caso,
+  salvo quando os dois motivos escritos são de fato diferentes.
+- **Promover a tipo mais caro** do que o comportamento exige — e2e onde unit resolve infla o gate
+  e a chance de flake.
+- **Propor caso pra comportamento que a spec não promete.** Isso é lacuna da spec, vai como aviso,
+  e não vira linha da matriz.
 
-Se um item dele estiver ambíguo demais pra virar caso ("testar o fluxo de reembolso"), pergunte o
-que especificamente deve dar certo ou errado. Uma pergunta, não um questionário.
+Requisito ambíguo demais pra virar caso ("o fluxo de reembolso funciona") não vira três chutes:
+pergunte o que especificamente deve dar certo ou errado. Uma pergunta, não um questionário.
+
+## A revisão dele, um caso por vez
+
+A matriz nasce **dentro**, e ele corta. É o inverso dos achados da crítica, que nascem fora — a
+diferença é que a proposta já passou pelo filtro do motivo escrito, e o achado de lente ainda não.
+
+- **Recusar não pede justificativa.** "Não quero" fecha o caso e vira linha de dívida. Exigir
+  motivo pra não cobrir é o atrito que faz a suíte inchar por cansaço.
+- **A escolha dele vence**, inclusive contra o motivo que você escreveu. Registre o risco aceito
+  numa linha e siga, sem reabrir.
+- **Caso que ele adiciona entra sem passar pelo seu crivo** — só traduza tipo, ambiente e gate, e
+  peça a ele a linha do "sem ele, quebra" se não estiver óbvia.
+- **Um por vez, em ordem de impacto.** Lista inteira de uma vez é o carimbo de volta.
+- **Cada caso chega como escolha, não como linha de tabela.** O que quebra sem ele primeiro, o
+  que custa escrever depois, e a sua recomendação — mantém ou corta. O tipo vai traduzido:
+
+  ```
+  ❌ R3 · timeout do gateway · integração · sandbox. Mantém?
+
+  ✅ Se o gateway cair no meio do estorno, o pedido fica pago e sem estorno
+     registrado — ninguém percebe até o fechamento do mês.
+     Cobrir custa um teste que sobe um gateway de mentira (uns 10s a mais na
+     suíte). Recomendo manter.
+  ```
 
 ### Tipo por necessidade
 
@@ -119,13 +155,16 @@ Todo tipo carrega o **ambiente** que o gate exige (`none`, `server-local`, `brow
 
 ## A crítica
 
-Só agora as lentes entram, e entram **sobre a lista dele** — nunca sobre a spec crua. Lance três
+Só agora as lentes entram, e entram **sobre a matriz já revisada por ele** — com os cortes dele
+dentro, nunca sobre a spec crua nem sobre a sua proposta original. O que ele tirou, tirou. Lance três
 subagentes **numa única resposta** (turnos separados serializam), `subagent_type: general-purpose`,
 `model: opus`, cada um com este prompt:
 
 > Leia `${CLAUDE_SKILL_DIR}/lenses.md` e assuma a lente **<Produto/QA | Engenharia | Adversarial>**.
-> Você critica uma lista de cobertura que o usuário escreveu — não propõe uma nova.
-> A spec está em `<caminho>`. A lista dele, já traduzida: `<matriz>`.
+> Você critica uma matriz de cobertura já aprovada pelo usuário — não reescreve uma nova, e não
+> reabre caso que ele cortou. Todo achado seu carrega **o que quebra na prática se ficar de fora**,
+> concreto; sem isso ele não chega à tela.
+> A spec está em `<caminho>`. A matriz, com os cortes dele: `<matriz>`.
 > Convenções de teste do projeto: `<sua síntese>`. Cobertura existente: `<inventário, com contagens
 > e os abates que você achou>`. Componentes tocados: `<paths>`.
 
@@ -141,29 +180,25 @@ aviso, e não vira caso.
 ## Tela 2 — os achados, e o default é fora
 
 Sem teto de quantidade: ele vê tudo que a crítica achou, porque o panorama do risco é dele. Mas
-**todo achado nasce fora da matriz** — entra só com um sim explícito. Ele não corta de uma lista
-pronta; ele escolhe o que puxar pra dentro.
+**todo achado nasce fora da matriz** — entra só com um sim explícito. É o contrário da proposta
+da Tela 1, e de propósito: aquela já passou pelo filtro do motivo escrito, esta ainda não.
 
 Três blocos, cada um ordenado por impacto:
 
 - **Descoberto** — comportamento sem verificação nenhuma. Cada linha diz **o que quebra na prática**
   se ficar de fora, e o custo de cobrir. É o único bloco que aumenta a suíte.
-- **Redundante** — caso dele que teste existente já cobre (`arquivo:linha`), ou dois casos dele que
-  verificam a mesma coisa. Aqui você recomenda **tirar**.
-- **Caro** — caso dele que sai mais salgado do que parece: ambiente novo, risco de flakiness, setup
-  pesado. Sempre com a alternativa mais barata ao lado, quando existir.
+- **Redundante** — caso da matriz que teste existente já cobre (`arquivo:linha`), ou dois casos
+  que verificam a mesma coisa. Aqui você recomenda **tirar** — inclusive caso que você propôs.
+- **Caro** — caso da matriz que sai mais salgado do que parece: ambiente novo, risco de flakiness,
+  setup pesado. Sempre com a alternativa mais barata ao lado, quando existir.
 
 Resolva **um por vez**, em ordem de impacto, com o trade-off numa linha e **sua recomendação
 explícita**. Opções discretas vão em `AskUserQuestion` com a recomendação primeiro; pergunta aberta
-vai em texto.
+vai em texto. Nos dois casos, as quatro linhas da régua: a escolha, o que acontece se entra, o que
+acontece se fica de fora, a recomendação — e nenhuma palavra que só este toolkit usa.
 
-O que governa a discussão:
-
-- **A escolha dele vence**, inclusive contra as três lentes. Registre o risco aceito numa linha e
-  siga — sem reabrir o ponto.
-- **Recusar achado não pede justificativa.** "Não quero" fecha o item e vira linha de risco aceito.
-  Exigir motivo pra não cobrir é o atrito que fez a suíte inchar.
-- **Caso cortado vira dívida registrada**, com o motivo se ele deu.
+Valem aqui as mesmas regras da revisão da Tela 1 — a escolha dele vence, recusar não pede
+justificativa, e o que ele cortar vira dívida registrada. Além delas:
 - **Requisito caminhando pra ficar sem verificação** dispara a pergunta da regra acima.
 - Se a decisão abrir tipo ou ambiente que nenhuma lente avaliou, rode **só a lente de Engenharia**
   de novo pra conferir custo e mock. Não repita o trio por isso.
@@ -174,22 +209,24 @@ Seção `## Testes` de `<root>/thoughts/changes/<NNN>-<slug>/plan.md` — crie o
 seção se ele ainda não existe. **`root` é o repositório principal** (`git worktree list | head -1`),
 porque `thoughts/` é gitignored e não existe dentro da worktree.
 
-Todo caso carrega a origem: `[usuário]` pro que veio do rascunho dele, `[lente]` pro que veio da
-crítica e ele aceitou. As duas marcas juntas mostram, PR a PR, quanto da suíte ele decidiu e quanto
-a máquina empurrou.
+Todo caso carrega a origem: `[agente]` pro que você propôs e ele manteve, `[usuário]` pro que ele
+acrescentou, `[lente]` pro que veio da crítica e ele aceitou. Registre também **quantos casos ele
+cortou** — é o número que diz se a revisão está acontecendo ou se virou carimbo.
 
 ```markdown
 ## Testes
 
 Baseline: <N> testes nos componentes tocados → <M> depois (+<K>)
 Ambiente exigido: <none | server-local | browser-playwright | sandbox>
-Origem: <X> casos [usuário] · <Y> casos [lente] · <Z> comportamentos já cobertos (abatidos)
+Origem: <X> [agente] · <Y> [usuário] · <Z> [lente] · <W> já cobertos (abatidos) · <C> cortados por ele
 
-| Req | Tipo | Casos | Ambiente | Gate |
+| Req | Caso | Tipo · Ambiente | Sem ele, quebra | Origem |
 |---|---|---|---|---|
-| R1 | unit | happy, valor negativo `[usuário]` | none | `npm test refund` |
-| R2 | — | já coberto por `test/refund.spec.ts:40` | — | — |
-| R3 | integração | timeout do gateway `[lente]` | sandbox | `npm run test:int` |
+| R1 | estorno maior que o pedido | unit · none | estorno de 150 num pedido de 100 passa e vira saldo credor | agente |
+| R2 | — | — | já coberto por `test/refund.spec.ts:40` | — |
+| R3 | timeout do gateway | integração · sandbox | pedido fica pago e sem refund registrado até o fechamento | lente |
+
+Gate: `npm test refund` (unit) · `npm run test:int` (integração)
 
 ### Decisões
 | # | Ponto | Decisão | Quem decidiu | Motivo / risco aceito |
@@ -207,8 +244,9 @@ A contagem `+K` é **piso, não meta**. Ela existe pra que a suíte não encolha
 
 ## Ao terminar
 
-Uma tela curta: cobertura antes → depois por tipo, ambiente exigido, quantos casos vieram dele e
-quantos da crítica, o que foi abatido por já existir, e a dívida que ficou. Depois:
+Uma tela curta: cobertura antes → depois por tipo, ambiente exigido, **quantos casos você propôs,
+quantos ele cortou e quantos ele acrescentou**, o que foi abatido por já existir, e a dívida que
+ficou. O número de cortes é o que mostra se ele revisou de fato. Depois:
 
 > Vou passar isto pro `plan`, e cada tarefa herda daqui tipo, ambiente e gate.
 
