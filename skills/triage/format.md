@@ -38,24 +38,55 @@ Três consequências de rodar em `file://`:
   existe: defina a paleta clara no `:root` e redefina os tokens dentro do media query. `body` com
   `background` de token, como sempre.
 
-## As quatro faixas de cada achado
+## As faixas de cada achado
 
-Todo achado tem estas quatro, nesta ordem, sempre:
-
-| Faixa | O que carrega |
-|---|---|
-| **Título** | o que quebra, na língua de quem usa o sistema — não o nome da função |
-| **Quem sente · Gatilho · Alcance** | três linhas curtas, em lista de definição |
-| **Traço** | bloco mono: a sequência do gatilho ao sintoma, uma chamada ou decisão por linha |
-| **Correção** | o que fazer, uma frase — e o que **não** resolve, quando alguém tentaria |
+| Faixa | O que carrega | Quando |
+|---|---|---|
+| **Título** | o que quebra, na língua de quem usa o sistema — não o nome da função | sempre |
+| **Quem sente · Gatilho · Alcance** | três linhas curtas, em lista de definição | sempre |
+| **O que está acontecendo** | prosa: o que o sistema faz hoje, o que deveria fazer, por que a diferença importa | sempre |
+| **Traço** | bloco mono, do gatilho ao sintoma | só quando o mecanismo é ordem de execução ou estado |
+| **Correção** | o texto novo ou o diff, escrito — e o que não resolve | sempre, salvo quando vira faixa de decisão |
 
 E no pé do card, separada do texto: a **linha de referências** (`arquivo:linha · arquivo:linha`).
 Toda referência sai da prosa e vem pra cá. Era isso que travava a leitura no original: cada
 `arquivo:linha` no meio da frase é uma decisão de abrir ou continuar.
 
-## O traço
+## A prosa, que é onde o achado se entende
 
-É a peça que faz o achado entrar. Regras:
+**Dois a quatro períodos, em prosa de verdade.** Não é resumo do traço nem repetição do título: é o
+parágrafo que um colega escreveria explicando o problema no quadro. Responde três coisas, nesta
+ordem:
+
+1. **O que o sistema faz hoje** — o comportamento real, afirmado.
+2. **O que deveria fazer** — e é aqui que o defeito aparece, por contraste.
+3. **Por que a diferença importa** — a consequência que justifica parar pra corrigir.
+
+**Esta faixa é a exceção à régua de densidade.** Ela pode ter período longo, pode ter aparte, e
+principalmente **precisa de conector causal** — `porque`, `então`, `mas`, `ou seja`. Fragmento
+telegráfico prova; prosa ligada explica, e é a ligação que faltava. O que ela continua não podendo
+ter é `arquivo:linha` no meio da frase: isso mora no pé do card, como no resto.
+
+Se esses três períodos não saem, você ainda não entendeu o achado — e nenhum traço cobre esse
+buraco.
+
+## O traço, que é opcional
+
+**Traço só quando o mecanismo é ordem de execução ou estado.** Aí ele é insubstituível: três fatos
+que só fazem sentido juntos — o campo está desmontado, o erro é escrito antes de montar, a escrita
+substitui a lista inteira — em parágrafo obrigam o leitor a reconstruir a sequência de cabeça.
+
+**Quando o achado não tem sequência, o traço atrapalha.** Contradição entre dois parágrafos de um
+doc, convenção sem precedente, contagem que não fecha, regra que nasce violada: nada disso é um
+caminho de execução. Forçar o bloco mono ali empilha saída de `grep` e resultado de `gh api`, que
+**provam** o achado sem **explicar** nada. Nesses casos a prosa carrega o achado sozinha, e a
+evidência vira citação curta de duas ou três linhas de cada lado.
+
+**A pergunta que decide:** dá pra numerar os passos do gatilho até o sintoma? Se dá, é traço. Se a
+resposta é "não são passos, são dois lugares que se contradizem", não há traço — há uma citação de
+cada lado.
+
+Quando entra, as regras:
 
 - **Uma chamada ou uma decisão por linha.** Nunca duas.
 - **Setas de fluxo** (`→`, `⇒`, `│`, `└─`) mostrando causa, e indentação mostrando aninhamento.
@@ -65,6 +96,29 @@ Toda referência sai da prosa e vem pra cá. Era isso que travava a leitura no o
 - **Marque o ponto do defeito** (`<b>`) e comente o de apoio em tom apagado (`<i>`). Um destaque
   por traço; dois já é nenhum.
 - **Sem `if`/`for` transcrito do código.** O traço é o caminho, não a implementação.
+
+## A correção, que se escreve — não se encomenda
+
+**A faixa entrega o conserto pronto, não a tarefa de achá-lo.** "Reescrever para o que a cláusula
+quer mesmo dizer" não é correção: é o problema repetido em modo imperativo, e devolve pro usuário
+exatamente o trabalho que a página existia pra fazer.
+
+| Natureza do defeito | O que a faixa entrega |
+|---|---|
+| **Texto** — doc, skill, `CLAUDE.md`, comentário, mensagem de UI | **o texto substituto, escrito**, em bloco, pronto pra colar |
+| **Código** | **o diff mínimo** — as linhas que mudam, e nada mais |
+| **Config** | o valor novo e onde ele vai |
+| **Escolha do usuário** | nenhuma: vira faixa de decisão, e a correção nasce depois que ele escolhe |
+
+**Escrever a correção não é aplicá-la.** Você não edita arquivo, não commita, não posta. A página
+mostra o texto pronto; colar é do usuário, ou do `implement` depois.
+
+**Duas correções defensáveis viram faixa de decisão**, com os dois custos escritos. O que não vale
+é fugir pra faixa de decisão porque escrever o texto dá trabalho: se o certo é óbvio, escreva o
+certo.
+
+**E continue dizendo o que não resolve**, uma linha, quando existe um conserto óbvio e errado que
+alguém tentaria. É o que evita a segunda rodada.
 
 ## A página inteira
 
@@ -118,7 +172,7 @@ sem material — o que o relatório dele já fazia, e é o que a página existe 
 invertida: a parte com template (contagens, status) é a que não pede nada, e a que pede escolha sai
 em prosa. A página desfaz essa inversão — é a razão de ela existir pra este caso.
 
-## Régua de densidade, que vale pra página inteira
+## Régua de densidade, que vale pra página inteira — menos numa faixa
 
 - **Frase de até ~25 palavras.** Passou disso, quebre — provavelmente são dois fatos.
 - **Um aparte por frase**, no máximo. Aparte dentro de subordinada é o que faz perder o sujeito.
@@ -126,6 +180,11 @@ em prosa. A página desfaz essa inversão — é a razão de ela existir pra est
 - **Coluna de leitura em ~65 caracteres.** Prosa larga cansa antes de confundir.
 - **Achado começa pelo sintoma.** Mecanismo primeiro é como quem descobriu escreve; sintoma
   primeiro é como quem corrige lê.
+
+**A exceção é a faixa "O que está acontecendo".** A régua foi escrita pra desinflar prosa de quem
+descobriu o defeito — e aplicada à escrita do zero ela produz fragmento, não explicação. Naquela
+faixa, período longo e conector causal são o instrumento; em todo o resto, continuam sendo o
+problema.
 
 ## Título e identidade
 
@@ -142,8 +201,8 @@ data e hora da geração — é o que diz se o que está na tela é da rodada de
 
 Ponto de partida, não gabarito a copiar — a identidade visual se decide na hora, com a
 `artifact-design` na mão. O que **não** se negocia: tokens de cor no `:root` e redefinidos no media
-query de tema escuro, `body` com `background` de token, mono nos traços, `overflow-x:auto` em todo
-bloco largo, e âncora (`id`) em cada achado — em página longa, o link pra um achado específico é o
+query de tema escuro, `body` com `background` de token, mono nos traços e no bloco de correção,
+`overflow-x:auto` em todo bloco largo, e âncora (`id`) em cada achado — em página longa, o link pra um achado específico é o
 que faz a conversa sobre ele ser possível.
 
 ```html
@@ -157,6 +216,11 @@ que faz a conversa sobre ele ser possível.
     <dt>Gatilho</dt><dd>método escrito por fora do schema: SQL direto, seed, migration</dd>
     <dt>Alcance</dt><dd>regressão — antes o caso era coberto</dd>
   </dl>
+  <p class="what">Hoje a linha chama <code>trim()</code> direto no <code>displayName</code>, que o
+  schema deixa nulo. Deveria chamar com <code>?.</code>, como chamava antes desta mudança — o
+  fallback "Método sem nome" logo ao lado só existe porque alguém previu o nulo. A diferença
+  importa porque o erro estoura dentro de um computed, então não é o campo que fica vazio: é a
+  página inteira que não renderiza, e ela é a única via de apagar o método defeituoso.</p>
   <pre class="trace">antes  method.displayName<b>?.</b>trim() || "Método sem nome"
 head   method.displayName<b>  </b>trim() || "Método sem nome"
                           <i>↑ o ?. saiu, o fallback continua anunciado</i>
@@ -165,7 +229,12 @@ displayName = undefined
    └─ describeCustomPaymentRow → <b>TypeError dentro de um computed</b>
         └─ a página não renderiza
              └─ <b>morre a única via de apagar o método defeituoso</b></pre>
-  <p class="fix"><b>Correção</b> Devolver o <code>?.</code> — um caractere.</p>
+  <div class="fix">
+    <b>Correção</b>
+    <pre>- method.displayName  trim() || "Método sem nome"
++ method.displayName?.trim() || "Método sem nome"</pre>
+    <p>Não resolve tratar no chamador: o computed roda antes.</p>
+  </div>
   <footer class="refs">store-apps-state.ts:80 · store-apps-patch.ts:537</footer>
 </article>
 ```

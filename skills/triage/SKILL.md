@@ -1,14 +1,17 @@
 ---
 name: triage
-description: Destrincha o que chegou denso e pede decisão — review que o time fez no PR dele, ou relatório de um comando que rodou. Cada ponto vira sintoma, gatilho e traço verificado no código, e sai como página local com o que procede, o que não, e em que ordem atacar. Use quando ele disser que recebeu review no PR, ou colar o resumo de um comando.
+description: Destrincha o que chegou denso e pede decisão — review que o time fez no PR dele, ou relatório de um comando que rodou. Cada ponto vira sintoma, explicação em prosa, evidência verificada no código e a correção já escrita — o texto ou o diff, pronto pra colar. Sai como página local com o que procede, o que não, e em que ordem atacar. Use quando ele disser que recebeu review no PR, ou colar o resumo de um comando.
 argument-hint: [número do PR | URL | nada, se ele colou o relatório | vazio = o PR da branch atual]
 allowed-tools: Read Write Grep Glob Agent Skill AskUserQuestion Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git branch*) Bash(git worktree list*) Bash(gh *) Bash(ls *) Bash(mkdir *) Bash(cat *) Bash(base64 *) Bash(python3 *) Bash(structure-cache *) Bash(structure-cache)
 ---
 
 # triage
 
-Chegou algo denso que pede decisão dele. Aqui você **entende, verifica e prioriza** — e nada mais.
-Não corrige, não responde, não posta.
+Chegou algo denso que pede decisão dele. Aqui você **entende, verifica, escreve o conserto e
+prioriza**.
+
+**Escrever o conserto não é aplicá-lo.** Você não edita arquivo, não commita, não responde ao
+revisor e não posta em lugar nenhum. A página mostra o texto pronto; colar é dele.
 
 O problema que esta peça resolve não é falta de qualidade: é forma de entrega. Review e relatório
 bons vêm escritos por quem **descobriu** o defeito — mecanismo primeiro, sintoma na terceira
@@ -79,21 +82,35 @@ O ciclo, por ponto do review:
 1. **Nomeie o sintoma.** O que o usuário final vê, numa linha. Se você não consegue dizer isso, você
    ainda não entendeu o ponto — volte ao texto antes de seguir.
 2. **Ache o gatilho.** Em que condição acontece: que dado, que ordem de cliques, que estado.
-3. **Reconstrua o traço.** A sequência do gatilho até o sintoma, em linhas curtas, uma chamada ou
-   uma decisão por linha. É aqui que o ponto fica entendível: metade dos achados de review é sobre
-   **ordem de execução e estado**, e isso é ilegível em prosa por construção.
-4. **Verifique no código do head**, arquivo por arquivo:
+3. **Explique em prosa.** Dois a quatro períodos: o que o sistema faz hoje, o que deveria fazer, e
+   por que a diferença importa. Com conector causal — `porque`, `então`, `mas` —, que é exatamente
+   o que fragmento telegráfico não tem. Se esses três períodos não saem, você ainda não entendeu o
+   ponto, e nenhum bloco de evidência vai cobrir esse buraco.
+4. **Reconstrua o traço, se houver traço.** Quando o mecanismo é ordem de execução ou estado, a
+   sequência do gatilho ao sintoma em linhas curtas é insubstituível — metade dos achados de review
+   é disso, e isso é ilegível em prosa por construção. Quando o achado é uma contradição entre dois
+   textos, uma convenção sem precedente ou uma contagem que não fecha, **não há sequência**: ali o
+   bloco mono vira saída de `grep` empilhada, que prova o achado e não explica nada. Nesse caso a
+   prosa carrega sozinha, e a evidência vira citação de duas linhas de cada lado.
+5. **Verifique no código do head**, arquivo por arquivo:
    `gh api repos/{owner}/{repo}/contents/<path>?ref=<headRefOid> --jq .content | base64 -d`
    Confirme a assinatura, a linha, a ordem das chamadas. **O texto do revisor é a hipótese; o código
    é o fato.**
-5. **Classifique** com `arquivo:linha`: **procede** · **procede em parte** — o que sobra ·
+6. **Classifique** com `arquivo:linha`: **procede** · **procede em parte** — o que sobra ·
    **não procede** — o que o código mostra · **[não verificado]** — e por quê.
-6. **Se o ponto pede decisão dele**, monte a faixa: qual é a escolha, o que muda de cada lado, e a
+7. **Escreva a correção, não a tarefa.** Defeito em texto — doc, skill, `CLAUDE.md`, comentário,
+   mensagem de UI — sai como **o texto substituto escrito, em bloco, pronto pra colar**. Defeito em
+   código sai como **diff mínimo**; em config, o valor novo e onde vai. "Reescrever para o que a
+   cláusula quer mesmo dizer" **não é correção**: é o problema repetido em imperativo, e devolve
+   justamente o trabalho que a página existe pra fazer. Diga também o que **não** resolve, quando
+   existe um conserto óbvio e errado.
+8. **Se o ponto pede decisão dele**, monte a faixa: qual é a escolha, o que muda de cada lado, e a
    sua recomendação — que é recomendação, não veredito. Ponto sem os dois lados escritos é ponto que
-   empurra a decisão de volta pra ele sem material.
+   empurra a decisão de volta pra ele sem material. **Faixa de decisão é pra escolha real**, não pra
+   fugir de escrever o texto: se só há um caminho defensável, ele se escreve.
 
-**Frase longa é mais de um fato.** Ponto do review com quarenta palavras num período costuma
-empacotar dois ou três achados com pesos diferentes. Separe antes de classificar: cada fato ou é
+**Frase longa é mais de um fato — no texto que chegou.** Ponto do review com quarenta palavras num
+período costuma empacotar dois ou três achados com pesos diferentes. Separe antes de classificar: cada fato ou é
 verificável, ou é opinião do revisor — e as duas coisas merecem tratamento diferente.
 
 ## Não repassar é a regra
@@ -123,8 +140,10 @@ de reordenar em silêncio. Bloqueante é palavra dele: se ele disse que nada blo
 
 ## A entrega
 
-**Uma página local, e três linhas na tela.** O formato está em `${CLAUDE_SKILL_DIR}/format.md` —
-leia antes de escrever.
+**Uma página local, e três linhas na tela.** Dois arquivos governam o que sai, e os dois se leem
+antes de escrever: a régua de prosa em `${CLAUDE_SKILL_DIR}/prosa.md` — que vale pra todo texto
+deste toolkit — e o formato da página em `${CLAUDE_SKILL_DIR}/format.md`, que é a versão
+especializada dela pra cá.
 
 **Onde o arquivo mora:** `<root>/thoughts/board/triage/<alvo>-<origem>.html`
 
@@ -171,7 +190,7 @@ invoca outra:
 
 | O que | Vai pra onde |
 |---|---|
-| Correção pequena, e a checagem de "o pedido foi atendido?" | **`/tk7:imp-review`** |
+| Correção pequena, com o texto já escrito na página | ele cola, e a checagem de "o pedido foi atendido?" é do **`/tk7:imp-review`** |
 | Ponto que muda comportamento | `tasks.md` da mudança, e **`/tk7:implement`** — comportamento sem teste é o que o ciclo existe pra impedir |
 | Ponto que procede e ninguém vai tocar agora | roadmap, como item com dono |
 | Relatório que sai denso **toda vez** | é a fonte que precisa de conserto, não a tradução. Diga qual arquivo gera o resumo e o que faltou nele — template pro que pede decisão, `AskUserQuestion` no lugar da pergunta aberta — e deixe a edição pro usuário: comando de projeto é versionado e revisado pelo time |
@@ -185,3 +204,5 @@ de resposta nasce depois da correção, no `imp-review`, não aqui.
 - **Nunca diga que o revisor errou sem `arquivo:linha`** do head.
 - **Nunca decida o que aceitar.** Você entrega o que é fato e o que é opinião, separados. O corte é
   do usuário.
+- **Nunca aplique a correção que você escreveu.** Escrever o conserto é o trabalho; editar o arquivo
+  do projeto, não — quem cola é o usuário, ou o `implement` depois.
