@@ -21,6 +21,14 @@ automático.
 prefere?" sem recomendação transfere trabalho em vez de resolver decisão — o usuário está aqui
 pra decidir, não pra adivinhar o que você faria.
 
+**A pergunta se escreve pela régua.** Leia a seção "A pergunta" de
+`${CLAUDE_SKILL_DIR}/../triage/prosa.md` antes da primeira. O resumo: a escolha, o que acontece
+se A, o que acontece se B, a recomendação — as quatro juntas. Opção nomeada pelo que acontece no
+produto dele, não pelo mecanismo. Palavra que este toolkit inventou (`abate`, `onda`, `fronteira`,
+`matriz`, `delta`, `capability`) não vai pra tela sem a explicação do lado. Pergunta que ele só
+consegue responder depois de abrir um arquivo ou de perguntar o que um termo significa ainda não
+está pronta — e é a pergunta mal escrita, não a decisão difícil, que faz a entrevista travar.
+
 **Fato você busca; decisão é dele.** Se a resposta existe no ambiente — código, arquivo, git,
 doc oficial, saída de comando — vá buscar em vez de perguntar. Perguntar o que você podia
 descobrir sozinho gasta o único recurso escasso da entrevista, que é a atenção do usuário.

@@ -86,6 +86,11 @@ primeira pergunta**:
 Fora dessas, decida e **mostre o que assumiu** numa linha por suposição. Contestar suposição
 escrita é barato; descobrir suposição implícita depois do código, não.
 
+Toda pergunta daqui — a do escopo, a do delta, a do conflito — segue a seção "A pergunta" de
+`${CLAUDE_SKILL_DIR}/../triage/prosa.md`: a escolha, o que acontece em cada saída, a recomendação.
+"Delta", "capability" e "requisito MODIFIED" são palavras suas; na tela, "o que muda no que o
+sistema já faz hoje", "o que o sistema promete", "comportamento que já existe e vai mudar".
+
 ## Onde escrever
 
 ```
@@ -173,8 +178,10 @@ diga por quê **junto** do achado, e deixe os dois na tela.
 
 ## Ao terminar
 
-Mostre ao usuário, em tela: os requisitos com seu delta, as suposições que você assumiu, o que
-ficou fora de escopo, e os achados do adversário. A pergunta que fecha é a única que importa:
+Mostre ao usuário, em tela: os requisitos, separados em **o que é novo**, **o que muda no que já
+existe** e **o que deixa de existir**; as suposições que você assumiu; o que ficou fora de escopo;
+e os achados do adversário, cada um com o que acontece se ficar como está. A pergunta que fecha é
+a única que importa:
 
 > **Você ficaria confortável se isto fosse construído exatamente assim, e nada além?**
 

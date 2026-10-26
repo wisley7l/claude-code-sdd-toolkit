@@ -53,7 +53,8 @@ entre a abordagem e um design doc do projeto.
 
 **Conflito com design doc bloqueia.** Se `ARCHITECTURE.md` define X e a mudança precisa de Y,
 não escolha em silêncio: mostre as saídas (respeitar o doc, atualizar o doc junto, ou tratar o
-doc como desatualizado) e deixe a decisão com ele.
+doc como desatualizado) e deixe a decisão com ele — cada saída com o que acontece se ele a
+escolher, e a sua recomendação, como manda a seção "A pergunta" da régua de prosa.
 
 Fora dessas, decida e **mostre o que assumiu**, uma linha por suposição.
 
@@ -166,6 +167,22 @@ limite de requisito coeso ou de camada.
 **Propor é seu; dividir é dele.** Mostre a fronteira sugerida e deixe a decisão com o usuário —
 inclusive a de seguir grande. Estreitar a spec, se for o caso, é decisão dela, não daqui.
 
+A pergunta vai pra tela sem o vocabulário desta seção — "fronteira", "cadeia", "stack", "bloco"
+são seus, não dele. O que ele precisa pra decidir é o que cada PR leva, o que cada opção custa a
+ele, e o que você recomenda:
+
+```
+❌ O bloco passa de 14 arquivos. Proponho a fronteira em limite de camada; os
+   PRs formam cadeia, então ofereço stack. Segue num só ou corta?
+
+✅ Esse PR ficou grande: 14 arquivos. Dá pra dividir em dois.
+   - Dividir: o primeiro leva a regra de validação, o segundo leva a tela e
+     o job. Cada review fica curto, mas o segundo só abre depois do primeiro
+     mergear.
+   - Um só: abre hoje, mas vira um review de 14 arquivos.
+   Recomendo dividir.
+```
+
 ## O mapa dos PRs
 
 Fronteira fechada, desenhe **a ordem em que eles nascem**. Vai no topo do `tasks.md`, antes do
@@ -235,6 +252,36 @@ exatamente o que estas lentes existem pra evitar.
 Achado que você aplicar, aplique **dizendo qual era** — a correção some do texto, mas a decisão
 não deve sumir da tela.
 
+## Como a decisão se explica
+
+**Leia `${CLAUDE_SKILL_DIR}/../triage/prosa.md` antes de escrever.** Vale pro arquivo e pro que
+vai à tela — e a seção "A pergunta" dela vale pra toda pergunta que esta peça faz: a da fronteira
+de PR, a do conflito com design doc, a de qual pasta de mudança usar.
+
+O plano é onde o usuário aprova, e decisão explicada só em prosa é aprovada sem ser entendida.
+Toda decisão técnica carrega **hoje × depois em código** — o que o codebase faz hoje, o que passa
+a fazer, e **o que hoje não cobre**, que costuma ser a razão real da mudança e a parte que a prosa
+engole:
+
+```
+❌ "Centralizar a validação no serviço, mantendo os controllers finos e garantindo
+   que a regra valha independentemente do ponto de entrada."
+
+✅ hoje
+     controller.ts   if (!cpf.valido) throw   ← só aqui
+     importJob.ts    (nada)                   ← CPF inválido entra por aqui
+   depois
+     service.ts      if (!cpf.valido) throw
+     controller.ts → service.criar()
+     importJob.ts  → service.criar()          ← agora coberto
+```
+
+"Independentemente do ponto de entrada" **é o job** — a prosa sabia qual era o buraco e não
+contou. Duas linhas de prosa ligando, o bloco carregando o resto.
+
+Se o hoje × depois não sai, a decisão ainda não está fechada, e nenhum parágrafo cobre esse
+buraco. Onde não deu pra verificar o "hoje", escreva `[A VERIFICAR]` — não compense com prosa.
+
 ## A barra
 
 Antes de mostrar, confira você mesmo — e é isto que vai pra tela no fechamento:
@@ -244,9 +291,10 @@ Antes de mostrar, confira você mesmo — e é isto que vai pra tela no fechamen
 3. **Toda tarefa que cruza fronteira tem contrato**, com a origem de cada parâmetro referenciada em
    `arquivo:linha` — e nenhuma passa de 5 passos sem a divisão ter sido proposta.
 4. **Toda decisão técnica tem fonte**, ou está marcada `[A VERIFICAR]` e não sustenta tarefa.
-5. **Dependência entre tarefas está explícita** e o agrupamento de PR a respeita.
-6. **Nenhum bloco de PR passa de 13 arquivos** sem a pergunta ter sido feita.
-7. **Nada de comportamento novo.** Requisito que não está na spec não nasce aqui.
+5. **Toda decisão técnica tem hoje × depois em código** — e a linha do que hoje não cobre.
+6. **Dependência entre tarefas está explícita** e o agrupamento de PR a respeita.
+7. **Nenhum bloco de PR passa de 13 arquivos** sem a pergunta ter sido feita.
+8. **Nada de comportamento novo.** Requisito que não está na spec não nasce aqui.
 
 ## O plano
 
@@ -262,7 +310,11 @@ Spec: [[spec]] · <N> requisitos · <M> PRs previstos
 
 ## Decisões técnicas
 ### D1 — <a decisão>
-<o que foi decidido e por quê> [Fonte: <url | arquivo:linha>]
+<o que foi decidido e por quê, 2 a 3 linhas> [Fonte: <url | arquivo:linha>]
+
+    hoje    <em código: o que o codebase faz, e o que isso não cobre>
+    depois  <em código: o que passa a fazer>
+
 Descartado: <alternativa> — <motivo>
 
 ## Testes
@@ -286,7 +338,7 @@ a exigir nova verificação. Se o rumo mudou porque o **comportamento** mudou, a
 
 ## Ao terminar
 
-Mostre em tela: a abordagem em duas linhas, as decisões técnicas com suas fontes, os PRs previstos
+Mostre em tela: a abordagem em duas linhas, as decisões técnicas com suas fontes e o hoje × depois, os PRs previstos
 com contagem de arquivos, **as ondas do mapa e a pilha mais longa**, a cobertura de teste antes → depois, a dívida aceita, as suposições que
 você assumiu, e os achados das lentes. Feche com:
 
